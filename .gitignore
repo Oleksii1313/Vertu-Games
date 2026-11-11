@@ -1,0 +1,13 @@
+# account & payment database (never commit)
+data/
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+# Python
+__pycache__/
+*.pyc
+.venv/
+# local environment / secrets
+.env
+# game build cache used by tools/*.cjs
+.cache/

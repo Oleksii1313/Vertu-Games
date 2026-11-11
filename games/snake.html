@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Snake — VertGames</title>
+
+<style>
+  :root{--bg:#1a2230;--surface:#202a3a;--card:#1b2432;--card2:#24303f;--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);
+    --text:#f3f7fb;--muted:#a7b7ca;--teal:#2b99a0;--blue:#2f63a8;--blue2:#2f4898;--indigo:#3730a0;
+    --grad:linear-gradient(135deg,#2b99a0 0%,#2f63a8 55%,#3730a0 100%);--shadow:0 14px 40px rgba(0,0,0,.4);
+    --head:"Oswald",-apple-system,"Segoe UI",sans-serif;--body:"Lato",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  .info{display:flex;justify-content:space-around;gap:8px;padding:11px 16px;background:rgba(20,26,38,.9);border-bottom:1px solid var(--line)}
+  .stat{text-align:center}
+  .stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
+  .stat .v{font-size:18px;font-weight:800;color:var(--teal)}
+  .board{flex:1;display:grid;place-items:center;padding:12px;min-height:0}
+  canvas{height:100%;width:auto;aspect-ratio:1/1;display:block;background:transparent;touch-action:none;cursor:pointer}
+  .controls{display:flex;justify-content:center;align-items:center;padding:12px;border-top:1px solid var(--line);gap:8px}
+  .dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:6px}
+  .dpad button{background:var(--card2);border:1px solid var(--line);border-radius:11px;color:var(--text);font-size:18px;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;transition:.1s}
+  .dpad button:active{background:var(--blue)}
+  .dpad .empty{background:transparent;border:none;cursor:default}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font:inherit;font-weight:800;border-radius:10px;padding:10px 16px;font-size:14px;color:var(--text);background:var(--card2);border:1px solid var(--line);transition:.15s}
+  .btn:active{transform:translateY(1px)}
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,12,20,.72);backdrop-filter:blur(6px);z-index:100}
+  .overlay.show{display:flex}
+  .panel{width:min(92vw,380px);background:var(--surface);border:1px solid var(--line2);border-radius:18px;padding:30px;text-align:center;box-shadow:var(--shadow);animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .panel h2{font-size:28px;margin:0 0 6px;color:var(--teal);font-family:var(--head)}
+  .panel .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+  .row{display:flex;justify-content:space-between;padding:11px 14px;background:var(--card2);border-radius:10px;margin-bottom:8px;font-size:15px}
+  .row .k{color:var(--muted)}.row .v{font-weight:800;color:var(--teal)}
+  .earn{font-size:24px;font-weight:900;color:var(--teal);margin:14px 0 20px}
+  .btns{display:flex;gap:10px}.btns .btn{flex:1;padding:12px;font-size:14px;justify-content:center}
+  .btn.primary{background:var(--grad);color:#fff;border:none}
+  .btn.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+  .hint{color:var(--muted);font-size:13px;margin-top:14px;text-align:center;line-height:1.6}
+  h1,h2,h3,h4{font-family:var(--head);letter-spacing:.5px}
+  .cheat-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(8,12,20,.9);backdrop-filter:blur(4px);text-align:center;padding:20px}
+  .cheat-overlay.show{display:flex}
+  .cheat-box{max-width:360px}.cheat-box .ic{font-size:44px;margin-bottom:12px}
+  .cheat-box h3{margin:0 0 10px;font-size:22px;font-family:var(--head);color:var(--text)}
+  .cheat-box p{color:var(--muted);font-size:14px;margin:0 0 6px;font-family:var(--body)}
+</style>
+<style id="game-controls-style">
+/* Responsive play area and reachable controls; no control is hidden on mobile. */
+html{height:100%;overflow:hidden;overscroll-behavior:none}
+body{height:100vh;height:100dvh;width:100%;min-height:0;overscroll-behavior:none}
+body>canvas{flex:1 1 0%;height:0;min-height:0;width:100%;touch-action:none}
+.info{flex-shrink:0;min-height:62px;padding:10px calc(64px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px));gap:6px;align-items:center}
+.info .stat{flex:1;min-width:0}.info .stat .l{display:block;white-space:nowrap;font-size:9px;letter-spacing:.7px}.info .stat .v{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:17px}
+.controls{flex-shrink:0;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px calc(12px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));background:#16202e;border-top:1px solid var(--line)}
+.controls button{min-width:52px;min-height:54px;width:auto;height:54px;padding:8px 14px;border:1px solid #ffffff2b;border-radius:13px;background:var(--card2);color:var(--text);font:700 13px var(--body);display:flex;align-items:center;justify-content:center;gap:8px;touch-action:none;-webkit-touch-callout:none;cursor:pointer;flex-shrink:0}
+.controls button:active,.controls button.pressed{background:#35677a;border-color:#79c8c7;transform:translateY(1px)}
+.controls button:focus-visible{outline:2px solid #8de0d2;outline-offset:2px}
+.controls button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;flex-shrink:0}
+.controls button.primary-action{background:var(--grad);border-color:transparent;color:white;min-width:116px}
+.controls #btnAuto[aria-pressed="true"]{border-color:#69c8ae;background:#224d4d;color:#b6f5df}
+.controls #btnAuto{font-size:11px;min-width:60px;flex-direction:column;gap:2px}
+.control-group{display:flex;gap:8px}
+body[data-game="platformer"] .controls,body[data-game="shooter"] .controls{justify-content:space-between}
+body[data-game="flappy"] #btnJump{width:min(100%,320px)}
+body[data-game="pong"] .controls button{width:min(38vw,180px)}
+.help,body>.hint{flex-shrink:0;margin:0;font-size:11px;padding:4px 12px 8px;text-align:center}
+.board,.board-wrap{flex:1 1 0%;min-width:0;min-height:0;overflow:hidden;padding:10px;display:flex;align-items:center;justify-content:center}
+.board canvas,.board-wrap canvas{flex:none;aspect-ratio:1;max-width:none;max-height:none;touch-action:none}
+.controls .dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:5px}
+.controls .dpad button{width:52px;height:52px;min-width:0;min-height:0;padding:8px}.controls .dpad .empty{pointer-events:none}
+.controls .dpad #btnUp{grid-area:1/2}.controls .dpad #btnLeft{grid-area:2/1}.controls .dpad #btnDown{grid-area:3/2}.controls .dpad #btnRight{grid-area:2/3}.controls .dpad #btnPause,.controls .dpad #btnReset{grid-area:2/2}
+.muted{top:72px;right:12px;width:44px;height:44px;touch-action:manipulation}
+.overlay{padding:64px 12px 16px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+.overlay .panel{flex-shrink:0;margin:auto;padding:22px;max-height:calc(100vh - 80px);max-height:calc(100dvh - 80px);overflow-y:auto;touch-action:pan-y}
+.overlay .btns .btn{min-height:48px;touch-action:manipulation}
+@media(max-width:420px){
+ .info .stat .l{font-size:8px;letter-spacing:.2px}.info .stat .v{font-size:14px}.info .stat .hearts{font-size:11px;letter-spacing:0}
+ .controls{gap:8px;padding-left:10px;padding-right:10px}.controls button{min-width:48px;padding:8px 10px;gap:5px}.controls button.primary-action{min-width:104px}
+ .control-group{gap:6px}body[data-game="shooter"] .controls{gap:6px}body[data-game="shooter"] .primary-action{min-width:94px;font-size:12px}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .info{min-height:56px;padding-top:6px;padding-bottom:6px}.info .stat .v{font-size:15px}
+ .controls{padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));gap:12px}.controls button{height:48px;min-height:48px}
+ .help,body>.hint{display:none}.muted{top:64px}
+ body[data-game="snake"],body[data-game="game2048"]{display:grid;grid-template-columns:minmax(0,1fr) 190px;grid-template-rows:56px minmax(0,1fr)}
+ body[data-game="snake"]>.info,body[data-game="game2048"]>.info{grid-area:1/1/2/3}
+ .board,.board-wrap{grid-area:2/1;align-self:stretch;padding:8px}
+ body[data-game="snake"]>.controls,body[data-game="game2048"]>.controls{grid-area:2/2;padding:8px;border-top:0;border-left:1px solid var(--line);height:100%}
+ .controls .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px)}.controls .dpad button{width:50px;height:50px}
+}
+
+</style>
+<script id="game-controls-runtime">
+/* Shared pointer controls for the six 2D games. No synthetic keyboard events. */
+(function(){
+ 'use strict';
+ const releases=new Set();
+ const enabled=()=>!window.cheatPaused&&!document.querySelector('.overlay.show,.cheat-overlay.show');
+ function element(id){return typeof id==='string'?document.getElementById(id):id}
+ function hold(id,change){const b=element(id);let pointer=null,active=false;
+  function release(){if(!active)return;active=false;pointer=null;b.classList.remove('pressed');change(false)}
+  b.addEventListener('pointerdown',e=>{if(e.button!==0||pointer!==null||!enabled())return;e.preventDefault();pointer=e.pointerId;active=true;b.setPointerCapture(e.pointerId);b.classList.add('pressed');change(true)});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,e=>{if(e.pointerId===pointer)release()});
+  // Keyboard activation of a focused on-screen button is also supported.
+  b.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='Enter')&&!e.repeat&&enabled()){e.preventDefault();active=true;change(true);b.classList.add('pressed')}});
+  b.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='Enter'){e.preventDefault();release()}});
+  releases.add(release);return release;
+ }
+ function tap(id,action,allowOverlay=false){const b=element(id);let pointer=null;
+  const allowed=()=>allowOverlay||enabled();
+  function release(){pointer=null;b.classList.remove('pressed')}
+  b.addEventListener('pointerdown',e=>{if(e.button!==0||pointer!==null||!allowed())return;e.preventDefault();pointer=e.pointerId;b.setPointerCapture(e.pointerId);b.classList.add('pressed');action()});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,e=>{if(e.pointerId===pointer)release()});
+  b.addEventListener('click',e=>{if(e.detail===0&&allowed())action()});
+  releases.add(release);
+ }
+ function swipe(id,action){const c=element(id);let point=null;
+  c.addEventListener('pointerdown',e=>{if(!enabled()||point)return;e.preventDefault();point={id:e.pointerId,x:e.clientX,y:e.clientY};c.setPointerCapture(e.pointerId)});
+  c.addEventListener('pointerup',e=>{if(!point||point.id!==e.pointerId)return;const dx=e.clientX-point.x,dy=e.clientY-point.y;point=null;if(!enabled()||Math.max(Math.abs(dx),Math.abs(dy))<22)return;action(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'))});
+  for(const event of ['pointercancel','lostpointercapture'])c.addEventListener(event,e=>{if(point?.id===e.pointerId)point=null});
+  releases.add(()=>point=null);
+ }
+ function reset(){for(const release of releases)release()}
+ function fitSquare(c){const wrap=c.parentElement,style=getComputedStyle(wrap);const w=wrap.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),h=wrap.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);const size=Math.max(1,Math.floor(Math.min(w,h,560)));c.style.width=c.style.height=size+'px'}
+ window.VGInput={hold,tap,swipe,reset,fitSquare};
+ addEventListener('blur',reset);addEventListener('resize',reset);document.addEventListener('visibilitychange',reset);
+ document.addEventListener('DOMContentLoaded',()=>{
+  for(const overlay of document.querySelectorAll('.overlay,.cheat-overlay'))new MutationObserver(()=>{if(overlay.classList.contains('show'))reset()}).observe(overlay,{attributes:true,attributeFilter:['class']});
+  const square=document.querySelector('.board canvas,.board-wrap canvas');if(square){fitSquare(square);new ResizeObserver(()=>fitSquare(square)).observe(square.parentElement)}
+ });
+})();
+
+</script>
+</head>
+<body data-game="snake">
+<div class="info">
+  <div class="stat"><span class="l">SCORE</span><span class="v" id="scoreVal">0</span></div>
+  <div class="stat"><span class="l">COINS</span><span class="v" id="coinsVal">0 V</span></div>
+  <div class="stat"><span class="l">LEVEL</span><span class="v" id="levelVal">1</span></div>
+  <div class="stat"><span class="l">SPEED</span><span class="v" id="speedVal">1</span></div>
+</div>
+<div class="board"><canvas id="c"></canvas></div>
+<div class="controls" aria-label="Управление игрой"><div class="dpad"><button type="button" id="btnUp" aria-label="Вверх"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v14"/></svg></button><button type="button" id="btnLeft" aria-label="Влево"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7M7 12h14"/></svg></button><button type="button" id="btnPause" aria-label="Пауза"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button type="button" id="btnRight" aria-label="Вправо"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7M3 12h14"/></svg></button><button type="button" id="btnDown" aria-label="Вниз"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 10 7 7 7-7M12 3v14"/></svg></button></div></div>
+
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <h2 id="ovTitle">GAME OVER</h2>
+    <p class="sub" id="ovSub">Змейка столкнулась сама с собой</p>
+    <div class="row"><span class="k">Score</span><span class="v" id="fScore">0</span></div>
+    <div class="row"><span class="k">Level</span><span class="v" id="fLevel">1</span></div>
+    <div class="row"><span class="k">Length</span><span class="v" id="fLen">1</span></div>
+    <div class="earn" id="fEarn">+0 V</div>
+    <div class="btns">
+      <button class="btn primary" id="ovBtn">Играть снова</button>
+      <button class="btn ghost" onclick="goHome()">Домой</button>
+    </div>
+    <p class="hint">Используй стрелки / свайпы. Нажми Space — пауза.</p>
+  </div>
+</div>
+
+<div class="cheat-overlay" id="cheatOverlay"><div class="cheat-box"><div class="ic">🛡</div><h3>Окно слишком маленькое</h3><p class="ch-why">Игра приостановлена — размер окна ниже допустимого.</p><p>Разверни окно или вернись на вкладку, чтобы продолжить.</p></div></div>
+
+<script>
+window.cheatPaused=false;(function(){var MIN_W=300,MIN_H=220;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?'Окно свёрнуто или скрыто':'Размер окна ниже допустимого'}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
+
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const grid=20;
+const scoreEl=document.getElementById('scoreVal'),coinsEl=document.getElementById('coinsVal'),levelEl=document.getElementById('levelVal'),speedEl=document.getElementById('speedVal');
+const overlay=document.getElementById('overlay');
+let cols,rows,tick=null,frame=0,particles=[];
+let score=0,coins=0,level=1,speed=150,started=false,paused=false,over=false;
+let snake=[],dir,nextDir,food;
+
+function resize(){c.width=c.height=400;VGInput.fitSquare(c)}
+window.addEventListener('resize',resize);
+
+function addCoin(n){coins+=n;coinsEl.textContent=coins+' V';if(window.parent!==window)try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}
+
+function initBoard(){
+  resize();cols=Math.floor(c.width/grid);rows=Math.floor(c.height/grid);
+  const cx=Math.floor(cols/2),cy=Math.floor(rows/2);
+  // start moving RIGHT, body of 1 so the run begins gently
+  snake=[{x:cx,y:cy}];
+  dir={x:1,y:0};nextDir={x:1,y:0};
+  score=0;coins=0;level=1;over=false;particles=[];
+  scoreEl.textContent=0;coinsEl.textContent=0+' V';levelEl.textContent=1;speedEl.textContent=1;
+  spawnFood();
+}
+
+/* start / restart via overlay */
+function ready(){
+  document.getElementById('ovTitle').textContent='ГОТОВ?';
+  document.getElementById('ovSub').textContent='Нажми стрелку, свайп или кнопку, чтобы начать';
+  document.getElementById('ovBtn').textContent='▶ Старт';
+  document.getElementById('fEarn').textContent='';
+  overlay.classList.add('show');started=false;paused=false;
+  initBoard();loop();
+}
+function startRun(){
+  overlay.classList.remove('show');started=true;paused=false;
+  if(tick)clearInterval(tick);speed=150;tick=setInterval(step,speed);
+}
+function gameOver(){over=true;started=false;if(tick)clearInterval(tick);
+  document.getElementById('ovTitle').textContent='GAME OVER';
+  document.getElementById('ovSub').textContent='Змейка столкнулась сама с собой';
+  document.getElementById('fScore').textContent=score;document.getElementById('fLevel').textContent=level;document.getElementById('fLen').textContent=snake.length;
+  document.getElementById('fEarn').textContent='+'+coins+' V';
+  document.getElementById('ovBtn').textContent='Играть снова';
+  overlay.classList.add('show');
+  spawnParticles(snake[0].x*grid+10,snake[0].y*grid+10,'#4037b0',30,6);
+  try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
+}
+function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
+
+/* ------- core fix: input queue. Only `dir` is what the snake ACTUALLY used last tick.
+   New presses go to `nextDir`, checked RIGOROUSLY against `dir`, and applied once at the
+   next tick. This stops the instant-180°-reversal-death. ------- */
+function pushDir(nx,ny){
+  // ignore no-op
+  if(nx===0&&ny===0)return;
+  // exact reverse of the direction actually moving -> reject
+  if(nx===-dir.x&&ny===-dir.y)return;
+  // same as current -> ignore
+  if(nx===dir.x&&ny===dir.y)return;
+  nextDir={x:nx,y:ny};
+}
+function peekOrigin(){return {x:snake[0].x,y:snake[0].y}}
+
+function spawnFood(){
+  let f;let guard=0;
+  do{f={x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)};guard++;}
+  while(snake.some(s=>s.x===f.x&&s.y===f.y)&&guard<400);
+  food=f;
+}
+
+function step(){
+  if(window.cheatPaused||paused||!started||over)return;
+  // apply the queued direction now (only legal ones were accepted)
+  dir=nextDir;
+  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  if(head.x<0)head.x=cols-1;if(head.x>=cols)head.x=0;
+  if(head.y<0)head.y=rows-1;if(head.y>=rows)head.y=0;
+  // self collision EXCLUDING the tail cell that is about to move away
+  const willGrow=(head.x===food.x&&head.y===food.y);
+  const bodyLen=willGrow?snake.length:snake.length-1;
+  for(let i=0;i<bodyLen;i++){if(snake[i].x===head.x&&snake[i].y===head.y){gameOver();return}}
+  snake.unshift(head);
+  if(willGrow){
+    score++;scoreEl.textContent=score;
+    addCoin(1);                                    // +1 V за съеденное яблоко
+    spawnParticles(food.x*grid+grid/2,food.y*grid+grid/2,'#ff2532',16,6);   // red apple particles
+    if(score%5===0){level++;levelEl.textContent=level;addCoin(5);            // +5 V за уровень скорости
+      if(tick)clearInterval(tick);speed=Math.max(70,150-level*8);speedEl.textContent=1+Math.floor((150-speed)/20);tick=setInterval(step,speed);}
+    spawnFood();
+  }else snake.pop();
+  frame++;
+}
+function spawnParticles(x,y,c,n,spd){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*spd,vy:(Math.random()-.5)*spd,l:1,c})}
+
+function setPaused(v){if(!started||over)return;paused=v;
+  document.getElementById('ovTitle').textContent=v?'ПАУЗА':'';
+  document.getElementById('ovSub').textContent=v?'Нажми ▶ или Space, чтобы продолжить':'';
+  document.getElementById('ovBtn').textContent=v?'▶ Продолжить':'';
+  document.getElementById('fEarn').textContent='';
+  if(v){if(tick)clearInterval(tick);overlay.classList.add('show')}
+  else{overlay.classList.remove('show');tick=setInterval(step,speed)}
+}
+document.getElementById('ovBtn').onclick=()=>{
+  if(over){initBoard();over=false;startRun();return}   // restart after game over
+  if(paused){setPaused(false);return}                  // resume from pause
+  startRun();                                          // start from READY
+};
+
+/* inputs */
+const bindBtn=(id,nx,ny)=>VGInput.tap(id,()=>input(nx,ny));
+function input(nx,ny){
+  if(over){return}
+  if(!started){initBoard();startRun();return} // first input = start moving
+  pushDir(nx,ny);
+}
+bindBtn('btnUp',0,-1);bindBtn('btnDown',0,1);bindBtn('btnLeft',-1,0);bindBtn('btnRight',1,0);
+VGInput.tap('btnPause',()=>setPaused(!paused));
+
+/* keyboard */
+window.addEventListener('keydown',e=>{
+  const map={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+  if(map[e.key]){e.preventDefault();input(...map[e.key]);return}
+  if(e.key===' '||e.key==='p'||e.key==='P'){e.preventDefault();if(!started&&!over){startRun()}else if(!over)setPaused(!paused)}
+});
+
+/* swipe on canvas */
+VGInput.swipe(c,d=>{const map={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};input(...map[d])});
+
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function draw(){
+  const bg=ctx.createLinearGradient(0,0,0,c.height);bg.addColorStop(0,'#202a3a');bg.addColorStop(1,'#1a2230');ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
+  ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=1;
+  for(let x=0;x<=cols;x++){ctx.beginPath();ctx.moveTo(x*grid,.5);ctx.lineTo(x*grid,c.height);ctx.stroke()}
+  for(let y=0;y<=rows;y++){ctx.beginPath();ctx.moveTo(.5,y*grid);ctx.lineTo(c.width,y*grid);ctx.stroke()}
+  // food — bright red apple
+  const pulse=.9+.1*Math.sin(frame*.3);
+  const fx=food.x*grid+grid/2, fy=food.y*grid+grid/2, R=grid*.42*pulse;
+  // green little leaf
+  ctx.fillStyle='#6dff3a';ctx.beginPath();ctx.ellipse(fx+2,fy-R-2,3.2,1.6,0.4,0,7);ctx.fill();
+  // red body
+  ctx.fillStyle='#ff2532';ctx.shadowBlur=14;ctx.shadowColor='#ff2532';
+  ctx.beginPath();ctx.arc(fx,fy,R,0,7);ctx.fill();ctx.shadowBlur=0;
+  // highlight
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(fx-R*.32,fy-R*.34,R*.2,0,7);ctx.fill();
+  // stem
+  ctx.strokeStyle='#8a5a2b';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(fx,fy-R);ctx.lineTo(fx+2,fy-R-3);ctx.stroke();
+  // snake — bright neon palette (only the snake is vivid; board stays neutral)
+  const n=snake.length;
+  for(let i=n-1;i>=0;i--){const s=snake[i],x=s.x*grid+1,y=s.y*grid+1,sz=grid-2;
+    if(i===0){ctx.fillStyle='#39ff14';ctx.shadowBlur=16;ctx.shadowColor='#39ff14';roundRect(x,y,sz,sz,6);ctx.fill();ctx.shadowBlur=0;
+      ctx.fillStyle='#c6ffb0';ctx.fillRect(x+2,y+2,sz-4,2);}
+    else{
+      // bright rainbow-ish gradient along the body (hot pink -> orange -> yellow -> lime)
+      const t=i/n;
+      let col;
+      if(t<0.25)col='#ff2bd6';else if(t<0.5)col='#ff7a2b';else if(t<0.75)col='#ffd21f';else col='#39ff14';
+      ctx.fillStyle=col;ctx.shadowBlur=8;ctx.shadowColor=col;roundRect(x,y,sz,sz,5);ctx.fill();ctx.shadowBlur=0;
+    }
+  }
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.l-=.02;ctx.globalAlpha=Math.max(0,p.l);ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
+  particles=particles.filter(p=>p.l>0);
+  ctx.strokeStyle='rgba(43,153,160,.45)';ctx.lineWidth=2;roundRect(1,1,c.width-2,c.height-2,0);ctx.stroke();
+}
+function loop(){draw();requestAnimationFrame(loop)}
+ready();
+</script>
+</body>
+</html>
