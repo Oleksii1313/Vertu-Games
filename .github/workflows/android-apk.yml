@@ -68,13 +68,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # PKCS12 keystores use one password for the store and private key.
           STORE_PASSWORD="$(openssl rand -hex 24)"
-          KEY_PASSWORD="$(openssl rand -hex 24)"
+          KEY_PASSWORD="$STORE_PASSWORD"
           KEYSTORE="$RUNNER_TEMP/vertgames-ci-release.jks"
           echo "::add-mask::$STORE_PASSWORD"
           echo "::add-mask::$KEY_PASSWORD"
           keytool -genkeypair -noprompt -v \
             -keystore "$KEYSTORE" \
+            -storetype PKCS12 \
             -storepass "$STORE_PASSWORD" \
             -keypass "$KEY_PASSWORD" \
             -alias vertgames \
