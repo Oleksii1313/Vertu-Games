@@ -73,7 +73,6 @@ jobs:
           KEY_PASSWORD="$STORE_PASSWORD"
           KEYSTORE="$RUNNER_TEMP/vertgames-ci-release.jks"
           echo "::add-mask::$STORE_PASSWORD"
-          echo "::add-mask::$KEY_PASSWORD"
           keytool -genkeypair -noprompt -v \
             -keystore "$KEYSTORE" \
             -storetype PKCS12 \
@@ -113,26 +112,48 @@ jobs:
       - name: Verify package, assets, version, and signature
         shell: bash
         run: |
-          set -euo pipefail
-          APK='android/app/build/outputs/apk/release/app-release.apk'
-          python3 android/verify_apk.py "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.vertgames.mobile' versionCode='1' versionName='1.0.0'"
-          mkdir -p "$RUNNER_TEMP/vertgames-release"
-          cp "$APK" "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk"
-          sha256sum "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk" > "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk.sha256"
+          set +e
           {
-            echo 'Application: VertGames'
-            echo 'Application ID: com.vertgames.mobile'
-            echo 'Version: 1.0.0 (versionCode 1)'
-            echo 'Build type: release'
-            echo 'Minimum Android: API 23'
-            echo 'Target Android: API 35'
-            echo 'Signing: temporary CI release key (not retained)'
-            echo "Commit: $GITHUB_SHA"
-            echo "Built UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            echo "APK bytes: $(stat -c '%s' "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk")"
-          } > "$RUNNER_TEMP/vertgames-release/build-info.txt"
+            set -euo pipefail
+            APK='android/app/build/outputs/apk/release/app-release.apk'
+            python3 android/verify_apk.py "$APK"
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+            BADGING="$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK")"
+            printf '%s\n' "$BADGING"
+            printf '%s\n' "$BADGING" | grep -F "package: name='com.vertgames.mobile' versionCode='1' versionName='1.0.0'"
+            mkdir -p "$RUNNER_TEMP/vertgames-release"
+            cp "$APK" "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk"
+            sha256sum "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk" > "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk.sha256"
+            {
+              echo 'Application: VertGames'
+              echo 'Application ID: com.vertgames.mobile'
+              echo 'Version: 1.0.0 (versionCode 1)'
+              echo 'Build type: release'
+              echo 'Minimum Android: API 23'
+              echo 'Target Android: API 35'
+              echo 'Signing: temporary CI release key (not retained)'
+              echo "Commit: $GITHUB_SHA"
+              echo "Built UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+              echo "APK bytes: $(stat -c '%s' "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk")"
+            } > "$RUNNER_TEMP/vertgames-release/build-info.txt"
+          } 2>&1 | tee "$RUNNER_TEMP/apk-verification.log"
+          verify_status=${PIPESTATUS[0]}
+          if [ "$verify_status" -ne 0 ]; then
+            details="$(tail -n 45 "$RUNNER_TEMP/apk-verification.log" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g' | cut -c1-8000)"
+            echo "::error title=APK verification failure::$details"
+            exit "$verify_status"
+          fi
+
+      - name: Attach APK diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vertgames-apk-verification-diagnostics
+          path: |
+            ${{ runner.temp }}/apk-verification.log
+            android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
+          retention-days: 2
 
       - name: Upload installable APK and build metadata
         uses: actions/upload-artifact@v7
