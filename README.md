@@ -52,7 +52,7 @@ The Gradle build copies current site/game sources into generated Android assets;
 
 ## CI APK
 
-The Android workflow installs the JDK/SDK toolchain, signs the release build with a temporary CI key, verifies APK structure/package/signature, and uploads `VertGames-1.0.0-release.apk` with build metadata and a SHA-256 checksum as a GitHub Actions artifact. The CI key is deliberately not retained; a later APK signed by a different CI key will not update-install over this one. Keep a private persistent signing key for updateable releases.
+The Android workflow uses the runner's preinstalled Android 35 SDK, sets up JDK 17, signs the release build with a temporary CI key, verifies APK structure/package/signature, and uploads `VertGames-1.0.0-release.apk` with build metadata and a SHA-256 checksum as a GitHub Actions artifact. The CI key is deliberately not retained; a later APK signed by a different CI key will not update-install over this one. Keep a private persistent signing key for updateable releases.
 
 ## Existing backend
 
