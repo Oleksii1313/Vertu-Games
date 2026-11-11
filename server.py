@@ -3,7 +3,7 @@
 Run: python3 server.py. Configure SMTP via environment (see .env.example).
 Game HTML files work independently; email/account APIs require this server.
 """
-import sys, google_oauth, casino_payments as shop
+import sys, google_oauth, casino_payments as shop, database as store
 import os, re, json, time, secrets, hashlib, hmac, sqlite3, ssl, smtplib, mimetypes, threading
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -11,44 +11,28 @@ from urllib.parse import urlparse, parse_qs, unquote
 from http.cookies import SimpleCookie
 from email.message import EmailMessage
 ROOT=Path(__file__).resolve().parent
-DB=Path(os.environ.get('VERTGAMES_DB',str(ROOT/'data'/'accounts.sqlite3')))
+DB=store.DB_PATH  # единый путь к базе SQLite (database.py)
 PORT=int(os.environ.get('PORT','8000'))
 COOKIE='vg_session'
 TTL=600
 MAIL_LOCK=threading.Lock()
 
-class ClosingConnection(sqlite3.Connection):
-    # SQLite's normal context manager commits/rolls back but does not close.
-    def __exit__(self, *args):
-        try:return super().__exit__(*args)
-        finally:self.close()
-
 def connect():
-    c=sqlite3.connect(DB,timeout=15,factory=ClosingConnection);c.row_factory=sqlite3.Row;return c
+    return store.connect(DB)
 
 def init_db():
-    DB.parent.mkdir(parents=True,exist_ok=True)
+    # схема аккаунтов/сессий/баланса живёт в database.py; доп. таблицы — у сервисов
     with connect() as c:
-        c.executescript('''
-        PRAGMA journal_mode=WAL;
-        CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY,username TEXT NOT NULL,username_key TEXT NOT NULL UNIQUE,email TEXT NOT NULL,email_key TEXT NOT NULL UNIQUE,password TEXT NOT NULL,created INTEGER NOT NULL,verified INTEGER NOT NULL);
-        CREATE TABLE IF NOT EXISTS pending(id TEXT PRIMARY KEY,username TEXT NOT NULL,username_key TEXT NOT NULL,email TEXT NOT NULL,email_key TEXT NOT NULL,password TEXT NOT NULL,code_hash TEXT NOT NULL,expires INTEGER NOT NULL,sent INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0);
-        CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,expires INTEGER NOT NULL);
-        CREATE TABLE IF NOT EXISTS limits(key TEXT PRIMARY KEY,count INTEGER NOT NULL,until INTEGER NOT NULL);
-        ''')
+        store.init_db(c)
         google_oauth.init_db(c)
         shop.init_db(c)
 
 def now():return int(time.time())
 def digest(s):return hashlib.sha256(s.encode()).hexdigest()
 def password_hash(password):
-    salt=secrets.token_hex(16);rounds=310000
-    return f'pbkdf2_sha256${rounds}${salt}$'+hashlib.pbkdf2_hmac('sha256',password.encode(),salt.encode(),rounds).hex()
+    return store.hash_password(password)
 def password_ok(password,stored):
-    try:
-        alg,rounds,salt,expected=stored.split('$')
-        return alg=='pbkdf2_sha256' and hmac.compare_digest(hashlib.pbkdf2_hmac('sha256',password.encode(),salt.encode(),int(rounds)).hex(),expected)
-    except (ValueError,TypeError):return False
+    return store.verify_password(password,stored)
 
 def valid_email(value):
     if not isinstance(value,str) or len(value)>254 or value.count('@')!=1:return False
@@ -72,8 +56,10 @@ def send_code(email,code):
         client.send_message(msg)
 
 def public_user(row):
-    with connect() as c: linked=google_oauth.linked(c,row['id'])
-    return {'username':row['username'],'email':row['email'],'emailVerified':True,'authSource':'server','created':row['created'],'googleLinked':linked}
+    with connect() as c:
+        linked=google_oauth.linked(c,row['id'])
+        coins=store.get_balance(row['id'],conn=c)
+    return {'username':row['username'],'email':row['email'],'coins':coins,'emailVerified':bool(row['verified']),'authSource':'server','created':row['created'],'googleLinked':linked}
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,fmt,*args):
@@ -87,10 +73,8 @@ class Handler(BaseHTTPRequestHandler):
     def rate(self,scope,limit,seconds):
         key=digest(scope+':'+self.client_address[0])
         with connect() as c:
-            c.execute('BEGIN IMMEDIATE');c.execute('DELETE FROM limits WHERE until<?',(now(),));r=c.execute('SELECT * FROM limits WHERE key=?',(key,)).fetchone()
-            if r and r['count']>=limit:self.error(429,'RATE_LIMIT','Слишком много попыток. Подождите и попробуйте позже.');return False
-            if r:c.execute('UPDATE limits SET count=count+1 WHERE key=?',(key,))
-            else:c.execute('INSERT INTO limits VALUES(?,?,?)',(key,1,now()+seconds))
+            if not store.rate_limit(key,limit,seconds,conn=c):
+                self.error(429,'RATE_LIMIT','Слишком много попыток. Подождите и попробуйте позже.');return False
         return True
     def cookie(self,token='',age=2592000):
         secure='; Secure' if os.environ.get('PUBLIC_URL','').startswith('https://') or self.headers.get('X-Forwarded-Proto','').split(',')[0]=='https' else ''
@@ -109,6 +93,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path=urlparse(self.path).path
         if path==google_oauth.CALLBACK:return google_oauth.callback(self,sys.modules[__name__])
+        if path=='/api/leaderboard':
+            with connect() as c:rows=store.top_users(20,conn=c)
+            return self.reply(200,{'ok':True,'users':rows})
         if path=='/api/auth/session':
             user=self.session();return self.reply(200,{'ok':True,'emailConfigured':configured(),'googleConfigured':google_oauth.configured(),'user':public_user(user) if user else None})
         if path=='/api/auth/availability':
@@ -118,6 +105,10 @@ class Handler(BaseHTTPRequestHandler):
                 taken_name=bool(c.execute('SELECT 1 FROM users WHERE username_key=?',(name.casefold(),)).fetchone()) if name else False
                 taken_email=bool(c.execute('SELECT 1 FROM users WHERE email_key=?',(email.casefold(),)).fetchone()) if email else False
             return self.reply(200,{'ok':True,'usernameTaken':taken_name,'emailTaken':taken_email,'emailValid':valid_email(email)})
+        if path=='/api/auth/balance':
+            user=self.session()
+            if not user:return self.error(401,'AUTH','Требуется вход')
+            return self.reply(200,{'ok':True,'coins':store.get_balance(user['id']),'user':public_user(user)})
         if path=='/api/shop/packs':return self.reply(200,shop.public_shop())
         if path=='/api/shop/wallet':return shop.wallet(self,sys.modules[__name__])
         if path=='/api/shop/order':return shop.order_status(self,sys.modules[__name__])
@@ -152,6 +143,7 @@ class Handler(BaseHTTPRequestHandler):
         path=urlparse(self.path).path
         try:
             if path=='/api/auth/google/start':return google_oauth.start(self,data,sys.modules[__name__])
+            if path=='/api/auth/migrate':return self.migrate_local(data)
             if path=='/api/auth/register':return self.register(data)
             if path=='/api/auth/verify':return self.verify(data)
             if path=='/api/auth/resend':return self.resend(data)
@@ -161,6 +153,16 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/shop/webhook/stripe':return shop.webhook(self,'stripe',sys.modules[__name__])
             if path=='/api/shop/webhook/cryptobot':return shop.webhook(self,'cryptobot',sys.modules[__name__])
             if path=='/api/shop/webhook/yookassa':return shop.webhook(self,'yookassa',sys.modules[__name__])
+            if path=='/api/auth/balance':
+                user=self.session()
+                if not user:return self.error(401,'AUTH','Требуется вход')
+                coin=store.get_balance(user['id'])
+                if 'delta' in data:
+                    try:delta=int(data['delta'])
+                    except (TypeError,ValueError):return self.error(400,'DELTA','Некорректное изменение баланса')
+                    if not -100000<=delta<=100000:return self.error(400,'DELTA','Слишком большое изменение баланса')
+                    coin=store.add_coins(user['id'],delta,str(data.get('reason',''))[:120])
+                return self.reply(200,{'ok':True,'coins':coin,'user':public_user(user)})
             if path=='/api/auth/logout':
                 with connect() as c:c.execute('DELETE FROM sessions WHERE token_hash=?',(digest(self.token()),))
                 return self.reply(200,{'ok':True},self.cookie('',0))
@@ -169,6 +171,27 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             print('API failure:',type(exc).__name__,flush=True)
             return self.error(500,'SERVER_ERROR','Не удалось выполнить запрос. Попробуйте позже.')
+    def migrate_local(self,data):
+        """Аккаунт, созданный в браузере (localStorage), переносится на сервер."""
+        if not self.rate('migrate',6,3600):return
+        name=str(data.get('username','')).strip();email=str(data.get('email','')).strip().lower()
+        password=data.get('password','');coins=data.get('coins',0)
+        if not valid_name(name) or not valid_email(email):return self.error(400,'INPUT','Проверьте ник и email')
+        if not isinstance(password,str) or not 4<=len(password)<=256:return self.error(400,'PASSWORD','Пароль 4–256 символов.')
+        try:coins=max(0,min(1000000,int(coins)))
+        except (TypeError,ValueError):coins=0
+        with connect() as c:
+            user=store.find_user(name,conn=c)
+            if user and password_ok(password,user['password']):
+                balance=max(store.get_balance(user['id'],conn=c),coins)
+                token=store.new_session(user['id'],conn=c)
+            elif user:return self.error(409,'DUPLICATE','Этот ник уже занят на сервере.')
+            else:
+                try:user=store.create_user(name,email,password,verified=True,coins=coins,conn=c)
+                except store.DuplicateUser:return self.error(409,'DUPLICATE','Этот ник или email уже занят на сервере.')
+                balance=coins;token=store.new_session(user['id'],conn=c)
+        self.reply(200,{'ok':True,'user':public_user(user),'coins':balance,'migrated':True},self.cookie(token))
+
     def register(self,data):
         if not self.rate('register',10,3600):return
         name=str(data.get('username','')).strip();email=str(data.get('email','')).strip().lower();password=data.get('password','')
@@ -176,8 +199,17 @@ class Handler(BaseHTTPRequestHandler):
         if not valid_email(email):return self.error(400,'EMAIL','Некорректный email. Укажите настоящий адрес.')
         if not isinstance(password,str) or not 4<=len(password)<=256:return self.error(400,'PASSWORD','Пароль должен содержать от 4 до 256 символов.')
         with connect() as c:
-            if c.execute('SELECT 1 FROM users WHERE username_key=? OR email_key=?',(name.casefold(),email.casefold())).fetchone():return self.error(409,'DUPLICATE','Этот ник или email уже зарегистрирован. Используйте вход.')
-        if not configured():return self.error(503,'EMAIL_NOT_CONFIGURED','Отправка писем ещё не настроена владельцем сайта. Аккаунт не создан. Существующий аккаунт доступен через «Вход».')
+            if store.username_taken(name,conn=c) or store.email_taken(email,conn=c):
+                return self.error(409,'DUPLICATE','Этот ник или email уже зарегистрирован. Используйте вход.')
+        if not configured():
+            # Без SMTP регистрацию можно разрешить флагом (почта останется неподтверждённой).
+            if os.environ.get('VERTGAMES_LOCAL_SIGNUP','0')!='1':
+                return self.error(503,'EMAIL_NOT_CONFIGURED','Отправка писем ещё не настроена владельцем сайта. Аккаунт не создан. Существующий аккаунт доступен через «Вход».')
+            with connect() as c:
+                try:user=store.create_user(name,email,password,verified=False,coins=100,conn=c)
+                except store.DuplicateUser:return self.error(409,'DUPLICATE','Этот ник или email уже зарегистрирован. Используйте вход.')
+                token=store.new_session(user['id'],conn=c)
+            return self.reply(201,{'ok':True,'user':public_user(user),'coins':100,'localSignup':True},self.cookie(token))
         # One pending request per email, with global cooldown. No code is returned to the client or logs.
         with MAIL_LOCK:
             with connect() as c:
@@ -200,8 +232,11 @@ class Handler(BaseHTTPRequestHandler):
             if p['attempts']>=5:return self.error(429,'CODE_LOCKED','Слишком много неверных кодов. Запросите новое письмо.')
             if not re.fullmatch(r'\d{6}',code) or not hmac.compare_digest(digest(pid+':'+code),p['code_hash']):
                 c.execute('UPDATE pending SET attempts=attempts+1 WHERE id=?',(pid,));return self.error(400,'INVALID_CODE','Неверный код. Проверьте шесть цифр в письме.')
-            cur=c.execute('INSERT INTO users(username,username_key,email,email_key,password,created,verified) VALUES(?,?,?,?,?,?,?)',(p['username'],p['username_key'],p['email'],p['email_key'],p['password'],now(),now()))
-            user=c.execute('SELECT * FROM users WHERE id=?',(cur.lastrowid,)).fetchone();token=self.new_session(c,user['id']);c.execute('DELETE FROM pending WHERE id=?',(pid,))
+            try:user=store.create_user(p['username'],p['email'],'',verified=True,coins=100,conn=c)
+            except store.DuplicateUser:return self.error(409,'DUPLICATE','Этот ник или email уже зарегистрирован. Используйте вход.')
+            c.execute('UPDATE users SET password=? WHERE id=?',(p['password'],user['id']))  # хеш уже посчитан при регистрации
+            user=store.get_user_by_id(user['id'],conn=c)
+            token=self.new_session(c,user['id']);c.execute('DELETE FROM pending WHERE id=?',(pid,))
         self.reply(200,{'ok':True,'user':public_user(user)},self.cookie(token))
     def resend(self,data):
         if not self.rate('resend',10,3600):return
@@ -220,11 +255,13 @@ class Handler(BaseHTTPRequestHandler):
         if not self.rate('login',20,900):return
         identifier=str(data.get('identifier','')).strip().casefold();password=data.get('password','')
         if not isinstance(password,str) or len(password)>256:return self.error(400,'PASSWORD','Некорректный пароль')
+        messages={'ACCOUNT_NOT_FOUND':(404,'Аккаунт на сервере не найден. Если регистрировались раньше, используйте тот же браузер и адрес сайта.'),
+                  'GOOGLE_LOGIN_REQUIRED':(401,'Для этого аккаунта используйте «Войти через Google». Пароль сайта не создавался.'),
+                  'WRONG_PASSWORD':(401,'Неверный пароль.')}
         with connect() as c:
-            u=c.execute('SELECT * FROM users WHERE username_key=? OR email_key=?',(identifier,identifier)).fetchone()
-            if not u:return self.error(404,'ACCOUNT_NOT_FOUND','Аккаунт на сервере не найден. Если регистрировались раньше, используйте тот же браузер и адрес сайта.')
-            if u['password']=='!google-only':return self.error(401,'GOOGLE_LOGIN_REQUIRED','Для этого аккаунта используйте «Войти через Google». Пароль сайта не создавался.')
-            if not password_ok(password,u['password']):return self.error(401,'WRONG_PASSWORD','Неверный пароль.')
+            try:u=store.authenticate(identifier,password,conn=c)
+            except store.InvalidCredentials as exc:
+                status,msg=messages.get(exc.code,(401,'Не удалось войти.'));return self.error(status,exc.code,msg)
             token=self.new_session(c,u['id'])
         self.reply(200,{'ok':True,'user':public_user(u)},self.cookie(token))
 
