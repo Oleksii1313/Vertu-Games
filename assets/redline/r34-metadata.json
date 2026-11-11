@@ -1,0 +1,196 @@
+{
+  "animationCount": 0,
+  "categories": [
+    {
+      "uid": "22a2f677efad4d7bbca5ad45f9b5868e",
+      "name": "Cars & Vehicles",
+      "slug": "cars-vehicles",
+      "uri": "https://api.sketchfab.com/v3/categories/22a2f677efad4d7bbca5ad45f9b5868e",
+      "icon": "https://static.sketchfab.com/static/builds/web/dist/static/assets/images/icons/categories/45dd0cc0860ac57fcd63bde1cc3f2b7c-v2.svg",
+      "thumbnails": [
+        {
+          "width": "512",
+          "height": "288",
+          "url": "https://static.sketchfab.com/categories/22a2f677efad4d7bbca5ad45f9b5868e/512x288.png"
+        },
+        {
+          "width": "800",
+          "height": "450",
+          "url": "https://static.sketchfab.com/categories/22a2f677efad4d7bbca5ad45f9b5868e/800x450.png"
+        }
+      ]
+    },
+    {
+      "uid": "17d20ca7b35243d4a45171838b50704c",
+      "name": "Science & Technology",
+      "slug": "science-technology",
+      "uri": "https://api.sketchfab.com/v3/categories/17d20ca7b35243d4a45171838b50704c",
+      "icon": "https://static.sketchfab.com/static/builds/web/dist/static/assets/images/icons/categories/86b1bae49e0ed3f43b2d59b26700234e-v2.svg",
+      "thumbnails": [
+        {
+          "width": "512",
+          "height": "288",
+          "url": "https://static.sketchfab.com/categories/17d20ca7b35243d4a45171838b50704c/512x288.png"
+        },
+        {
+          "width": "800",
+          "height": "450",
+          "url": "https://static.sketchfab.com/categories/17d20ca7b35243d4a45171838b50704c/800x450.png"
+        }
+      ]
+    }
+  ],
+  "commentCount": 0,
+  "createdAt": "2026-09-07T12:39:21.475552",
+  "embedUrl": "https://sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/embed",
+  "faceCount": 266060,
+  "isAgeRestricted": false,
+  "license": {
+    "uri": "https://api.sketchfab.com/v3/licenses/322a749bcfa841b29dff1e8a1bb74b0b",
+    "label": "CC Attribution",
+    "fullName": "Creative Commons Attribution",
+    "requirements": "Author must be credited. Commercial use is allowed.",
+    "url": "http://creativecommons.org/licenses/by/4.0/",
+    "slug": "by"
+  },
+  "likeCount": 160,
+  "name": "Nissan R34 Brians Fast Furious | www.vecarz.com",
+  "publishedAt": "2026-09-07T12:44:38.513319",
+  "soundCount": 0,
+  "staffpickedAt": null,
+  "tags": [
+    {
+      "name": "nissan",
+      "slug": "nissan",
+      "uri": "https://api.sketchfab.com/v3/tags/nissan"
+    },
+    {
+      "name": "legends",
+      "slug": "legends",
+      "uri": "https://api.sketchfab.com/v3/tags/legends"
+    },
+    {
+      "name": "fast",
+      "slug": "fast",
+      "uri": "https://api.sketchfab.com/v3/tags/fast"
+    },
+    {
+      "name": "supercar",
+      "slug": "supercar",
+      "uri": "https://api.sketchfab.com/v3/tags/supercar"
+    },
+    {
+      "name": "GTR",
+      "slug": "gtr",
+      "uri": "https://api.sketchfab.com/v3/tags/gtr"
+    },
+    {
+      "name": "r34",
+      "slug": "r34",
+      "uri": "https://api.sketchfab.com/v3/tags/r34"
+    },
+    {
+      "name": "brians",
+      "slug": "brians",
+      "uri": "https://api.sketchfab.com/v3/tags/brians"
+    }
+  ],
+  "thumbnails": {
+    "images": [
+      {
+        "uid": "f884e8e5fa86423db44d40912f73482a",
+        "width": 1920,
+        "height": 1080,
+        "size": 463737,
+        "url": "https://media.sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/thumbnails/2d729be0bd474238b184a9e1acc6d360/6bba7f5258c148fb9da3dcd7cfaf904c.jpeg"
+      },
+      {
+        "uid": "c006e5462e6d4936ba6157ddef537278",
+        "width": 1024,
+        "height": 576,
+        "size": 114623,
+        "url": "https://media.sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/thumbnails/2d729be0bd474238b184a9e1acc6d360/0866f35b94b247a286fb55f2943bbec5.jpeg"
+      },
+      {
+        "uid": "6be3ce3456834ca3bb6986f7f9f3e242",
+        "width": 720,
+        "height": 405,
+        "size": 62435,
+        "url": "https://media.sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/thumbnails/2d729be0bd474238b184a9e1acc6d360/109284990f9943048cba379c0d4f9f28.jpeg"
+      },
+      {
+        "uid": "097fad3d311844b9aa3defb5ebee81d4",
+        "width": 256,
+        "height": 144,
+        "size": 11593,
+        "url": "https://media.sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/thumbnails/2d729be0bd474238b184a9e1acc6d360/353ec0baea11498982d6feeb0210a569.jpeg"
+      },
+      {
+        "uid": "06b05264d1154434afb09e65da960d14",
+        "width": 64,
+        "height": 36,
+        "size": 1775,
+        "url": "https://media.sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/thumbnails/2d729be0bd474238b184a9e1acc6d360/7879ea856ecb4b31990c20c88e42e8d2.jpeg"
+      }
+    ]
+  },
+  "uid": "412aa249c2f548eebf64bdb35f3553af",
+  "uri": "https://api.sketchfab.com/v3/models/412aa249c2f548eebf64bdb35f3553af",
+  "user": {
+    "uid": "3f3128e66b434556a831444e846717c0",
+    "username": "heynic",
+    "displayName": "vecarz",
+    "account": "basic",
+    "profileUrl": "https://sketchfab.com/heynic",
+    "avatar": {
+      "uid": "f6949765a609461a9ea0f49cd8c10ceb",
+      "uri": "https://api.sketchfab.com/v3/avatars/f6949765a609461a9ea0f49cd8c10ceb",
+      "images": [
+        {
+          "width": 32,
+          "height": 32,
+          "size": 1105,
+          "url": "https://media.sketchfab.com/avatars/f6949765a609461a9ea0f49cd8c10ceb/1221ccac1fe045ec988d66a62b34c77a.jpeg"
+        },
+        {
+          "width": 48,
+          "height": 48,
+          "size": 1429,
+          "url": "https://media.sketchfab.com/avatars/f6949765a609461a9ea0f49cd8c10ceb/c1f0ffdc59bd40dca2923ed8ac647069.jpeg"
+        },
+        {
+          "width": 90,
+          "height": 90,
+          "size": 2633,
+          "url": "https://media.sketchfab.com/avatars/f6949765a609461a9ea0f49cd8c10ceb/bbab7000d79c4db6a541270a50aadb4d.jpeg"
+        },
+        {
+          "width": 100,
+          "height": 100,
+          "size": 2879,
+          "url": "https://media.sketchfab.com/avatars/f6949765a609461a9ea0f49cd8c10ceb/de9c7937570941a78862b19cf07b9ee5.jpeg"
+        }
+      ]
+    },
+    "uri": "https://api.sketchfab.com/v3/users/3f3128e66b434556a831444e846717c0"
+  },
+  "vertexCount": 157904,
+  "viewCount": 10261,
+  "viewerUrl": "https://sketchfab.com/3d-models/nissan-r34-brians-fast-furious-wwwvecarzcom-412aa249c2f548eebf64bdb35f3553af",
+  "isDownloadable": true,
+  "isProtected": false,
+  "description": "Credit [Ddiaz Design] https://sketchfab.com/3d-models/1999-nissan-skyline-gtr-r34-c-west-2f2f-38247650e5b94f2ea28e2638dce5572a\nThank you bro, that is a legend model!\ncredit [DRIVER-FIRE] https://sketchfab.com/3d-models/brians-r34-from-2-fast-2-furious-c424e4f18c9742d296920f069d139b45\nThank you bro, that is a legend model!",
+  "price": null,
+  "downloadCount": 2519,
+  "editorUrl": "https://sketchfab.com/models/412aa249c2f548eebf64bdb35f3553af/edit",
+  "status": {
+    "warning": {},
+    "processing": "SUCCEEDED"
+  },
+  "source": "website",
+  "hasCommentsDisabled": true,
+  "updatedAt": "2026-09-15T01:50:36.282079",
+  "pbrType": "metalness",
+  "textureCount": 31,
+  "materialCount": 37
+}
