@@ -18,7 +18,6 @@ REQUIRED_ENTRIES = (
     "assets/www/admin.html", "assets/www/about.html", "assets/www/support.html",
     "assets/www/api.html", "assets/www/privacy.html",
     "assets/www/assets/redline/car-pack.glb", "assets/www/assets/redline/gt-r34.glb",
-    "assets/www/assets/redline/meshes.json.gz", "assets/www/assets/redline/surface.json.gz",
 )
 
 

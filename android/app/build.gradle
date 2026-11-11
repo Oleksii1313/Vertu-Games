@@ -21,6 +21,10 @@ tasks.register('syncWebAssets', Sync) {
         include 'coin.svg'
         include 'games/**'
         include 'assets/**'
+        // Build-time collision/surface JSON is retained in the source tree and
+        // validated separately; the standalone Redline page does not fetch it.
+        exclude 'assets/redline/meshes.json.gz'
+        exclude 'assets/redline/surface.json.gz'
     }
     into(generatedWebAssets.map { it.dir('www') })
 }

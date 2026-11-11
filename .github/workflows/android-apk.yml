@@ -155,10 +155,21 @@ jobs:
           if-no-files-found: ignore
           retention-days: 2
 
-      - name: Upload installable APK and build metadata
+      - name: Upload installable APK
         uses: actions/upload-artifact@v7
         with:
-          name: VertGames-1.0.0-APK
-          path: ${{ runner.temp }}/vertgames-release/*
+          name: VertGames-1.0.0-release.apk
+          path: ${{ runner.temp }}/vertgames-release/VertGames-1.0.0-release.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build metadata and checksum
+        uses: actions/upload-artifact@v7
+        with:
+          name: VertGames-1.0.0-build-info
+          path: |
+            ${{ runner.temp }}/vertgames-release/VertGames-1.0.0-release.apk.sha256
+            ${{ runner.temp }}/vertgames-release/build-info.txt
           if-no-files-found: error
           retention-days: 30
