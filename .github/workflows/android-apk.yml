@@ -88,7 +88,25 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build release APK
-        run: gradle --no-daemon --stacktrace -p android clean assembleRelease
+        shell: bash
+        run: |
+          set +e
+          gradle --no-daemon --stacktrace -p android clean assembleRelease 2>&1 | tee "$RUNNER_TEMP/gradle-build.log"
+          build_status=${PIPESTATUS[0]}
+          if [ "$build_status" -ne 0 ]; then
+            details="$(tail -n 45 "$RUNNER_TEMP/gradle-build.log" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g' | cut -c1-8000)"
+            echo "::error title=Gradle build failure::$details"
+            exit "$build_status"
+          fi
+
+      - name: Attach Gradle log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vertgames-gradle-failure-log
+          path: ${{ runner.temp }}/gradle-build.log
+          if-no-files-found: ignore
+          retention-days: 2
 
       - name: Verify package, assets, version, and signature
         shell: bash
