@@ -1,0 +1,207 @@
+{
+  "animationCount": 0,
+  "categories": [
+    {
+      "uid": "22a2f677efad4d7bbca5ad45f9b5868e",
+      "name": "Cars & Vehicles",
+      "slug": "cars-vehicles",
+      "uri": "https://api.sketchfab.com/v3/categories/22a2f677efad4d7bbca5ad45f9b5868e",
+      "icon": "https://static.sketchfab.com/static/builds/web/dist/static/assets/images/icons/categories/45dd0cc0860ac57fcd63bde1cc3f2b7c-v2.svg",
+      "thumbnails": [
+        {
+          "width": "512",
+          "height": "288",
+          "url": "https://static.sketchfab.com/categories/22a2f677efad4d7bbca5ad45f9b5868e/512x288.png"
+        },
+        {
+          "width": "800",
+          "height": "450",
+          "url": "https://static.sketchfab.com/categories/22a2f677efad4d7bbca5ad45f9b5868e/800x450.png"
+        }
+      ]
+    }
+  ],
+  "commentCount": 115,
+  "createdAt": "2017-08-13T23:15:07.706666",
+  "embedUrl": "https://sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/embed",
+  "faceCount": 69312,
+  "isAgeRestricted": false,
+  "license": {
+    "uri": "https://api.sketchfab.com/v3/licenses/322a749bcfa841b29dff1e8a1bb74b0b",
+    "label": "CC Attribution",
+    "fullName": "Creative Commons Attribution",
+    "requirements": "Author must be credited. Commercial use is allowed.",
+    "url": "http://creativecommons.org/licenses/by/4.0/",
+    "slug": "by"
+  },
+  "likeCount": 2238,
+  "name": "Generic passenger car pack",
+  "publishedAt": "2017-08-15T00:13:06.171676",
+  "soundCount": 0,
+  "staffpickedAt": "2017-08-15T16:01:31.943153",
+  "tags": [
+    {
+      "name": "cars",
+      "slug": "cars",
+      "uri": "https://api.sketchfab.com/v3/tags/cars"
+    },
+    {
+      "name": "set",
+      "slug": "set",
+      "uri": "https://api.sketchfab.com/v3/tags/set"
+    },
+    {
+      "name": "urban",
+      "slug": "urban",
+      "uri": "https://api.sketchfab.com/v3/tags/urban"
+    },
+    {
+      "name": "generic",
+      "slug": "generic",
+      "uri": "https://api.sketchfab.com/v3/tags/generic"
+    },
+    {
+      "name": "pack",
+      "slug": "pack",
+      "uri": "https://api.sketchfab.com/v3/tags/pack"
+    },
+    {
+      "name": "props",
+      "slug": "props",
+      "uri": "https://api.sketchfab.com/v3/tags/props"
+    },
+    {
+      "name": "civilian",
+      "slug": "civilian",
+      "uri": "https://api.sketchfab.com/v3/tags/civilian"
+    },
+    {
+      "name": "render",
+      "slug": "render",
+      "uri": "https://api.sketchfab.com/v3/tags/render"
+    },
+    {
+      "name": "unity",
+      "slug": "unity",
+      "uri": "https://api.sketchfab.com/v3/tags/unity"
+    },
+    {
+      "name": "low-poly",
+      "slug": "low-poly",
+      "uri": "https://api.sketchfab.com/v3/tags/low-poly"
+    },
+    {
+      "name": "asset",
+      "slug": "asset",
+      "uri": "https://api.sketchfab.com/v3/tags/asset"
+    },
+    {
+      "name": "vehicle",
+      "slug": "vehicle",
+      "uri": "https://api.sketchfab.com/v3/tags/vehicle"
+    },
+    {
+      "name": "car",
+      "slug": "car",
+      "uri": "https://api.sketchfab.com/v3/tags/car"
+    }
+  ],
+  "thumbnails": {
+    "images": [
+      {
+        "uid": "df032c8b79214993aa7832f76e9190e4",
+        "width": 1920,
+        "height": 1080,
+        "size": 451473,
+        "url": "https://media.sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/thumbnails/0c4ea7182f24445da4da30e7d6b3faa9/bd395d5361b4498a8589d02b037929e5.jpeg"
+      },
+      {
+        "uid": "7e39ffa031984d099c0d065a33bd1073",
+        "width": 1024,
+        "height": 576,
+        "size": 83954,
+        "url": "https://media.sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/thumbnails/0c4ea7182f24445da4da30e7d6b3faa9/2d6b22491a0c405c8349997e6dbd638d.jpeg"
+      },
+      {
+        "uid": "d75ec5c129724cf0b1592b182bb8121d",
+        "width": 720,
+        "height": 405,
+        "size": 43877,
+        "url": "https://media.sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/thumbnails/0c4ea7182f24445da4da30e7d6b3faa9/2c73a8e90b5748c9bb9d153906bdf190.jpeg"
+      },
+      {
+        "uid": "d716e287937f4af384f0c55e6320da4c",
+        "width": 256,
+        "height": 144,
+        "size": 8234,
+        "url": "https://media.sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/thumbnails/0c4ea7182f24445da4da30e7d6b3faa9/9c650f2ea36146ebab227d7c3cef2720.jpeg"
+      },
+      {
+        "uid": "d2ddd424a711469f9fc95189da8c3d55",
+        "width": 64,
+        "height": 36,
+        "size": 1240,
+        "url": "https://media.sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/thumbnails/0c4ea7182f24445da4da30e7d6b3faa9/f45f3c3c1d0a49d8a00aa096a3801d9d.jpeg"
+      }
+    ]
+  },
+  "uid": "20f9af9b8a404d5cb022ac6fe87f21f5",
+  "uri": "https://api.sketchfab.com/v3/models/20f9af9b8a404d5cb022ac6fe87f21f5",
+  "user": {
+    "uid": "b3d557b8090940e69b5ca9524e9681b7",
+    "username": "comrade1280",
+    "displayName": "Comrade1280",
+    "account": "basic",
+    "profileUrl": "https://sketchfab.com/comrade1280",
+    "avatar": {
+      "uid": "7aba38aaae894511ba4610deadabed78",
+      "uri": "https://api.sketchfab.com/v3/avatars/7aba38aaae894511ba4610deadabed78",
+      "images": [
+        {
+          "width": 100,
+          "height": 100,
+          "size": 1023,
+          "url": "https://media.sketchfab.com/avatars/7aba38aaae894511ba4610deadabed78/8f8849c89018414b96acfb14a952e743.jpeg"
+        },
+        {
+          "width": 32,
+          "height": 32,
+          "size": 474,
+          "url": "https://media.sketchfab.com/avatars/7aba38aaae894511ba4610deadabed78/07e9955e3bef4f35a8b4c06fc22df3b1.jpeg"
+        },
+        {
+          "width": 48,
+          "height": 48,
+          "size": 599,
+          "url": "https://media.sketchfab.com/avatars/7aba38aaae894511ba4610deadabed78/2e54f6bd81524be9862b1eae58bb76b6.jpeg"
+        },
+        {
+          "width": 90,
+          "height": 90,
+          "size": 916,
+          "url": "https://media.sketchfab.com/avatars/7aba38aaae894511ba4610deadabed78/5e94c52e8aa14be290cd03627652572b.jpeg"
+        }
+      ]
+    },
+    "uri": "https://api.sketchfab.com/v3/users/b3d557b8090940e69b5ca9524e9681b7"
+  },
+  "vertexCount": 41463,
+  "viewCount": 227786,
+  "viewerUrl": "https://sketchfab.com/3d-models/generic-passenger-car-pack-20f9af9b8a404d5cb022ac6fe87f21f5",
+  "isDownloadable": true,
+  "isProtected": false,
+  "description": "Low-poly (under 8k) pack of generic passenger vehicles.\n\n\nSuitable for exterior landscape renderings and can be used in gamedev as props or in mobile games as player vehicle.\n\nAll cars are bearing minimum to none similarities to real life cars and completly  trademark clame proof.\n\nSpecs are:\nsedan - 7122 tris.\nwagon - 6982 tris.\nhatchback - 6808 tris.\ncompact - 7257 tris.\ncoupe - 6022 tris.\nminivan - 7450 tris.\nsport - 6268 tris.\npickup - 6918 tris.\nSUV - 7951 tris.\noffroad - 6502 tris. \n\nEach car has 6 different colors texture, metallic, glossiness and opacity, also, they can be rendered without textures at all using only material color or vertex paint.\n\n\n\nFor the best picture, please, switch viewer to HD texture.",
+  "price": null,
+  "downloadCount": 80808,
+  "editorUrl": "https://sketchfab.com/models/20f9af9b8a404d5cb022ac6fe87f21f5/edit",
+  "status": {
+    "warning": {},
+    "processing": "SUCCEEDED"
+  },
+  "source": "website",
+  "hasCommentsDisabled": false,
+  "updatedAt": "2022-07-20T20:02:20.927686",
+  "pbrType": "metalness",
+  "textureCount": 57,
+  "materialCount": 41
+}

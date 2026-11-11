@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Flappy Bird — VertGames</title>
+
+<style>
+  :root{--bg:#1a2230;--surface:#202a3a;--card:#1b2432;--card2:#24303f;--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);
+    --text:#f3f7fb;--muted:#a7b7ca;--teal:#2b99a0;--blue:#2f63a8;--blue2:#2f4898;--indigo:#3730a0;
+    --grad:linear-gradient(135deg,#2b99a0 0%,#2f63a8 55%,#3730a0 100%);--shadow:0 14px 40px rgba(0,0,0,.4);
+    --head:"Oswald",-apple-system,"Segoe UI",sans-serif;--body:"Lato",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  .info{display:flex;justify-content:space-around;gap:8px;padding:12px 16px;background:rgba(13,20,32,.85);border-bottom:1px solid var(--line)}
+  .stat{text-align:center}
+  .stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
+  .stat .v{font-size:20px;font-weight:800;color:var(--teal)}
+  canvas{flex:1;width:100%;display:block;cursor:pointer}
+  .controls{display:flex;justify-content:center;gap:14px;padding:14px;border-top:1px solid var(--line)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font:inherit;font-weight:800;border-radius:12px;padding:14px 40px;font-size:18px;color:#fff;background:var(--grad);transition:.15s}
+  .btn:active{transform:translateY(2px)}
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,9,15,.72);backdrop-filter:blur(6px);z-index:100}
+  .overlay.show{display:flex}
+  .panel{width:min(92vw,380px);background:var(--surface);border:1px solid var(--line2);border-radius:18px;padding:30px;text-align:center;box-shadow:var(--shadow);animation:pop .3s ease}
+  @keyframes pop{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .panel h2{font-size:28px;margin:0 0 6px;color:var(--teal)}
+  .panel .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+  .row{display:flex;justify-content:space-between;padding:11px 14px;background:var(--card2);border-radius:10px;margin-bottom:8px;font-size:15px}
+  .row .k{color:var(--muted)}.row .v{font-weight:800;color:var(--teal)}
+  .earn{font-size:24px;font-weight:900;color:var(--teal);margin:14px 0 20px}
+  .btns{display:flex;gap:10px}
+  .btns .btn{flex:1;padding:12px;font-size:14px}
+  .btn.ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+  .msg{color:var(--muted);font-size:13px;margin-top:12px;min-height:16px}
+  h1,h2,h3,h4{font-family:var(--head);letter-spacing:.5px}
+
+  /* anti-cheat window monitor */
+  .cheat-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(6,9,15,.88);backdrop-filter:blur(4px);text-align:center;padding:20px}
+  .cheat-overlay.show{display:flex}
+  .cheat-box{max-width:360px}
+  .cheat-box .ic{font-size:44px;margin-bottom:12px}
+  .cheat-box h3{margin:0 0 10px;font-size:22px;font-family:var(--head);color:var(--text)}
+  .cheat-box p{color:var(--muted);font-size:14px;margin:0 0 6px;font-family:var(--body)}
+
+</style>
+<style id="game-controls-style">
+/* Responsive play area and reachable controls; no control is hidden on mobile. */
+html{height:100%;overflow:hidden;overscroll-behavior:none}
+body{height:100vh;height:100dvh;width:100%;min-height:0;overscroll-behavior:none}
+body>canvas{flex:1 1 0%;height:0;min-height:0;width:100%;touch-action:none}
+.info{flex-shrink:0;min-height:62px;padding:10px calc(64px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px));gap:6px;align-items:center}
+.info .stat{flex:1;min-width:0}.info .stat .l{display:block;white-space:nowrap;font-size:9px;letter-spacing:.7px}.info .stat .v{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:17px}
+.controls{flex-shrink:0;position:relative;z-index:2;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px calc(12px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));background:#16202e;border-top:1px solid var(--line)}
+.controls button{min-width:52px;min-height:54px;width:auto;height:54px;padding:8px 14px;border:1px solid #ffffff2b;border-radius:13px;background:var(--card2);color:var(--text);font:700 13px var(--body);display:flex;align-items:center;justify-content:center;gap:8px;touch-action:none;-webkit-touch-callout:none;cursor:pointer;flex-shrink:0}
+.controls button:active,.controls button.pressed{background:#35677a;border-color:#79c8c7;transform:translateY(1px)}
+.controls button:focus-visible{outline:2px solid #8de0d2;outline-offset:2px}
+.controls button svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;flex-shrink:0}
+.controls button.primary-action{background:var(--grad);border-color:transparent;color:white;min-width:116px}
+.controls #btnAuto[aria-pressed="true"]{border-color:#69c8ae;background:#224d4d;color:#b6f5df}
+.controls #btnAuto{font-size:11px;min-width:60px;flex-direction:column;gap:2px}
+.control-group{display:flex;gap:8px}
+body[data-game="platformer"] .controls,body[data-game="shooter"] .controls{justify-content:space-between}
+body[data-game="flappy"] #btnJump{width:min(100%,320px)}
+body[data-game="pong"] .controls button{width:min(38vw,180px)}
+.help,body>.hint{flex-shrink:0;margin:0;font-size:11px;padding:4px 12px 8px;text-align:center}
+.board,.board-wrap{flex:1 1 0%;min-width:0;min-height:0;overflow:hidden;padding:10px;display:flex;align-items:center;justify-content:center}
+.board canvas,.board-wrap canvas{flex:none;aspect-ratio:1;max-width:none;max-height:none;touch-action:none}
+.controls .dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:5px}
+.controls .dpad button{width:52px;height:52px;min-width:0;min-height:0;padding:8px}.controls .dpad .empty{pointer-events:none}
+.controls .dpad #btnUp{grid-area:1/2}.controls .dpad #btnLeft{grid-area:2/1}.controls .dpad #btnDown{grid-area:3/2}.controls .dpad #btnRight{grid-area:2/3}.controls .dpad #btnPause,.controls .dpad #btnReset{grid-area:2/2}
+.muted{top:72px;right:12px;width:44px;height:44px;touch-action:manipulation}
+.overlay{padding:64px 12px 16px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}
+.overlay .panel{flex-shrink:0;margin:auto;padding:22px;max-height:calc(100vh - 80px);max-height:calc(100dvh - 80px);overflow-y:auto;touch-action:pan-y}
+.overlay .btns .btn{min-height:48px;touch-action:manipulation}
+@media(max-width:420px){
+ .info .stat .l{font-size:8px;letter-spacing:.2px}.info .stat .v{font-size:14px}.info .stat .hearts{font-size:11px;letter-spacing:0}
+ .controls{gap:8px;padding-left:10px;padding-right:10px}.controls button{min-width:48px;padding:8px 10px;gap:5px}.controls button.primary-action{min-width:104px}
+ .control-group{gap:6px}body[data-game="shooter"] .controls{gap:6px}body[data-game="shooter"] .primary-action{min-width:94px;font-size:12px}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .info{min-height:56px;padding-top:6px;padding-bottom:6px}.info .stat .v{font-size:15px}
+ .controls{padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));gap:12px}.controls button{height:48px;min-height:48px}
+ .help,body>.hint{display:none}.muted{top:64px}
+ body[data-game="snake"],body[data-game="game2048"]{display:grid;grid-template-columns:minmax(0,1fr) 190px;grid-template-rows:56px minmax(0,1fr)}
+ body[data-game="snake"]>.info,body[data-game="game2048"]>.info{grid-area:1/1/2/3}
+ .board,.board-wrap{grid-area:2/1;align-self:stretch;padding:8px}
+ body[data-game="snake"]>.controls,body[data-game="game2048"]>.controls{grid-area:2/2;padding:8px;border-top:0;border-left:1px solid var(--line);height:100%}
+ .controls .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px)}.controls .dpad button{width:50px;height:50px}
+}
+
+</style>
+<script id="game-controls-runtime">
+/* Shared pointer controls for the six 2D games. No synthetic keyboard events. */
+(function(){
+ 'use strict';
+ const releases=new Set();
+ const enabled=()=>!window.cheatPaused&&!document.querySelector('.overlay.show,.cheat-overlay.show');
+ function element(id){return typeof id==='string'?document.getElementById(id):id}
+ function hold(id,change){const b=element(id);let pointer=null,active=false;
+  function release(){if(!active)return;active=false;pointer=null;b.classList.remove('pressed');change(false)}
+  b.addEventListener('pointerdown',e=>{if(e.button!==0||pointer!==null||!enabled())return;e.preventDefault();pointer=e.pointerId;active=true;b.setPointerCapture(e.pointerId);b.classList.add('pressed');change(true)});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,e=>{if(e.pointerId===pointer)release()});
+  // Keyboard activation of a focused on-screen button is also supported.
+  b.addEventListener('keydown',e=>{if((e.code==='Space'||e.code==='Enter')&&!e.repeat&&enabled()){e.preventDefault();active=true;change(true);b.classList.add('pressed')}});
+  b.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='Enter'){e.preventDefault();release()}});
+  releases.add(release);return release;
+ }
+ function tap(id,action,allowOverlay=false){const b=element(id);let pointer=null;
+  const allowed=()=>allowOverlay||enabled();
+  function release(){pointer=null;b.classList.remove('pressed')}
+  b.addEventListener('pointerdown',e=>{if(e.button!==0||pointer!==null||!allowed())return;e.preventDefault();pointer=e.pointerId;b.setPointerCapture(e.pointerId);b.classList.add('pressed');action()});
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,e=>{if(e.pointerId===pointer)release()});
+  b.addEventListener('click',e=>{if(e.detail===0&&allowed())action()});
+  releases.add(release);
+ }
+ function swipe(id,action){const c=element(id);let point=null;
+  c.addEventListener('pointerdown',e=>{if(!enabled()||point)return;e.preventDefault();point={id:e.pointerId,x:e.clientX,y:e.clientY};c.setPointerCapture(e.pointerId)});
+  c.addEventListener('pointerup',e=>{if(!point||point.id!==e.pointerId)return;const dx=e.clientX-point.x,dy=e.clientY-point.y;point=null;if(!enabled()||Math.max(Math.abs(dx),Math.abs(dy))<22)return;action(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'))});
+  for(const event of ['pointercancel','lostpointercapture'])c.addEventListener(event,e=>{if(point?.id===e.pointerId)point=null});
+  releases.add(()=>point=null);
+ }
+ function reset(){for(const release of releases)release()}
+ function fitSquare(c){const wrap=c.parentElement,style=getComputedStyle(wrap);const w=wrap.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),h=wrap.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);const size=Math.max(1,Math.floor(Math.min(w,h,560)));c.style.width=c.style.height=size+'px'}
+ window.VGInput={hold,tap,swipe,reset,fitSquare};
+ addEventListener('blur',reset);addEventListener('resize',reset);document.addEventListener('visibilitychange',reset);
+ document.addEventListener('DOMContentLoaded',()=>{
+  for(const overlay of document.querySelectorAll('.overlay,.cheat-overlay'))new MutationObserver(()=>{if(overlay.classList.contains('show'))reset()}).observe(overlay,{attributes:true,attributeFilter:['class']});
+  const square=document.querySelector('.board canvas,.board-wrap canvas');if(square){fitSquare(square);new ResizeObserver(()=>fitSquare(square)).observe(square.parentElement)}
+ });
+})();
+
+</script>
+</head>
+<body data-game="flappy">
+<div class="info">
+  <div class="stat"><span class="l">SCORE</span><span class="v" id="scoreVal">0</span></div>
+  <div class="stat"><span class="l">BEST</span><span class="v" id="bestVal">0</span></div>
+  <div class="stat"><span class="l">COINS</span><span class="v" id="coinsVal">0 V</span></div>
+</div>
+<canvas id="c"></canvas>
+<div class="controls" aria-label="Управление игрой"><button type="button" id="btnJump" class="primary-action" aria-label="Взмах"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v14"/></svg><span>Взмах</span></button></div>
+
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <h2>GAME OVER</h2>
+    <p class="sub" id="sub">Не повезло!</p>
+    <div class="row"><span class="k">Score</span><span class="v" id="fScore">0</span></div>
+    <div class="row"><span class="k">Best</span><span class="v" id="fBest">0</span></div>
+    <div class="earn" id="fEarn">+0 V</div>
+    <div class="btns">
+      <button class="btn" onclick="restart()">Играть снова</button>
+      <button class="btn ghost" onclick="goHome()">Домой</button>
+    </div>
+    <p class="msg" id="fMsg"></p>
+  </div>
+</div>
+
+<script>
+window.cheatPaused=false;(function(){var MIN_W=320,MIN_H=240;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?'Окно свёрнуто или скрыто':'Размер окна ниже допустимого'}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
+</script>
+<script>
+
+
+const LS=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch(e){return null}};
+let score=0,coins=0,best=Number(LS('nl_best_flappy'))||0,running=false;
+const scan=document.getElementById('c'),ctx=scan.getContext('2d');
+let bird,pipes,groundX,frame,stars,particles;
+function size(){const oldHeight=scan.height;scan.width=scan.clientWidth;scan.height=scan.clientHeight;
+  if(bird&&oldHeight>50){const ratio=(scan.height-50)/(oldHeight-50),maxY=scan.height-50;
+    bird.y=Math.max(bird.r+2,Math.min(maxY-bird.r-2,bird.y*ratio));
+    for(const p of pipes){const gap=Math.min(150,Math.max(70,(p.botY-p.topY)*ratio)),center=Math.max(gap/2+16,Math.min(maxY-gap/2-16,(p.topY+p.botY)/2*ratio));p.topY=center-gap/2;p.botY=center+gap/2}
+  }
+}
+size();window.addEventListener('resize',size);
+
+function init(){
+  resizeCanvas();bird={x:80,y:scan.height/2,vy:0,r:16,rot:0,wing:0};pipes=[];groundX=0;frame=0;score=0;particles=[];
+  stars=Array.from({length:60},()=>({x:Math.random()*scan.width,y:Math.random()*scan.height,s:Math.random()*1.6+.4}));
+  document.getElementById('scoreVal').textContent=0;running=true;
+}
+function resizeCanvas(){size()}
+const bestEl=document.getElementById('bestVal');bestEl.textContent=best;
+const coinsEl=document.getElementById('coinsVal');
+function jump(){if(running){bird.vy=-6.8;bird.rot=-.45}}
+VGInput.tap('btnJump',jump);VGInput.tap(scan,jump);
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();jump()}});
+function addPipe(){const playable=scan.height-50,gap=Math.min(150,Math.max(70,playable*.45));const topY=24+Math.random()*Math.max(0,playable-gap-48);pipes.push({x:scan.width,topY:topY,botY:topY+gap,w:64,passed:false});}
+const saveBest=()=>{if(score>best){best=score;LS('nl_best_flappy',best);bestEl.textContent=best}};
+function update(){
+  if(window.cheatPaused)return;
+  if(!running)return;
+  bird.vy+=.34;bird.y+=bird.vy;bird.wing=Math.sin(frame*.2)*6;
+  if(bird.vy>0)bird.rot=Math.min(Math.PI/2,bird.rot+.05);
+  if(bird.y+bird.r>scan.height-50||bird.y-bird.r<0)return gameOver();
+  if(frame%95===0)addPipe();
+  for(let i=pipes.length-1;i>=0;i--){const p=pipes[i];p.x-=2.6;
+    if(!p.passed&&p.x+p.w<bird.x){p.passed=true;score++;document.getElementById('scoreVal').textContent=score;addCoin(1)}
+    if(bird.x+bird.r-5>p.x&&bird.x-bird.r+5<p.x+p.w){if(bird.y-bird.r+5<p.topY||bird.y+bird.r-5>p.botY)return gameOver()}
+    if(p.x+p.w<-100)pipes.splice(i,1);}
+  groundX=(groundX-2.6)%24;frame++;
+}
+function addCoin(n){coins+=n;coinsEl.textContent=coins+' V';if(window.parent!==window){try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}}
+function gameOver(){running=false;saveBest();document.getElementById('fScore').textContent=score;
+  document.getElementById('fBest').textContent=best;document.getElementById('fEarn').textContent='+'+coins+' V';
+  burst(bird.x,bird.y);document.getElementById('overlay').classList.add('show');try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}}
+function restart(){document.getElementById('overlay').classList.remove('show');init()}
+function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
+function burst(x,y){for(let i=0;i<26;i++)particles.push({x,y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,life:1,c:Math.random()>.5?'#2b99a0':'#3730a0'})}
+function draw(){
+  const g=ctx.createLinearGradient(0,0,0,scan.height);g.addColorStop(0,'#202a3a');g.addColorStop(1,'#1a2230');ctx.fillStyle=g;ctx.fillRect(0,0,scan.width,scan.height);
+  ctx.fillStyle='rgba(255,255,255,.30)';stars.forEach(s=>{ctx.fillRect(s.x,s.y,s.s,s.s)});
+  pipes.forEach(p=>{
+    const grad=ctx.createLinearGradient(p.x,0,p.x+p.w,0);grad.addColorStop(0,'#2f4898');grad.addColorStop(.5,'#2f63a8');grad.addColorStop(1,'#2f4898');
+    ctx.fillStyle=grad;ctx.fillRect(p.x,0,p.w,p.topY);ctx.fillRect(p.x-6,p.topY-24,p.w+12,24);
+    ctx.fillRect(p.x,p.botY,p.w,scan.height-p.botY);ctx.fillRect(p.x-6,p.botY,p.w+12,24);
+    ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(p.x+5,0,6,p.topY);ctx.fillRect(p.x+5,p.botY,6,scan.height-p.botY);
+  });
+  ctx.fillStyle='#1a2434';ctx.fillRect(0,scan.height-50,scan.width,50);
+  ctx.fillStyle='#2b99a0';ctx.fillRect(0,scan.height-50,scan.width,3);
+  ctx.strokeStyle='rgba(41,136,142,.35)';for(let x=groundX;x<scan.width;x+=24){ctx.strokeRect(x,scan.height-50,24,50)}
+  ctx.save();ctx.translate(bird.x,bird.y);ctx.rotate(bird.rot);
+  ctx.fillStyle='#2b99a0';ctx.strokeStyle='#10161f';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(0,0,bird.r,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(-5,bird.wing,10,7,-.2,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(6,-5,6,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#10161f';ctx.beginPath();ctx.arc(8,-5,2.4,0,7);ctx.fill();
+  ctx.fillStyle='#2f63a8';ctx.beginPath();ctx.moveTo(10,0);ctx.lineTo(22,5);ctx.lineTo(10,10);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.1;p.life-=.03;ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,4,4)});ctx.globalAlpha=1;
+  particles=particles.filter(p=>p.life>0);
+}
+function loop(){update();draw();requestAnimationFrame(loop)}
+init();loop();
+</script>
+<div class="cheat-overlay" id="cheatOverlay"><div class="cheat-box"><div class="ic">🛡</div><h3>Окно слишком маленькое</h3><p class="ch-why">Игра приостановлена — размер окна ниже допустимого.</p><p>Разверни окно или вернись на вкладку, чтобы продолжить.</p></div></div>
+</body>
+</html>

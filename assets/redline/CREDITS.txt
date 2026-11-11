@@ -1,0 +1,30 @@
+3D models used in Idle Car Empire
+=================================
+
+gt-r34.glb — the MC GT platform (Performance car)
+  Original: "Nissan R34 Brians Fast Furious | www.vecarz.com" by vecarz
+  https://sketchfab.com/heynic
+  https://sketchfab.com/3d-models/nissan-r34-brians-fast-furious-wwwvecarzcom-412aa249c2f548eebf64bdb35f3553af
+  Licence: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+
+  Changes: geometry simplified and meshopt-compressed, textures resized to
+  512 px WebP (gltf-transform optimize). In the game the badges and the
+  manufacturer plate are hidden; the body is repainted only when the player
+  picks a colour. Not affiliated with or endorsed by Nissan or the makers of
+  the Fast & Furious films; all trademarks belong to their owners.
+
+car-pack.glb — City Car, Sedan, SUV, Luxury, Supercar, Sports Car, Hypercar and
+  Electric platforms, and the street traffic (compact, minivan, off-roader, pickup, wagon)
+  Original: "Generic passenger car pack" by Comrade1280
+  https://sketchfab.com/comrade1280
+  https://sketchfab.com/3d-models/generic-passenger-car-pack-20f9af9b8a404d5cb022ac6fe87f21f5
+  Licence: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+
+  Changes: meshopt-compressed, textures resized to 512 px WebP (gltf-transform
+  optimize); two textures of the Wagon body, missing from the received file,
+  replaced with plain grey. In the game each car is taken out of the pack,
+  straightened and scaled, and its paint texture is turned grey so the body
+  can be painted in the game's colours.
+
+Every model here allows commercial use (CC BY 4.0). Models under a
+non-commercial licence (CC BY-NC) are not used: the Android app shows ads.

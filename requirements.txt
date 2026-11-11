@@ -1,0 +1,3 @@
+# Required only for Google sign-in. Email-code auth still uses Python stdlib.
+google-auth>=2.40,<3
+requests>=2.32.5,<3

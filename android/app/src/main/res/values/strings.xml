@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">VertGames</string>
+    <string name="exit_title">Leave VertGames?</string>
+    <string name="exit_message">Your games and local progress will stay saved on this device.</string>
+    <string name="stay">Stay</string>
+    <string name="exit">Exit</string>
+    <string name="retry">Retry</string>
+    <string name="load_error_title">VertGames could not start</string>
+    <string name="load_error_message">The game library is bundled with the app. Restart VertGames or reinstall it if the problem continues.</string>
+</resources>

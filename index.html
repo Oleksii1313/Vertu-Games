@@ -1,0 +1,1352 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VertGames — Играй в стиле будущего</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Lato:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+  :root{
+    --bg:#1a2230; --surface:#202a3a; --card:#1b2432; --card2:#24303f;
+    --line:rgba(255,255,255,.10); --line2:rgba(255,255,255,.16);
+    --text:#f3f7fb; --muted:#a7b7ca;
+    --teal:#2b99a0; --blue:#2f63a8; --blue2:#2f4898; --indigo:#3730a0;
+    --grad:linear-gradient(135deg,#2b99a0 0%,#2f63a8 55%,#3730a0 100%);
+    --radius:14px;
+    --shadow:0 14px 40px rgba(0,0,0,.4);
+    --head:"Oswald",-apple-system,"Segoe UI",sans-serif;
+    --body:"Lato",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-x:hidden}
+  body{font-family:var(--body);
+    background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4,.logo-text,.stat b,.page-head h1{font-family:var(--head)!important;letter-spacing:.5px}
+  .en{display:none}
+  body[lang="en"] .ru{display:none}
+  body[lang="en"] .en{display:inline}
+
+  .bg{position:fixed;inset:0;z-index:-2;background:
+    radial-gradient(900px 600px at 15% -10%,rgba(52,168,176,.10),transparent 60%),
+    radial-gradient(900px 600px at 88% 6%,rgba(66,58,176,.12),transparent 60%),
+    radial-gradient(700px 500px at 55% 112%,rgba(58,116,184,.08),transparent 60%),
+    var(--bg);}
+  .bg-grid{position:fixed;inset:0;z-index:-1;opacity:.4;
+    background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+    background-size:48px 48px;
+    -webkit-mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 80%);mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 80%);}
+
+  .header{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:14px 26px;
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(10,14,22,.78);border-bottom:1px solid var(--line);}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);font-weight:800;letter-spacing:.4px;flex-shrink:0;}
+  .logo-icon{width:30px;height:30px;display:grid;place-items:center;background:transparent;}
+  .logo-text{font-size:18px}
+  .logo-text span{color:var(--teal)}
+  .nav{display:flex;gap:4px;margin:0 auto;}
+  .nav a{color:var(--muted);text-decoration:none;padding:8px 12px;border-radius:9px;font-size:14px;font-weight:600;transition:.2s;white-space:nowrap;flex-shrink:0;}
+  .nav a:hover{color:var(--text);background:var(--card2)}
+  .nav a.active{color:var(--text);background:var(--card2)}
+  .label-ru,body[lang="en"] .label-en{display:inline}
+  .label-en,body[lang="en"] .label-ru{display:none}
+
+  .header-actions{display:flex;align-items:center;gap:9px;margin-left:auto;flex-shrink:0;}
+  .coin{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;background:var(--card2);
+    border:1px solid var(--line);font-weight:700;font-size:14px;white-space:nowrap;}
+  .btn-icon{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:17px;cursor:pointer;transition:.2s;}
+  .btn-icon:hover{background:var(--card2)}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font:inherit;font-weight:700;border-radius:10px;padding:10px 18px;transition:.2s;font-size:14px;}
+  .btn-primary{background:var(--grad);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.15)}
+  .btn-lg{padding:14px 26px;font-size:16px;border-radius:12px}
+  .btn-ghost{background:var(--card2);color:var(--text);border:1px solid var(--line);}
+  .btn-ghost:hover{background:#132032;border-color:var(--line2)}
+  .btn-danger{background:rgba(66,58,176,.25);color:#c9c4ef;border:1px solid rgba(66,58,176,.4)}
+
+  .lang-switch{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .lang-switch button{background:transparent;border:none;color:var(--muted);padding:8px 12px;cursor:pointer;font-weight:700;font-size:13px}
+  .lang-switch button.on{color:#fff;background:var(--grad)}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:36px 24px 80px;}
+
+  .hero{text-align:center;padding:60px 10px 40px;position:relative;}
+  .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;
+    border:1px solid var(--line2);background:var(--card2);color:var(--muted);font-size:13px;font-weight:600;}
+  .badge .pulse{width:7px;height:7px;border-radius:50%;background:var(--teal);}
+  .hero h1{font-size:clamp(32px,5.5vw,56px);line-height:1.05;margin:22px 0 16px;font-weight:800;letter-spacing:-1px;}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero p{color:var(--muted);max-width:600px;margin:0 auto 30px;font-size:16px;line-height:1.6}
+  .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .stats{display:flex;gap:12px;justify-content:center;margin-top:40px;flex-wrap:wrap;}
+  .stat{min-width:120px;padding:18px;border-radius:14px;border:1px solid var(--line);background:var(--card);}
+  .stat b{display:block;font-size:26px;font-weight:800;color:var(--teal);}
+  .stat span{color:var(--muted);font-size:13px}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0 32px;}
+  .chip{padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);
+    color:var(--muted);cursor:pointer;font-weight:600;font-size:14px;transition:.2s;}
+  .chip:hover{color:var(--text);background:var(--card2)}
+  .chip.on{color:#fff;background:var(--grad);border-color:transparent}
+
+  .sec-head{display:flex;align-items:center;justify-content:space-between;margin:10px 0 20px;}
+  .sec-head h2{font-size:24px;margin:0;font-weight:800}
+  .sec-head a{color:var(--teal);text-decoration:none;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;
+    transition:.2s;position:relative;display:flex;flex-direction:column;}
+  .card:hover{transform:translateY(-3px);border-color:var(--line2);box-shadow:var(--shadow);}
+  .thumb{aspect-ratio:16/10;background:linear-gradient(135deg,rgba(52,168,176,.16),rgba(66,58,176,.16));display:grid;place-items:center;position:relative;overflow:hidden;}
+  .thumb .ghost{font-size:42px;filter:none}
+  .tag{position:absolute;top:12px;left:12px;z-index:2;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.5px;}
+  .tag.new{background:var(--grad);color:#fff}
+  .tag.hot{background:var(--blue);color:#fff}
+  .tag.free{background:var(--teal);color:#062a2c}
+  .cbody{padding:15px;display:flex;flex-direction:column;gap:5px;flex:1}
+  .cbody h3{margin:0;font-size:17px}
+  .cbody p{margin:0;color:var(--muted);font-size:13px}
+  .cbot{margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:12px}
+  .cbot .play{margin-left:auto}
+  .rate{color:var(--teal);font-weight:700;font-size:14px}
+  .play{padding:8px 18px;border-radius:9px;border:none;background:var(--grad);color:#fff;font-weight:700;cursor:pointer;font-size:13px;transition:.2s}
+  .play:hover{filter:brightness(1.15)}
+  .info-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:14px;cursor:pointer;font-weight:800;transition:.2s;display:grid;place-items:center}
+  .info-btn:hover{background:var(--grad);color:#fff;border-color:transparent}
+
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0}
+
+  .footer{border-top:1px solid var(--line);margin-top:70px;padding:32px 26px;background:rgba(10,14,22,.6)}
+  .fwrap{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .footer p{color:var(--muted);font-size:14px;max-width:280px}
+  .flinks{display:flex;gap:22px;flex-wrap:wrap}
+  .flinks a{min-height:44px;min-width:44px;display:inline-flex;align-items:center;color:var(--muted);text-decoration:none;font-size:14px}
+  .flinks a:hover{color:var(--text)}
+  .fbottom{max-width:1180px;margin:26px auto 0;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+
+  .modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:44px;background:rgba(6,9,15,.7);backdrop-filter:blur(6px);}
+  .modal.open{display:flex}
+  .panel{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line2);border-radius:18px;padding:26px;box-shadow:var(--shadow);position:relative;animation:pop .3s ease;}
+  @keyframes pop{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer}
+  /* close X sits OUTSIDE the window frame (behind its top-right corner) */
+  .modal>.panel>.close{position:absolute;top:-52px;right:-8px;width:38px;height:38px;border:none;border-radius:50%;background:var(--card2);color:var(--muted);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.15s;}
+  .modal>.panel>.close:hover{background:var(--grad);color:#fff;transform:scale(1.08)}
+  .tabs{display:flex;gap:5px;background:var(--card);border:1px solid var(--line);padding:5px;border-radius:10px;margin-bottom:20px}
+  .tabs button{flex:1;padding:9px;border:none;background:none;color:var(--muted);font-weight:700;border-radius:7px;cursor:pointer}
+  .tabs button.on{background:var(--grad);color:#fff}
+  label{display:block;margin-bottom:14px}
+  label span{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  input[type=text],input[type=password],input[type=number],select{width:100%;padding:12px 14px;border-radius:9px;
+    border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;outline:none;transition:.2s}
+  input:focus{border-color:var(--teal)}
+  .msg{font-size:13px;margin:12px 0 0;min-height:16px}
+  .msg.ok{color:var(--teal)} .msg.err{color:#d083a0}
+  .reg-hint{display:block;font-size:12px;margin:4px 0 0;min-height:15px}
+  .reg-hint.bad{color:#d083a0}
+  .reg-hint.good{color:var(--teal)}
+  .hidden{display:none !important}
+  .account{text-align:left}
+  .account .title{color:var(--muted);font-size:13px}
+  .account .user{font-size:19px;font-weight:800;margin:4px 0 14px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;z-index:200;
+    background:var(--surface);border:1px solid var(--line2);color:var(--text);padding:12px 20px;border-radius:10px;font-weight:600;
+    font-size:14px;box-shadow:var(--shadow);transition:.3s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+
+  /* profile & shop */
+  .profile-btn{display:inline-flex;align-items:center;gap:8px}
+  .profile-btn .pavatar{margin-right:2px}
+  .panel h4{font-size:14px;color:var(--muted);margin:20px 0 10px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+  .picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:8px}
+  .pick{aspect-ratio:1;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--text);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:20px;transition:.15s;position:relative}
+  .pick:hover{border-color:var(--line2);transform:scale(1.05)}
+  .pick.on{outline:2px solid var(--teal);outline-offset:-2px;background:#132532}
+  .pick span{font-size:9px;color:var(--muted);line-height:1}
+  .pick .sw{width:22px;height:22px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+  .pick .pr{position:absolute;top:3px;right:3px;font-size:8px;color:var(--teal);font-weight:800}
+  .prof-head{display:flex;align-items:center;gap:14px;padding:6px 0 4px}
+  .prof-avatar{width:58px;height:58px;border-radius:16px;background:var(--card2);display:grid;place-items:center;font-size:30px;border:1px solid var(--line)}
+  .prof-name{font-size:20px;font-weight:900;margin:0}
+  .prof-title{color:var(--muted);font-size:13px;margin:2px 0 0}
+  .prof-bal{margin-left:auto;text-align:right}
+  .shop-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .shop-cat{padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-weight:700;font-size:14px;cursor:pointer;transition:.15s;margin-right:6px}
+  .shop-cat.on{background:var(--grad);border-color:transparent}
+  .shop-cap{font-size:13px;color:var(--muted)}
+  .shop-sub{font-size:13px;color:var(--muted);margin:0 0 16px}
+  .shoprow{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--card2);border:1px solid var(--line);margin-bottom:8px}
+  .shoprow .preview{width:46px;height:46px;border-radius:11px;background:var(--card);display:grid;place-items:center;font-size:24px;flex-shrink:0}
+  .shoprow .meta{flex:1;min-width:0}
+  .shoprow .meta .nm{font-weight:800;font-size:15px}
+  .shoprow .meta .own{color:var(--muted);font-size:12px}
+  .shoprow .price{font-weight:800;color:var(--teal);flex-shrink:0;font-size:14px;white-space:nowrap}
+  .shoprow button{flex-shrink:0}
+  .pick.locked{opacity:.45;cursor:default}
+  .shop-tags{display:flex;gap:8px;margin:6px 0 14px;flex-wrap:wrap}
+
+  /* about / learn more */
+  .about-feats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 18px}
+  @media(max-width:600px){.about-feats{grid-template-columns:1fr}}
+  .about-feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:left}
+  .about-feat .ic{width:38px;height:38px;border-radius:10px;background:var(--card2);display:grid;place-items:center;color:var(--teal);margin-bottom:10px}
+  .about-feat .ic .ic{width:20px;height:20px}
+  .about-feat h5{margin:8px 0 4px;font-size:15px;font-family:var(--head);letter-spacing:.3px}
+  .about-feat p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+  .how{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:4px;text-align:left}
+  .how h5{margin:0 0 8px;font-size:15px;font-family:var(--head)}
+  .how ol{margin:0;padding-left:20px;color:#c6cfdf;font-size:13.5px;line-height:1.85}
+  .how li b{color:var(--teal)}
+  .about-note{color:var(--muted);font-size:13px;margin-top:10px;text-align:left;line-height:1.6}
+
+  /* Full-size about window; scroll the overlay to keep the outside close button visible. */
+  .modal#aboutModal{overflow-y:auto;align-items:flex-start;padding:64px 24px 24px;}
+  .modal#aboutModal .panel{max-width:720px;transform:none;animation:none;margin:auto;flex-shrink:0;padding:30px;}
+  #aboutModal .about-feat p{font-size:14px;}
+  #aboutModal .about-feat h5{font-size:16px;}
+  .modal#shopModal .panel{max-width:560px;}
+  @media(max-width:600px){
+    .modal#aboutModal{padding:64px 16px 20px;}
+    .modal#aboutModal .panel{padding:20px;}
+  }
+
+  /* custom icons */
+  .ic{display:inline-block;vertical-align:-2px;flex:none}
+  .up .ic{vertical-align:-2px}
+  .thumb .ic{filter:drop-shadow(0 4px 14px rgba(43,153,160,.35))}
+  .feat-icon{width:40px;height:40px;border-radius:11px;background:var(--card2);display:grid;place-items:center;color:var(--teal);margin-bottom:10px}
+  .feat-icon .ic{width:22px;height:22px}
+
+  /* embedded game player */
+  .play-frame{position:fixed;inset:0;width:100vw;height:100vh;width:100dvw;height:100dvh;overscroll-behavior:none;z-index:120;display:none;background:#05080d}
+  .play-frame.open{display:block}
+  .play-frame iframe{width:100%;height:100%;border:0;display:block;background:#000}
+  .play-frame .close{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:30;width:44px;height:44px;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--text);font-size:26px;cursor:pointer;display:grid;place-items:center;transition:.15s}
+  .play-frame .close:hover{background:var(--grad);border-color:transparent}
+
+  /* game detail */
+  .game-modal .panel{max-width:680px;padding:0;overflow:hidden}
+  .gm-head{position:relative;padding:32px 30px 20px;background:linear-gradient(135deg,rgba(52,168,176,.16),rgba(66,58,176,.16));border-bottom:1px solid var(--line)}
+  .gm-head .gm-emoji{font-size:48px;margin-bottom:8px}
+  .gm-head h2{margin:0;font-size:26px;font-weight:900}
+  .gm-head .gm-sub{color:var(--muted);font-size:14px;margin-top:6px}
+  .gm-body{padding:24px 30px 28px}
+  .gm-desc{color:#c6cfdf;font-size:15px;line-height:1.7;margin:0 0 20px;white-space:pre-line}
+  .gm-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+  @media(max-width:560px){.gm-meta{grid-template-columns:1fr 1fr}}
+  .gm-meta .m{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .gm-meta .m .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  .gm-meta .m .v{font-weight:800;font-size:14px;margin-top:4px;color:#fff}
+  .gm-actions{display:flex;gap:12px;align-items:center}
+  .gm-actions .btn{flex:1;justify-content:center}
+
+  @media(max-width:1200px){.nav{display:none}.header{padding:12px 16px}.hero h1{font-size:34px}}
+
+  /* soft edge glow */
+  .bg-edge{position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+    radial-gradient(120% 90% at 50% -10%,rgba(52,168,176,.10),transparent 55%),
+    radial-gradient(120% 90% at 50% 110%,rgba(66,58,176,.10),transparent 55%);}
+
+
+  /* ---- mobile: hamburger + dropdown nav ---- */
+  .menuBtn{display:none;width:40px;height:40px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--text);cursor:pointer;place-items:center;padding:0}
+  .menuBtn .bars{display:grid;gap:4px}
+  .menuBtn .bars i{display:block;width:18px;height:2px;background:var(--text);border-radius:2px}
+  @media(max-width:1200px){
+    .menuBtn{display:grid}
+    /* зворачиваем навигацию в выпадающее меню */
+    .nav{display:none;position:absolute;top:calc(100%);left:0;right:0;flex-direction:column;align-items:stretch;gap:2px;margin:0;
+      padding:10px 16px 14px;background:rgba(10,14,22,.98);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);box-shadow:0 20px 40px rgba(0,0,0,.45);z-index:60}
+    .header.open .nav{display:flex}
+    .nav a{padding:12px 14px;border-radius:10px;font-size:15px}
+    .header{padding:10px 14px}
+    .header-actions{gap:6px}
+    .lang-switch button{padding:7px 9px;font-size:12px}
+    .coin{padding:6px 10px;font-size:13px;gap:5px}
+    .logo-text{font-size:16px}
+    .wrap{padding:24px 14px 60px}
+  }
+  .coin-icon{display:inline-block;width:20px;height:20px;flex:none;vertical-align:middle;color:var(--teal);}
+
+  /* Keep authentication and balances inside the header, including long names. */
+  .header{gap:12px}
+  .header-actions{min-width:0;max-width:100%;flex-shrink:1}
+  .header-actions #authButton{min-width:0;max-width:180px;flex:0 1 auto;white-space:nowrap;overflow:hidden;justify-content:center}
+  #authButton>span:not(.pavatar){min-width:0;overflow:hidden;text-overflow:ellipsis}
+  #authButton>.pavatar{flex-shrink:0}
+  .header-actions>.coin{min-width:0;max-width:120px}
+  .header-actions>.coin>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .header-actions>.lang-switch,.header-actions>.menuBtn{flex-shrink:0}
+  @media(max-width:1200px){
+    .header-actions #authButton>.pavatar~span:last-child{display:none}
+  }
+  @media(max-width:560px){
+    .header{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 12px}
+    .header>.logo{min-height:44px;max-width:calc(100% - 54px);justify-self:start}
+    .header-actions{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(80px,1.2fr);gap:8px;width:100%;margin-left:0;min-width:0}
+    .header-actions>.menuBtn{position:absolute;right:12px;top:10px;width:44px;height:44px}
+    .header-actions>.lang-switch{height:44px}
+    .header-actions>.lang-switch button{min-width:37px;padding:8px 6px}
+    .header-actions>.coin{height:44px;max-width:none;padding:6px 8px;justify-content:center}
+    .header-actions #authButton{width:100%;max-width:none;min-height:44px;padding:8px 10px;font-size:13px;gap:5px}
+  }
+
+</style>
+</head>
+<body lang="ru">
+<div class="bg"></div><div class="bg-grid"></div>
+<div class="bg-edge"></div>
+
+<header class="header">
+  <a href="index.html" class="logo"><span class="logo-icon"><svg class="logo-svg" width="30" height="30" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect width="40" height="40" rx="10" fill="#1A2230"/>
+  <path d="M11 13L20 28L29 13H24L20 20L16 13H11Z" fill="url(#vert-grad)"/>
+  <circle cx="20" cy="10" r="2" fill="#2B99A0"/>
+  <defs>
+    <linearGradient id="vert-grad" x1="11" y1="13" x2="29" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2B99A0"/>
+      <stop offset="1" stop-color="#3730A0"/>
+    </linearGradient>
+  </defs>
+</svg></span><span class="logo-text">VERT<span>GAMES</span></span></a>
+  <nav class="nav">
+    <a href="index.html" class="active"><span class="label-ru">Главная</span><span class="label-en">Home</span></a>
+    <a href="top.html"><span class="label-ru">Топ по балансу</span><span class="label-en">Top by balance</span></a>
+    <a href="roulette.html"><span class="label-ru">Рулетка</span><span class="label-en">Roulette</span></a>
+    <a href="#" onclick="navClick();toggleShop(true);return false"><span class="label-ru">Магазин</span><span class="label-en">Shop</span></a>
+    <a href="#" onclick="navClick();toggleProfile(true);return false"><span class="label-ru">Профиль</span><span class="label-en">Profile</span></a>
+    <a href="admin.html"><span class="label-ru">Админ</span><span class="label-en">Admin</span></a>
+  </nav>
+  <div class="header-actions">
+    <button class="menuBtn" onclick="toggleMenu()" aria-label="Меню" title="Меню"><span class="bars"><i></i><i></i><i></i></span></button>
+    <div class="lang-switch"><button id="langRu" class="on">RU</button><button id="langEn">EN</button></div>
+    <div class="coin"><svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width=".8" opacity=".5"/><path d="M8.5 8.5 12 16l3.5-7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="coincounter">0</span></div>
+    <button class="btn btn-primary" id="authButton"><span class="label-ru">Войти</span><span class="label-en">Sign In</span></button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="badge"><span class="pulse"></span><span data-ic="spark" data-s="14"></span><span class="label-ru"> Новый сезон уже здесь</span><span class="label-en"> New season is here</span></span>
+    <h1><span class="label-ru">Играй в стиле <span class="grad">будущего</span></span><span class="label-en">Play in the style of <span class="grad">the future</span></span></h1>
+    <p><span class="label-ru">Игры одного лаунчера. Запускай, соревнуйся и зарабатывай монеты в минималистичном неоновом интерфейсе.</span>
+       <span class="label-en">Games of one launcher. Launch, compete and earn coins in a minimal neon UI.</span></p>
+    <div class="hero-btns">
+      <button class="btn btn-primary btn-lg" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})"><span data-ic="play" data-s="18"></span><span class="label-ru">Запустить</span><span class="label-en">Launch</span></button>
+      <button class="btn btn-ghost btn-lg" onclick="toggleAbout(true)"><span class="label-ru">Узнать больше</span><span class="label-en">Learn more</span></button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>11</b><span class="label-ru">Игр</span><span class="label-en">Games</span></div>
+      <div class="stat"><b id="playerCount">0</b><span class="label-ru">Игроков</span><span class="label-en">Players</span></div>
+      <div class="stat"><b id="coinTotal">0</b><span class="label-ru">V в обороте</span><span class="label-en">V in circulation</span></div>
+    </div>
+  </section>
+
+  <div class="chips" id="chips"></div>
+
+  <section class="sec-head" id="games">
+    <h2><span class="label-ru">Топ игры</span><span class="label-en">Top games</span></h2>
+    <a href="top.html" style="display:inline-flex;align-items:center;gap:4px"><span class="label-ru">Смотреть всё</span><span class="label-en">View all</span><span data-ic="chev" data-s="14"></span></a>
+  </section>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer class="footer">
+  <div class="fwrap">
+    <div>
+      <div class="logo"><span class="logo-icon"><svg class="logo-svg" width="30" height="30" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect width="40" height="40" rx="10" fill="#1A2230"/>
+  <path d="M11 13L20 28L29 13H24L20 20L16 13H11Z" fill="url(#vert-grad)"/>
+  <circle cx="20" cy="10" r="2" fill="#2B99A0"/>
+  <defs>
+    <linearGradient id="vert-grad" x1="11" y1="13" x2="29" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2B99A0"/>
+      <stop offset="1" stop-color="#3730A0"/>
+    </linearGradient>
+  </defs>
+</svg></span><span class="logo-text">VERT<span>GAMES</span></span></div>
+      <p><span class="label-ru">Будущее игр — у тебя в руках.</span><span class="label-en">The future of gaming — in your hands.</span></p>
+    </div>
+    <div class="flinks">
+      <a href="about.html"><span class="label-ru">О нас</span><span class="label-en">About</span></a>
+      <a href="support.html"><span class="label-ru">Поддержка</span><span class="label-en">Support</span></a>
+      <a href="api.html">API</a>
+      <a href="privacy.html"><span class="label-ru">Конфиденциальность</span><span class="label-en">Privacy</span></a>
+    </div>
+  </div>
+  <div class="fbottom"><span class="label-ru">© 2026 VestGames.org Все права защищены.</span><span class="label-en">© 2026 VestGames.org All rights reserved.</span></div>
+</footer>
+
+<div class="modal" id="authModal">
+  <div class="panel">
+    <button class="close" onclick="toggleAuth(false)">×</button>
+    <div class="tabs">
+      <button id="tabLogin" class="on" onclick="openTab('login')"><span class="label-ru">Вход</span><span class="label-en">Sign In</span></button>
+      <button id="tabReg" onclick="openTab('reg')"><span class="label-ru">Регистрация</span><span class="label-en">Register</span></button>
+    </div>
+    <form id="formLogin" onsubmit="doLogin(event)">
+      <label><span>Имя пользователя / Username</span><input id="lgUser" type="text" autocomplete="username" required></label>
+      <label><span>Пароль / Password</span><input id="lgPass" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-primary" type="submit" style="width:100%"><span class="label-ru">Войти</span><span class="label-en">Sign In</span></button>
+    </form>
+    <form id="formReg" class="hidden" onsubmit="doRegister(event)">
+      <label><span>Имя пользователя / Username</span><input id="rgUser" type="text" autocomplete="username" required></label>
+      <label><span>Email</span><input id="rgEmail" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+      <label><span>Пароль / Password</span><input id="rgPass" type="password" autocomplete="new-password" required></label>
+      <label><span>Повторите пароль / Confirm</span><input id="rgPass2" type="password" autocomplete="new-password" required></label>      <p class="reg-hint" id="regHint"></p>
+      
+      <button class="btn btn-primary" type="submit" style="width:100%"><span class="label-ru">Создать аккаунт</span><span class="label-en">Create Account</span></button>
+    </form>
+    <div class="account hidden" id="accountPanel">
+      <p class="title"><span class="label-ru">Вы вошли как</span><span class="label-en">Logged in as</span></p>
+      <p class="user" id="acctName"></p>
+      <button class="btn btn-danger" type="button" style="width:100%" onclick="logout()"><span class="label-ru">Выйти</span><span class="label-en">Logout</span></button>
+    </div>
+    <p class="msg" id="authMsg"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Embedded game player -->
+<div class="play-frame" id="playFrame">
+  <button class="close" onclick="closeGame()" title="Закрыть / Close">×</button>
+  <iframe id="gameFrame" src="about:blank" allow="autoplay; fullscreen" title="game"></iframe>
+</div>
+
+<!-- Profile customization -->
+<div class="modal" id="profileModal">
+  <div class="panel">
+    <button class="close" onclick="toggleProfile(false)">×</button>
+    <h2 style="font-family:var(--head)"><span class="label-ru">Профиль</span><span class="label-en">Profile</span></h2>
+    <div class="account hidden" id="profLogged">
+      <div class="prof-head">
+        <span class="prof-avatar" id="profAvatar"><span data-ic="rocket" data-s="30"></span></span>
+        <div>
+          <p class="prof-name" id="profName">—</p>
+          <p class="prof-title" id="profTitle">—</p>
+        </div>
+        <div class="prof-bal">
+          <div class="coin"><svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width=".8" opacity=".5"/><path d="M8.5 8.5 12 16l3.5-7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="profCoins">0</span></div>
+        </div>
+      </div>
+      <h4><span class="label-ru">Аватар</span><span class="label-en">Avatar</span></h4>
+      <div class="picker" id="pickerAv"></div>
+      <h4><span class="label-ru">Цвет акцента</span><span class="label-en">Accent color</span></h4>
+      <div class="picker" id="pickerCol"></div>
+      <h4><span class="label-ru">Титул</span><span class="label-en">Title</span></h4>
+      <div class="picker" id="pickerTitle"></div>
+      <div class="btns" style="display:flex;gap:10px;margin-top:22px">
+        <button class="btn btn-primary" style="flex:1" onclick="toggleShop(true)"><span data-ic="bag" data-s="18"></span><span class="label-ru">Магазин</span><span class="label-en">Shop</span></button>
+        <button class="btn btn-danger" style="flex:1" onclick="logout()"><span class="label-ru">Выйти</span><span class="label-en">Logout</span></button>
+      </div>
+    </div>
+    <div class="account" id="profGuest">
+      <p style="color:var(--muted);margin:10px 0"><span class="label-ru">Войдите, чтобы настроить профиль и тратить монеты.</span><span class="label-en">Sign in to customize your profile and spend coins.</span></p>
+      <button class="btn btn-primary" style="width:100%" onclick="toggleProfile(false);toggleAuth(true)"><span class="label-ru">Войти / Регистрация</span><span class="label-en">Sign In / Register</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Shop -->
+<div class="modal" id="shopModal">
+  <div class="panel">
+    <button class="close" onclick="toggleShop(false)">×</button>
+    <div class="shop-head">
+      <h2 style="font-family:var(--head);margin:0;font-size:24px"><span class="label-ru">Магазин</span><span class="label-en">Shop</span></h2>
+      <div class="coin"><svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width=".8" opacity=".5"/><path d="M8.5 8.5 12 16l3.5-7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="shopCoins">0</span></div>
+    </div>
+    <p class="sub" style="font-size:13px;color:var(--muted)"><span class="label-ru">Зарабатывай V в играх и покупай аватары, цвета и титулы.</span><span class="label-en">Earn V in games to buy avatars, colors and titles.</span></p>
+    <div class="shop-tags" id="shopTabs"></div>
+    <div id="shopList"></div>
+  </div>
+</div>
+
+<!-- About / Learn more -->
+<div class="modal" id="aboutModal">
+  <div class="panel">
+    <button class="close" onclick="toggleAbout(false)">×</button>
+    <h2 style="font-family:var(--head);margin:0 0 2px;display:flex;align-items:center;gap:8px"><span data-ic="game" data-s="18"></span><span class="label-ru">VertGames</span><span class="label-en">VertGames</span></h2>
+    <p style="color:var(--muted);font-size:14px;margin:0 0 18px"><span class="label-ru">Минималистичная игровая платформа: играй, зарабатывай монеты и прокачивай профиль.</span><span class="label-en">A minimal gaming platform: play, earn coins and upgrade your profile.</span></p>
+    <div class="about-feats">
+      <div class="about-feat"><div class="ic"><span data-ic="game"></span></div><h5><span class="label-ru">11 игр</span><span class="label-en">11 games</span></h5><p><span class="label-ru">Flappy, 2048, Platformer, Pong, Shooter, Snake, MiniCraft 3D, Doodle Jump, Космокухня, Sky-Isle Logistics и Redline: Розыск — в одном каталоге.</span><span class="label-en">Flappy, 2048, Platformer, Pong, Shooter, Snake, MiniCraft 3D, Doodle Jump, Cosmic Kitchen, Sky-Isle Logistics and Redline: Wanted — in one collection.</span></p></div>
+      <div class="about-feat"><div class="ic"><span data-ic="coin"></span></div><h5><span class="label-ru">Монеты V</span><span class="label-en">V coins</span></h5><p><span class="label-ru">Начисляются за рекорды, волны, дистанцию и комбо прямо в игре.</span><span class="label-en">Earned for records, waves, distance and combos right in game.</span></p></div>
+      <div class="about-feat"><div class="ic"><span data-ic="bag"></span></div><h5><span class="label-ru">Магазин</span><span class="label-en">Shop</span></h5><p><span class="label-ru">Аватары, цвета акцента и титулы — покупай за накопленные V.</span><span class="label-en">Avatars, accent colors and titles — buy with your V.</span></p></div>
+      <div class="about-feat"><div class="ic"><span data-ic="user"></span></div><h5><span class="label-ru">Профиль</span><span class="label-en">Profile</span></h5><p><span class="label-ru">Собери свой образ и показывай его в топе и на главной.</span><span class="label-en">Build your look and show it on the leaderboard and home.</span></p></div>
+      <div class="about-feat"><div class="ic"><span data-ic="wheel"></span></div><h5><span class="label-ru">Рулетка</span><span class="label-en">Roulette</span></h5><p><span class="label-ru">Первый спин дня бесплатно. Ставь V и крути колесо с шансом на ×5.</span><span class="label-en">First spin of the day is free. Bet V and spin for up to ×5.</span></p></div>
+      <div class="about-feat"><div class="ic"><span data-ic="trophy"></span></div><h5><span class="label-ru">Честный топ</span><span class="label-en">Fair leaderboard</span></h5><p><span class="label-ru">Только реальные игроки, отсортированные по балансу.</span><span class="label-en">Only real players, sorted by balance.</span></p></div>
+    </div>
+    <div class="how">
+      <h5><span class="label-ru">Как это работает</span><span class="label-en">How it works</span></h5>
+      <ol>
+        <li><span class="label-ru">Зарегистрируйся — <b>+100 V на старт</b>.</span><span class="label-en">Register — <b>+100 V to start</b>.</span></li>
+        <li><span class="label-ru">Открой любую игру (открывается прямо на странице, без попапов).</span><span class="label-en">Open any game (opens right on the page, no popups).</span></li>
+        <li><span class="label-ru">Играй — монеты <b>зачисляются автоматически</b>.</span><span class="label-en">Play — coins are <b>credited automatically</b>.</span></li>
+        <li><span class="label-ru">Трать V в <b>магазине</b>, крути <b>рулетку</b> и поднимайся в <b>топе</b>.</span><span class="label-en">Spend V in the <b>shop</b>, spin the <b>roulette</b> and climb the <b>leaderboard</b>.</span></li>
+      </ol>
+    </div>
+    <p class="about-note"><span data-ic="shield" data-s="16"></span> <span class="label-ru">Честный геймплей: при сворачивании вкладки или слишком маленьком окне игра ставится на паузу.</span><span class="label-en">Fair play: if the tab is hidden or the window is too small, the game pauses.</span></p>
+    <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="toggleAbout(false);document.getElementById('games').scrollIntoView({behavior:'smooth'})"><span data-ic="play" data-s="18"></span><span class="label-ru">Начать игру</span><span class="label-en">Start playing</span></button>
+  </div>
+</div>
+
+<div class="modal game-modal" id="gameModal">
+  <div class="panel">
+    <button class="close" onclick="closeGameInfo()">×</button>
+    <div class="gm-head">
+      <div class="gm-emoji" id="gmEmoji"><span data-ic="game" data-s="40"></span></div>
+      <h2 id="gmTitle">Game</h2>
+      <p class="gm-sub" id="gmSub">—</p>
+    </div>
+    <div class="gm-body">
+      <p class="gm-desc" id="gmDesc"></p>
+      <div class="gm-meta">
+        <div class="m"><div class="k">Категория · Category</div><div class="v" id="gmCat">—</div></div>
+        <div class="m"><div class="k">Рейтинг · Rating</div><div class="v" id="gmRate">—</div></div>
+        <div class="m"><div class="k">Награда · Reward</div><div class="v" id="gmReward">—</div></div>
+      </div>
+      <div class="gm-actions">
+        <button class="btn btn-primary btn-lg" id="gmPlay"><span data-ic="play" data-s="18"></span><span class="label-ru">Играть</span><span class="label-en">Play</span></button>
+        <button class="btn btn-ghost btn-lg" onclick="closeGameInfo()"><span class="label-ru">Закрыть</span><span class="label-en">Close</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script id="accounts-module">
+/* ============================================================================
+ *  VertGames — база данных аккаунтов (accounts / database)
+ *  ----------------------------------------------------------------------------
+ *  ЕДИНЫЙ модуль хранения аккаунтов для всех страниц сайта.
+ *
+ *  Как устроено.
+ *  - В браузере модуль публикует глобальный объект `VA` (VertGames Accounts)
+ *    и все страницы обращаются к нему через `VA.*` (или через страничные
+ *    функции db()/save()/register()..., которые делегируют сюда).
+ *  - Данные хранятся в `window.VA` объекте и персистятся через слой
+ *    `VA._store` (по умолчанию — localStorage).
+ *
+ *  ДЛЯ СЕРВЕРА В БУДУЩЕМ.
+ *  Этот же файл можно `require('../database.js')` внутри Node-сервера:
+ *    - в Node экспортируется то же хранилище через `module.exports`;
+ *    - серверу достаточно заменить `VA._store` на объект с методами
+ *      `load()` / `save(data)` (чтение и запись в свой файл/БД) — и весь
+ *      остальной код (регистрация, вход, баланс, топ) продолжит работать
+ *      без правок, но уже через сервер.
+ *  HTML-страницы обращаются к этому файлу как к источнику правды об аккаунтах.
+ *
+ *  Поля аккаунта: username, email, salt, pass, balance, banned, created,
+ *                 owned, avatar, color, title.
+ * ==========================================================================*/
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    // Node / будущий сервер
+    module.exports = factory();
+  } else {
+    // Браузер: глобальный VA (VertGames Accounts)
+    root.VA = factory();
+  }
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var STORE_KEY = 'nl_users';
+  var SESSION_KEY = 'nl_current';
+
+  /* ---------- слой хранения ----------
+   *  В браузере работаем через localStorage.
+   *  Если localStorage недоступен (например, внутри Node-модуля), используем
+   *  in-memory карту — так этот файл работает и как автономная база.
+   *  Для будущего сервера: подмените VA._store на объект с методами
+   *  load()/save(data) поверх своего файла/БД — остальной код не меняется. */
+  var mem = {}, memorySession = null;
+  var isBrowser = typeof window !== 'undefined';
+  var storageError = '';
+  var hasLS = (function () {
+    try { if (typeof localStorage === 'undefined') return false;
+      var key='vg_storage_probe_'+Math.random();localStorage.setItem(key,'1');localStorage.removeItem(key);return true;
+    } catch(e) { storageError='Хранилище браузера недоступно';return false; }
+  })();
+  var store = {
+    load: function () {
+      if (hasLS) { try {var raw=localStorage.getItem(STORE_KEY),d=raw?JSON.parse(raw):{};
+        if(!d||typeof d!=='object'||Array.isArray(d))throw new Error('Invalid accounts');
+        mem=d;return d;
+      } catch(e) {storageError='Не удалось прочитать сохранённые аккаунты';return Object.assign({},mem);} }
+      return Object.assign({},mem);
+    },
+    save: function(data) {
+      if(storageError&&hasLS)return false; // Never overwrite unreadable legacy data.
+      mem=Object.assign({},data);
+      if(hasLS){try{localStorage.setItem(STORE_KEY,JSON.stringify(data));return true}catch(e){hasLS=false;storageError='Не удалось сохранить аккаунт';return false}}
+      return !isBrowser;
+    }
+  };
+  function storageStatus(){return {persistent:hasLS&&!storageError,error:storageError};}
+
+  /* ---------- утилиты ---------- */
+  function now() { return Date.now(); }
+
+  // pure-JS SHA-256 (работает и на file://, где crypto.subtle недоступен)
+  function sha256(ascii) {
+    function rightRotate(v, a) { return (v >>> a) | (v << (32 - a)); }
+    var mathPow = Math.pow, maxWord = mathPow(2, 32), result = '', words = [],
+        asciiBitLength = ascii.length * 8;
+    var hash = sha256.h = sha256.h || [], k = sha256.k = sha256.k || [],
+        primeCounter = k.length, isComposite = {};
+    for (var candidate = 2; primeCounter < 64; candidate++) {
+      if (!isComposite[candidate]) {
+        for (var i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+        hash[primeCounter] = (mathPow(candidate, .5) * maxWord) | 0;
+        k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+      }
+    }
+    ascii += '\x80';
+    while (ascii.length % 64 - 56) ascii += '\x00';
+    for (i = 0; i < ascii.length; i++) {
+      var j = ascii.charCodeAt(i);
+      if (j >> 8) return '';
+      words[i >> 2] |= j << ((3 - i) % 4) * 8;
+    }
+    words[words.length] = (asciiBitLength / maxWord) | 0;
+    words[words.length] = asciiBitLength;
+    for (j = 0; j < words.length;) {
+      var w = words.slice(j, j += 16), oldHash = hash;
+      hash = hash.slice(0, 8);
+      for (i = 0; i < 64; i++) {
+        var w15 = w[i - 15], w2 = w[i - 2];
+        var a = hash[0], e = hash[4];
+        var temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
+          ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] +
+          (w[i] = (i < 16) ? w[i] : (w[i - 16] +
+            (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] +
+            (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+        var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
+          ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+        hash = [(temp1 + temp2) | 0].concat(hash);
+        hash[4] = (hash[4] + temp1) | 0;
+      }
+      for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+    for (i = 0; i < 8; i++) {
+      for (j = 3; j + 1; j--) {
+        var b = (hash[i] >> (j * 8)) & 255;
+        result += ((b < 16) ? 0 : '') + b.toString(16);
+      }
+    }
+    return result;
+  }
+  function passHash(s) { return sha256(unescape(encodeURIComponent(s))); }
+  function randSalt() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+
+  /* ---------- данные ---------- */
+  function getUsers() { return store.load(); }
+
+  function saveUsers(data) { return store.save(data); }
+
+  function getUser(name) {
+    if (!name) return null;
+    var d = getUsers();
+    return Object.prototype.hasOwnProperty.call(d,name)?d[name]:null;
+  }
+
+  function findByEmail(email) {
+    if (!email) return null;
+    email = String(email).toLowerCase().trim();
+    var d = getUsers();
+    for (var k in d) {
+      if (d[k] && d[k].email && String(d[k].email).toLowerCase().trim() === email) return d[k];
+    }
+    return null;
+  }
+
+  /* ---------- валидация ---------- */
+  function isValidEmail(e) {
+    if(typeof e!=='string'||e.length>254||e.split('@').length!==2)return false;
+    var parts=e.split('@'),local=parts[0],domain=parts[1];
+    return local.length>0&&local.length<=64&&local[0]!=='.'&&local[local.length-1]!=='.'&&local.indexOf('..')<0&&
+      /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local)&&
+      /^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(domain);
+  }
+  // занят ли ник (без учёта регистра)
+  function usernameTaken(name) {
+    name = String(name || '').trim().toLowerCase();
+    if (!name) return false;
+    var d = getUsers();
+    for (var k in d) {
+      if (String(k).toLowerCase() === name) return d[k];
+    }
+    return null;
+  }
+  // занят ли email (без учёта регистра)
+  function emailTaken(email) {
+    return findByEmail(email) || null;
+  }
+
+  /* ---------- регистрация (с email) ---------- */
+  // опции: { username, email, password }
+  function register(opt) {
+    var u = String((opt && opt.username) || '').trim();
+    var e = String((opt && opt.email) || '').trim();
+    var p = String((opt && opt.password) || '');
+    if (!u) return { ok: false, msg: 'Введите имя / enter name' };
+    if (['__proto__','prototype','constructor'].indexOf(u.toLowerCase())>=0)return {ok:false,msg:'Выберите другой ник / choose another username'};
+    if(isBrowser&&!storageStatus().persistent)return {ok:false,code:'STORAGE_UNAVAILABLE',msg:'Браузер не разрешает сохранять аккаунты. Откройте сайт по постоянному адресу, не в предпросмотре.'};
+    if (!e) return { ok: false, msg: 'Введите email / enter email' };
+    if (!isValidEmail(e)) return { ok: false, msg: 'Некорректный email / invalid email' };
+    if (p.length < 4) return { ok: false, msg: 'Пароль от 4 символов / min 4 chars' };
+    var d = getUsers();
+    if (usernameTaken(u)) return { ok: false, msg: 'Имя занято / name taken' };
+    if (findByEmail(e)) return { ok: false, msg: 'Этот email уже зарегистрирован / email already used' };
+    var salt = randSalt();
+    d[u] = {
+      username: u,
+      email: e,
+      salt: salt,
+      pass: passHash(salt + p),
+      balance: 100,
+      banned: false,
+      created: now(),
+      owned: ['av:rocket', 'col:teal', 't:new'],
+      avatar: 'av:rocket',
+      color: 'col:teal',
+      title: 't:new'
+    };
+    if(!saveUsers(d)){delete mem[u];return {ok:false,code:'STORAGE_UNAVAILABLE',msg:'Не удалось сохранить аккаунт. Регистрация не завершена.'};}
+    return { ok: true, username:u };
+  }
+
+  /* ---------- вход (по имени или email + пароль) ---------- */
+  function loginCheck(u, p) {
+    u = String(u || '').trim();
+    var d = getUsers();
+    var x = Object.prototype.hasOwnProperty.call(d,u)?d[u]:null;
+    var name = u;
+    if(!x){for(var key in d){if(key.toLowerCase()===u.toLowerCase()){x=d[key];name=key;break}}}
+    if(x&&x.authSource==='server')return {ok:false,code:'SERVER_LOGIN_REQUIRED',msg:'Для этого аккаунта нужен вход через сервер.',username:name};
+    // разрешаем вход по email, если ввели не логин.
+    // Сканируем сам объект d (не полагаясь на равенство ссылок — в браузере
+    // каждый load() возвращает свежераспарсенный объект).
+    if (!x && u.indexOf('@') >= 0) {
+      var mail = u.toLowerCase().trim();
+      for (var k in d) {
+        if (d[k] && d[k].email && String(d[k].email).toLowerCase().trim() === mail) {
+          x = d[k]; name = k; break;
+        }
+      }
+    }
+    if (!x) return { ok: false, msg: 'Аккаунт не найден в этом браузере. Проверьте ник/email и адрес сайта.', username: u };
+    if(x.authSource==='server')return {ok:false,code:'SERVER_LOGIN_REQUIRED',msg:'Для этого аккаунта нужен вход через сервер.',username:name};
+    if (x.salt) {
+      if (passHash(x.salt + p) !== x.pass) return { ok: false, msg: 'Неверный пароль / wrong password', username: name };
+    } else {
+      // апгрейд старых аккаунтов без соли
+      if (x.pass !== p) return { ok: false, msg: 'Неверный пароль / wrong password', username: name };
+      var salt = randSalt();
+      x.salt = salt; x.pass = passHash(salt + p); saveUsers(d);
+    }
+    if (x.banned) return { ok: false, msg: 'Аккаунт заблокирован / account banned', username: name };
+    return { ok: true, username: name };
+  }
+
+  /* ---------- баланс ---------- */
+  function getUserBalance(name) {
+    var u = getUser(name);
+    return u ? Number(u.balance) || 0 : 0;
+  }
+  function setUserBalance(name, v) {
+    var d = getUsers();
+    if (!d[name]) return null;
+    d[name].balance = Math.max(0, Number(v) || 0);
+    saveUsers(d);
+    return d[name].balance;
+  }
+  function adjustUserBalance(name, delta) {
+    var d = getUsers();
+    if (!d[name]) return 0;
+    d[name].balance = Math.max(0, (Number(d[name].balance) || 0) + Number(delta || 0));
+    saveUsers(d);
+    return d[name].balance;
+  }
+  function topUsers(n) {
+    return Object.values(getUsers()).filter(function (u) { return u && !u.banned; })
+      .sort(function (a, b) { return (b.balance || 0) - (a.balance || 0); })
+      .slice(0, n || 0);
+  }
+
+  /* ---------- метаданные (профиль) ---------- */
+  function ensureMeta() {
+    var d = getUsers(); var ch = false;
+    for (var nm in d) {
+      var u = d[nm];
+      if (!Array.isArray(u.owned)) { u.owned = ['av:rocket', 'col:teal', 't:new']; ch = true; }
+      if (!u.avatar) { u.avatar = 'av:rocket'; ch = true; }
+      if (!u.color) { u.color = 'col:teal'; ch = true; }
+      if (!u.title) { u.title = 't:new'; ch = true; }
+    }
+    if (ch) saveUsers(d);
+  }
+
+  /* ---------- очистка фейков/сидов ---------- */
+  function cleanFakes() {
+    var d = getUsers(); var ch = false;
+    for (var n in d) {
+      var u = d[n];
+      if (u && !u.salt && u.pass === 'x' && !Array.isArray(u.owned)) { delete d[n]; ch = true; }
+    }
+    if (ch) saveUsers(d);
+    return ch;
+  }
+
+  /* ---------- сессия ---------- */
+  function getCurrentUser() {
+    var name=memorySession;
+    try{name=localStorage.getItem(SESSION_KEY)||sessionStorage.getItem(SESSION_KEY)||name}catch(e){}
+    if(!name)return null;
+    var users=getUsers(),found=Object.prototype.hasOwnProperty.call(users,name)?name:null;
+    if(!found)for(var k in users){if(k.toLowerCase()===String(name).toLowerCase()||(users[k].email&&users[k].email.toLowerCase()===String(name).toLowerCase())){found=k;break}}
+    if(!found||users[found].banned)return null;
+    if(found!==name)setCurrent(found);
+    return found;
+  }
+  function setCurrent(name) {
+    memorySession=name||null;
+    try{name?sessionStorage.setItem(SESSION_KEY,name):sessionStorage.removeItem(SESSION_KEY)}catch(e){}
+    try{name?localStorage.setItem(SESSION_KEY,name):localStorage.removeItem(SESSION_KEY)}catch(e){}
+  }
+
+  /* ---------- публичный API ---------- */
+  return {
+    // хранение
+    storageStatus: storageStatus,
+    STORE_KEY: STORE_KEY,
+    SESSION_KEY: SESSION_KEY,
+    getUsers: getUsers,
+    saveUsers: saveUsers,
+    getUser: getUser,
+    findByEmail: findByEmail,
+    // хеши / проверка
+    sha256: sha256,
+    passHash: passHash,
+    randSalt: randSalt,
+    isValidEmail: isValidEmail,
+    usernameTaken: usernameTaken,
+    emailTaken: emailTaken,
+    // аккаунты
+    register: register,
+    loginCheck: loginCheck,
+    // баланс
+    getUserBalance: getUserBalance,
+    setUserBalance: setUserBalance,
+    adjustUserBalance: adjustUserBalance,
+    topUsers: topUsers,
+    // профиль / очистка
+    ensureMeta: ensureMeta,
+    cleanFakes: cleanFakes,
+    // сессия
+    getCurrentUser: getCurrentUser,
+    setCurrent: setCurrent,
+    // слой хранения (для будущего сервера — переопределяемый)
+    _store: store
+  };
+});
+
+</script>
+<script>
+const KEY='nl_users', SKEY='nl_current';
+const LS=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch(e){return null}};
+const SS=(k,v)=>{try{return v===undefined?sessionStorage.getItem(k):sessionStorage.setItem(k,v)}catch(e){return null}};
+const SSR=(k)=>{try{sessionStorage.removeItem(k)}catch(e){}};
+function db(){return (window.VA?VA.getUsers():(()=>{try{return JSON.parse(LS(KEY))||{}}catch(e){return{}}})())}
+function save(u){if(window.VA)return VA.saveUsers(u);LS(KEY,JSON.stringify(u))}
+function getUsers(){return db()}
+function getCurrentUser(){return window.VA?VA.getCurrentUser():SS(SKEY)}
+function setCurrent(n){if(window.VA)return VA.setCurrent(n);n?SS(SKEY,n):SSR(SKEY)}
+function register(u,p,email){if(window.VA)return VA.register({username:u,email:email||'',password:p});const d=db(); if(d[u]) return {ok:false,msg:'Имя занято / name taken'}; const salt=randSalt(); d[u]={username:u,email:email||'',salt:salt,pass:passHash(salt+p),balance:100,banned:false,created:Date.now(),owned:['av:rocket','col:teal','t:new'],avatar:'av:rocket',color:'col:teal',title:'t:new'}; save(d); return {ok:true}}
+
+/* live availability check for registration (username + email) */
+function checkRegInputs(){
+  var u=(document.getElementById('rgUser')||{}).value||'';
+  var e=(document.getElementById('rgEmail')||{}).value||'';
+  var h=document.getElementById('regHint'); if(!h)return;
+  u=u.trim().toLowerCase(); e=e.trim().toLowerCase();
+  var take_ = function(n){ if(window.VA&&VA.usernameTaken)return VA.usernameTaken(n); var d=db(); return d[n]?true:false; };
+  var emailok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  if(u && take_(u)){ h.textContent='Этот ник занят / username taken'; h.className='reg-hint bad'; }
+  else if(e && !emailok){ h.textContent='Некорректный email / invalid email'; h.className='reg-hint bad'; }
+  else if(e && emailok && (window.VA&&VA.emailTaken ? VA.emailTaken(e) : false)){ h.textContent='Этот email уже зарегистрирован / email already used'; h.className='reg-hint bad'; }
+  else { h.textContent=''; h.className='reg-hint'; }
+}
+function bindRegChecks(){
+  var u=document.getElementById('rgUser'), e=document.getElementById('rgEmail');
+  if(u&&!u._bound){ u.addEventListener('input',checkRegInputs); u._bound=1; }
+  if(e&&!e._bound){ e.addEventListener('input',checkRegInputs); e._bound=1; }
+  checkRegInputs();
+}
+
+function loginCheck(u,p){if(window.VA)return VA.loginCheck(u,p);const d=db(); if(!d[u]) return {ok:false,msg:'Пользователь не найден / not found'}; const x=d[u];
+  if(x.salt){ if(passHash(x.salt+p)!==x.pass) return {ok:false,msg:'Неверный пароль / wrong password'}; }
+  else { if(x.pass!==p) return {ok:false,msg:'Неверный пароль / wrong password'}; const salt=randSalt(); x.salt=salt; x.pass=passHash(salt+p); save(d); } // upgrade legacy plaintext account
+  if(x.banned) return {ok:false,msg:'Аккаунт заблокирован / account banned'}; return {ok:true}}
+function getUserBalance(u){if(window.VA)return VA.getUserBalance(u);return db()[u]?db()[u].balance:0}
+function adjustUserBalance(u,delta){if(window.VA)return VA.adjustUserBalance(u,delta);const d=db(); if(!d[u])return 0; d[u].balance=Math.max(0,(Number(d[u].balance)||0)+Number(delta||0)); save(d); return d[u].balance}
+function setUserBalance(u,v){if(window.VA)return VA.setUserBalance(u,v);const d=db(); if(!d[u])return; d[u].balance=Math.max(0,Number(v)||0); save(d)}
+function topUsers(n){if(window.VA)return VA.topUsers(n);return Object.values(db()).filter(u=>!u.banned).sort((a,b)=>b.balance-a.balance).slice(0,n)}
+function updateCoin(){const u=getCurrentUser(); const el=document.getElementById('coincounter'); if(el) el.textContent=(u?getUserBalance(u):0)}
+function showToast(t){const e=document.getElementById('toast'); e.textContent=t; e.classList.add('show'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('show'),2600)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+/* pure-JS SHA-256 (works even on file:// where crypto.subtle is unavailable) */
+function sha256(ascii){function rightRotate(v,a){return (v>>>a)|(v<<(32-a))}var mathPow=Math.pow,maxWord=mathPow(2,32),result='',words=[],asciiBitLength=ascii.length*8;var hash=sha256.h=sha256.h||[],k=sha256.k=sha256.k||[],primeCounter=k.length;var isComposite={};for(var candidate=2;primeCounter<64;candidate++){if(!isComposite[candidate]){for(var i=0;i<313;i+=candidate)isComposite[i]=candidate;hash[primeCounter]=(mathPow(candidate,.5)*maxWord)|0;k[primeCounter++]=(mathPow(candidate,1/3)*maxWord)|0;}}ascii+='\x80';while(ascii.length%64-56)ascii+='\x00';for(i=0;i<ascii.length;i++){var j=ascii.charCodeAt(i);if(j>>8)return '';words[i>>2]|=j<<((3-i)%4)*8;}words[words.length]=(asciiBitLength/maxWord)|0;words[words.length]=asciiBitLength;for(j=0;j<words.length;){var w=words.slice(j,j+=16),oldHash=hash;hash=hash.slice(0,8);for(i=0;i<64;i++){var w15=w[i-15],w2=w[i-2];var a=hash[0],e=hash[4];var temp1=hash[7]+(rightRotate(e,6)^rightRotate(e,11)^rightRotate(e,25))+((e&hash[5])^((~e)&hash[6]))+k[i]+(w[i]=(i<16)?w[i]:(w[i-16]+(rightRotate(w15,7)^rightRotate(w15,18)^(w15>>>3))+w[i-7]+(rightRotate(w2,17)^rightRotate(w2,19)^(w2>>>10)))|0);var temp2=(rightRotate(a,2)^rightRotate(a,13)^rightRotate(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));hash=[(temp1+temp2)|0].concat(hash);hash[4]=(hash[4]+temp1)|0;}for(i=0;i<8;i++)hash[i]=(hash[i]+oldHash[i])|0;}for(i=0;i<8;i++){for(j=3;j+1;j--){var b=(hash[i]>>(j*8))&255;result+=((b<16)?0:'')+b.toString(16)}}return result}
+function passHash(s){return sha256(unescape(encodeURIComponent(s)))}
+function randSalt(){return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)}
+/* remove leftover fake/seeded accounts (created with pass:'x', no real registration) */
+function cleanFakes(){if(window.VA)return VA.cleanFakes();const d=db();let ch=false;for(const n in d){const u=d[n];if(u&&!u.salt&&u.pass==='x'&&!Array.isArray(u.owned)){delete d[n];ch=true}}if(ch)save(d)}
+/* ---- custom icon set (inline SVG, currentColor) ---- */
+const IC={
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8 21h8"/>',
+  bag:'<path d="M6 8h12v11H6z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
+  users:'<circle cx="8" cy="9" r="3"/><path d="M2 20c0-3 3-4 6-4s6 1 6 4"/><circle cx="17" cy="8" r="2.5"/><path d="M16 12c3 0 5 1 5 4"/>',
+  shield:'<path d="M12 3l7 3v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V6z"/><path d="M9 12l2 2 4-4"/>',
+  coin:'<circle cx="12" cy="12" r="9"/><path d="M9 9l3 6 3-6"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',
+  star:'<path d="M12 3l2.7 6 6.3.5-4.7 4.2 1.4 6.3-5.7-3.4-5.7 3.4 1.4-6.3L3 9.5 9.3 9z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/>',
+  play:'<path d="M7 5l12 7-12 7z"/>',
+  chev:'<path d="M9 5l7 7-7 7"/>',
+  cross:'<path d="M6 6l12 12M18 6L6 18"/>',
+  cart:'<path d="M4 5h2l2.5 11h9l2.5-8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/>',
+  crown:'<path d="M3 8l4 4 5-6 5 6 4-4-2 10H5z"/>',
+  spark:'<path d="M13 3L5 13h5l-1 8 8-10h-5z"/>',
+  wheel:'<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/><circle cx="12" cy="12" r="2"/>',
+  bolt:'<path d="M13 3L6 13h5l-1 8 8-10h-5z"/>',
+  bird:'<rect x="17" y="1" width="5" height="7" rx="1" fill="currentColor" stroke="none"/><rect x="16" y="6" width="7" height="2" rx="0.5" fill="currentColor" stroke="none"/><rect x="17" y="16" width="5" height="7" rx="1" fill="currentColor" stroke="none"/><rect x="16" y="16" width="7" height="2" rx="0.5" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="6" fill="currentColor" stroke="none"/><path d="M5 12C5 10 8 10 8 12C8 13.5 6.5 14 5 12Z" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="11.5" cy="10" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="0.9" fill="#2C3E50" stroke="none"/><path d="M14 11L18 12.5L14 14V11Z" fill="currentColor" stroke="none"/>',
+  puzzle:'<path d="M10 4a2 2 0 1 1 4 0h3v3a2 2 0 1 1 0 4v5h-4a2 2 0 1 0-4 0H6v-4a2 2 0 1 0-4 0V9h3"/>',
+  platforms:'<circle cx="12" cy="5" r="2" fill="currentColor" stroke="none"/><path d="M12 7V13"/><path d="M9 9L12 10L15 8.5"/><path d="M9 17L12 13L15 16"/><rect x="4" y="19" width="16" height="2" rx="1" fill="currentColor" stroke="none"/>',
+  ball:'<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3.5 2.5 3.5 13.5 0 16"/>',
+  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+  racecar:'<path d="M3 15V11l2-2 2-5h10l2 5 2 2v4M3 15h18M5 15v4H3v-4m16 0v4h2v-4M6 9h12M6 12h2m8 0h2M9 15h6"/>',
+  drone:'<rect x="8" y="9" width="8" height="6" rx="2"/><path d="m8 10-3-4m11 4 3-4M8 14l-3 4m11-4 3 4"/><ellipse cx="4" cy="5" rx="3" ry="1.5"/><ellipse cx="20" cy="5" rx="3" ry="1.5"/><ellipse cx="4" cy="19" rx="3" ry="1.5"/><ellipse cx="20" cy="19" rx="3" ry="1.5"/>',
+  rover:'<path d="M3 7h12v11H3zM15 11h4l3 4v3h-7M6 7V4h6v3M3 11h12"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>',
+  doodle:'<path d="M7 14V8a5 5 0 0 1 10 0v6Z M8 14v3m8-3v3M8 21h8M3 9l2-3m14 0 2 3"/><circle cx="10" cy="7" r=".7"/><circle cx="14" cy="7" r=".7"/>',
+  cube:'<path d="m12 2 9 5v10l-9 5-9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/>',
+  snake:'<path d="M5 13c1.6 0 2.4-2 4-2s2.4 3 4 3 2.4-3 4-3 1.8 2 3 2"/><circle cx="5" cy="13" r="1.2" fill="currentColor" stroke="none"/>',
+  dice:'<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/>',
+  game:'<path d="M6 9h12a4 4 0 0 1 4 5l-1 3.5a2 2 0 0 1-3.6.6L15 16H9l-2.4 2.1a2 2 0 0 1-3.6-.6L2 14a4 4 0 0 1 4-5z"/><path d="M8 12v3M6.5 13.5h3"/><circle cx="16" cy="12" r="0.9"/><circle cx="18" cy="14" r="0.9"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  check:'<path d="M5 12l5 5 9-10"/>',
+  palette:'<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2-.7-1.4.3-2.5 1.8-2.5H17a4 4 0 0 0 4-4c0-5.3-4-9.5-9-9.5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="8" r="1"/>',
+  tag:'<path d="M4 4h7l9 9-7 7-9-9z"/><circle cx="8" cy="8" r="1.3"/>',
+  heart:'<path d="M12 20s-7-4.5-9-9c-1.2-3 .8-6 3.8-6 1.8 0 3.2 1 4.2 2.4C12 6 13.4 5 15.2 5c3 0 5 3 3.8 6-2 4.5-7 9-7 9z"/>',
+  refresh:'<path d="M4 12a8 8 0 0 1 14-5l2 2M20 12a8 8 0 0 1-14 5l-2-2"/><path d="M20 4v5h-5M4 20v-5h5"/>',
+  rocket:'<path d="M12 3c3 2.5 4 6 4 9l-4 4-4-4c0-3 1-6.5 4-9z"/><path d="M8 12H5l-2-2v3l3 2M16 12h3l2-2v3l-3 2M12 16v5"/>',
+  alien:'<circle cx="12" cy="11" r="7"/><ellipse cx="9.5" cy="11" rx="1.7" ry="2.6" fill="currentColor" stroke="none"/><ellipse cx="14.5" cy="11" rx="1.7" ry="2.6" fill="currentColor" stroke="none"/><path d="M10 20l2-3 2 3"/>',
+  bot:'<rect x="6" y="7" width="12" height="10" rx="3"/><circle cx="9.5" cy="11.5" r="1"/><circle cx="14.5" cy="11.5" r="1"/><path d="M9 14h6M12 4v3M8 4.5h8"/>',
+  dragon:'<path d="M4 18c1-5 6-9 11-9 4 0 6 2 6 2-1 4-5 9-10 9-3 0-5-1-7-2z"/><path d="M9 12c2-1 5 0 6 2M7 15c2 0 3-1 4-2"/><path d="M8 19l-1 2M13 19l1 2"/>',
+  fox:'<path d="M4 5l4 3h8l4-3L19 13l-4 6H9l-4-6z"/><path d="M9.5 12h.01M14.5 12h.01"/>',
+  tiger:'<path d="M4 6l4 3h8l4-3 1 4-2 8H5l-2-8z"/><path d="M9 15c2 1.5 4 1.5 6 0M9 10c-1 1-1 4 .5 5-.5-2 .5-4-.5-5zM15 10c1 1 1 4-.5 5 .5-2-.5-4 .5-5z"/>',
+  phoenix:'<path d="M6 17c6 2 11-1 12-7-2 2-4 1-5-1 1-4 6-4 8-4-1 7-5 13-12 15"/><path d="M5 17c-2 1-2 3-1 4"/>',
+  gem:'<path d="M6 4h12l4 5-10 11L2 9z"/><path d="M2 9h20M9.5 4l2.5 5-2.5 11L7 9zM14.5 4L12 9l2.5 11L17 9z"/>'
+};
+function ic(n,s,cls){var c=IC[n]||'';return '<svg class="ic'+(cls?' '+cls:'')+'" width="'+(s||20)+'" height="'+(s||20)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+c+'</svg>'}
+function toggleMenu(){var h=document.querySelector('.header');if(h)h.classList.toggle('open')}
+function navClick(){var h=document.querySelector('.header');if(h)h.classList.remove('open')}
+function hydrateIcons(){document.querySelectorAll('[data-ic]').forEach(el=>{el.innerHTML=ic(el.getAttribute('data-ic'),Number(el.getAttribute('data-s'))||20)})}
+
+const modal=document.getElementById('authModal');
+let logged=getCurrentUser();
+function toggleAuth(o){modal.classList.toggle('open',o); if(o){openTab(logged?'acct':'login'); refreshAccount()}}
+function refreshAccount(){const u=getCurrentUser(); document.getElementById('acctName').textContent=u||'';
+  document.getElementById('formLogin').classList.toggle('hidden',!!logged);
+  document.getElementById('accountPanel').classList.toggle('hidden',!logged);
+  document.getElementById('authButton').innerHTML=logged?`<span>${u}</span>`:`<span class="label-ru">Войти</span><span class="label-en">Sign In</span>`;
+  applyMetaToHeader();}
+function openTab(t){
+  document.getElementById('tabLogin').classList.toggle('on',t==='login');
+  document.getElementById('tabReg').classList.toggle('on',t==='reg');
+  var fl=document.getElementById('formLogin'),fr=document.getElementById('formReg'),ap=document.getElementById('accountPanel');
+  if(fl){fl.classList.toggle('hidden',t!=='login');fl.style.display=(t==='login')?'':'none';}
+  if(fr){fr.classList.toggle('hidden',t!=='reg');fr.style.display=(t==='reg')?'':'none';}
+  if(ap){ap.classList.toggle('hidden',t!=='acct');ap.style.display=(t==='acct')?'':'none';}
+  if(t==='reg'&&typeof bindRegChecks==='function')bindRegChecks();}
+function doLogin(e){e.preventDefault(); const u=document.getElementById('lgUser').value.trim(); const r=loginCheck(u,document.getElementById('lgPass').value); const m=document.getElementById('authMsg'); if(!r.ok){m.textContent=r.msg;m.className='msg err';return} setCurrent(r.username||u); logged=r.username||u; m.className='msg'; m.textContent=''; modal.classList.remove('open'); refreshAccount(); updateCoin(); showToast('Welcome, '+u+'!')}
+function doRegister(e){e.preventDefault(); const u=document.getElementById('rgUser').value.trim(),p=document.getElementById('rgPass').value,p2=document.getElementById('rgPass2').value; const m=document.getElementById('authMsg'); if(!u){m.textContent='Введите имя / enter name';m.className='msg err';return} if(p.length<4){m.textContent='Пароль от 4 символов / min 4 chars';m.className='msg err';return} if(p!==p2){m.textContent='Пароли не совпадают / passwords differ';m.className='msg err';return} const em=document.getElementById('rgEmail')?document.getElementById('rgEmail').value.trim():'';
+  if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){m.textContent='Некорректный email / invalid email';m.className='msg err';return}
+  const r=register(u,p,em); if(!r.ok){m.textContent=r.msg;m.className='msg err';return} setCurrent(u); logged=u; m.className='msg'; m.textContent=''; modal.classList.remove('open'); refreshAccount(); updateCoin(); showToast('Welcome, '+u+'! +100 V')}
+function logout(){setCurrent(null); logged=null; refreshAccount(); updateCoin(); applyMetaToHeader()}
+
+/* ---------- CATALOG: avatars, colors, titles ---------- */
+const SHOP={
+  av:[
+    {id:'av:rocket',i:'rocket',ru:'Ракета',en:'Rocket',p:0},
+    {id:'av:fox',i:'fox',ru:'Лис',en:'Fox',p:100},
+    {id:'av:tiger',i:'tiger',ru:'Тигр',en:'Tiger',p:130},
+    {id:'av:ghost',i:'alien',ru:'Инопланетянин',en:'Alien',p:120},
+    {id:'av:dragon',i:'dragon',ru:'Дракон',en:'Dragon',p:180},
+    {id:'av:cyber',i:'bot',ru:'Кибербот',en:'Cyborg',p:220},
+    {id:'av:phoenix',i:'phoenix',ru:'Феникс',en:'Phoenix',p:280},
+    {id:'av:gem',i:'gem',ru:'Самоцвет',en:'Gem',p:320},
+  ],
+  col:[
+    {id:'col:teal',h:'#2b99a0',ru:'Бирюза',en:'Teal',p:0},
+    {id:'col:blue',h:'#2f63a8',ru:'Синий',en:'Blue',p:60},
+    {id:'col:indigo',h:'#3730a0',ru:'Индиго',en:'Indigo',p:60},
+    {id:'col:gold',h:'#e8b64c',ru:'Золото',en:'Gold',p:120},
+    {id:'col:pink',h:'#e05a9e',ru:'Розовый',en:'Pink',p:140},
+    {id:'col:viper',h:'#57d364',ru:'Неон-зелёный',en:'Viper',p:150},
+    {id:'col:crimson',h:'#e23a4f',ru:'Алый',en:'Crimson',p:160},
+    {id:'col:violet',h:'#8a6bff',ru:'Фиолетовый',en:'Violet',p:180},
+  ],
+  title:[
+    {id:'t:new',ru:'Новичок',en:'Rookie',p:0},
+    {id:'t:vet',ru:'Ветеран',en:'Veteran',p:80},
+    {id:'t:ace',ru:'Ас',en:'Ace',p:160},
+    {id:'t:legend',ru:'Легенда',en:'Legend',p:240},
+    {id:'t:top',ru:'Гроза топов',en:'Top Slayer',p:340},
+  ]
+};
+function itemById(id){for(const k in SHOP){const it=SHOP[k].find(i=>i.id===id);if(it)return {it,cat:k}}return null}
+function itemPrice(id){const r=itemById(id);return r?r.it.p:0}
+function owns(id,owned){const p=itemPrice(id);return p===0||(Array.isArray(owned)&&owned.includes(id))}
+function ensureMeta(){const d=db();let ch=false;for(const nm in d){const u=d[nm];if(!Array.isArray(u.owned)){u.owned=['av:rocket','col:teal','t:new'];ch=true}if(!u.avatar){u.avatar='av:rocket';ch=true}if(!u.color){u.color='col:teal';ch=true}if(!u.title){u.title='t:new';ch=true}}if(ch)save(d)}
+function metaOf(u){const d=db();if(!u||!d[u])return null;const x=d[u];return {owned:x.owned||[],avatar:x.avatar||'av:rocket',color:x.color||'col:teal',title:x.title||'t:new',balance:x.balance||0}}
+function langEn(){return document.body.getAttribute('lang')==='en'}
+function itemLabel(it){return langEn()?it.en:it.ru}
+function avGlyph(it,s){return ic(it.i, s||22)}
+function equipItem(id){const u=getCurrentUser();if(!u)return;const r=itemById(id);if(!r)return;if(!owns(id,metaOf(u).owned))return false;const d=db();if(!d[u])return false;
+  if(r.cat==='av')d[u].avatar=id;else if(r.cat==='col')d[u].color=id;else if(r.cat==='title')d[u].title=id;
+  save(d);applyMetaToHeader();return true}
+function applyMetaToHeader(){const u=getCurrentUser();const b=document.getElementById('authButton');const dot=document.querySelector('.header-actions .coin-icon');
+  if(!u){b.innerHTML='<span class="label-ru">Войти</span><span class="label-en">Sign In</span>';if(dot)dot.style.color='var(--teal)';return}
+  const m=metaOf(u);const av=itemById(m.avatar),col=itemById(m.color),ti=itemById(m.title);const cc=col?col.it.h:'#2b99a0';
+  b.innerHTML=`<span class="pavatar" style="color:${cc}">${av?avGlyph(av.it,14):ic('rocket',14)}</span><span style="color:var(--text);font-weight:800">${esc(u)}</span><span style="color:var(--muted);font-size:11px;margin-left:2px">${ti?itemLabel(ti.it):''}</span>`;
+  if(dot)dot.style.color=cc}
+
+/* ---------- PROFILE MODAL ---------- */
+const profileModal=document.getElementById('profileModal');
+function toggleProfile(o){profileModal.classList.toggle('open',o);if(o){const u=getCurrentUser();
+  document.getElementById('profLogged').classList.toggle('hidden',!u);
+  document.getElementById('profGuest').classList.toggle('hidden',!!u);
+  if(u)renderProfile()}}
+profileModal.addEventListener('click',e=>{if(e.target===profileModal)toggleProfile(false)});
+function renderProfile(){const u=getCurrentUser();const m=metaOf(u);if(!m)return;const av=itemById(m.avatar),ti=itemById(m.title),col=itemById(m.color);const cc=col?col.it.h:'#2b99a0';
+  document.getElementById('profAvatar').innerHTML=av?avGlyph(av.it,30):ic('rocket',30);
+  document.getElementById('profAvatar').style.color=cc;
+  document.getElementById('profName').textContent=u;
+  document.getElementById('profName').style.color=cc;
+  document.getElementById('profTitle').textContent=ti?('· '+itemLabel(ti.it)):'';
+  document.getElementById('profCoins').textContent=m.balance;
+  renderPicker('pickerAv','av',m);renderPicker('pickerCol','col',m);renderPicker('pickerTitle','title',m)}
+function renderPicker(elId,cat,m){const el=document.getElementById(elId);el.innerHTML='';const sel=m[cat==='av'?'avatar':cat==='col'?'color':'title'];
+  SHOP[cat].forEach(it=>{if(!owns(it.id,m.owned))return;const b=document.createElement('button');b.className='pick'+(it.id===sel?' on':'');
+    if(cat==='col'){b.innerHTML=`<span class="sw" style="background:${it.h}"></span><span>${itemLabel(it)}</span>`}
+    else if(cat==='av'){b.innerHTML=`${avGlyph(it,22)}<span>${itemLabel(it)}</span>`}
+    else{b.innerHTML=`<span style="font-size:13px;font-family:var(--head)">${itemLabel(it)}</span>`}
+    b.onclick=()=>{equipItem(it.id);renderProfile();applyMetaToHeader()};el.appendChild(b)})}
+
+/* ---------- SHOP MODAL ---------- */
+const shopModal=document.getElementById('shopModal');
+let shopCat='av';
+function toggleShop(o){shopModal.classList.toggle('open',o);if(o){renderShopTabs();renderShop();applyMetaToHeader()}}
+shopModal.addEventListener('click',e=>{if(e.target===shopModal)toggleShop(false)});
+function renderShopTabs(){const el=document.getElementById('shopTabs');el.innerHTML='';
+  [['av','user','Аватары','Avatars'],['col','palette','Цвета','Colors'],['title','tag','Титулы','Titles']].forEach(([id,icn,ru,en])=>{
+    const b=document.createElement('button');b.className='shop-cat'+(shopCat===id?' on':'');b.innerHTML=ic(icn,16)+(langEn()?en:ru);b.onclick=()=>{shopCat=id;renderShopTabs();renderShop()};el.appendChild(b)})}
+function renderShop(){const u=getCurrentUser();const m=u?metaOf(u):null;
+  document.getElementById('shopCoins').textContent=(m?m.balance:0);
+  const el=document.getElementById('shopList');el.innerHTML='';
+  const sel=m?(shopCat==='av'?m.avatar:shopCat==='col'?m.color:m.title):null;
+  SHOP[shopCat].forEach(it=>{const owned=owns(it.id,m?m.owned:[]);const equipped=owned&&it.id===sel;
+    const row=document.createElement('div');row.className='shoprow';
+    const preview=shopCat==='col'?`<span class="sw" style="width:24px;height:24px;border-radius:7px;background:${it.h};box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)"></span>`:(shopCat==='av'?avGlyph(it,24):`<span style="font-family:var(--head);font-size:14px;color:var(--muted)">${itemLabel(it)}</span>`);
+    let btn;
+    if(equipped)btn=`<button class="btn btn-ghost" disabled style="opacity:.6">${ic('check',16)}</button>`;
+    else if(owned)btn=`<button class="btn btn-ghost" onclick="equipItem('${it.id}');renderShop();renderProfile();applyMetaToHeader()">${ic('lock',15)} <span class="label-ru">Надеть</span><span class="label-en">Equip</span></button>`;
+    else btn=`<button class="btn btn-primary" onclick="buyItem('${it.id}')">${it.p} V</button>`;
+    row.innerHTML=`<div class="preview">${preview}</div><div class="meta"><div class="nm">${itemLabel(it)}</div><div class="own">${equipped?'<span style="color:var(--teal);font-weight:700">'+ (langEn()?'Equipped':'Надето') +'</span>':owned?(langEn()?'Owned':'Куплено'):''}</div></div><div class="price">${it.p>0?it.p+' V':''}</div><div style="min-width:88px">${btn}</div>`;
+    el.appendChild(row)})}
+function buyItem(id){const u=getCurrentUser();if(!u){showToast('Войдите, чтобы покупать / sign in to buy');toggleShop(false);toggleAuth(true);return}
+  const r=itemById(id);const m=metaOf(u);
+  if(owns(id,m.owned)&&m.owned.includes(id)){equipItem(id);renderShop();renderProfile();return}
+  const p=r.it.p;if(m.balance<p){showToast('Недостаточно V / not enough V');return}
+  const d=db();d[u].balance=m.balance-p;d[u].owned=Array.isArray(d[u].owned)?d[u].owned:[];d[u].owned.push(id);save(d);
+  equipItem(id);applyMetaToHeader();updateCoin();renderShop();renderProfile();
+  showToast(langEn()?'Purchased!':'Куплено!')}
+document.getElementById('authButton').onclick=()=>{logged?toggleProfile(true):toggleAuth(true)};
+document.querySelector('#authModal .close').onclick=()=>toggleAuth(false);
+modal.addEventListener('click',e=>{if(e.target===modal)toggleAuth(false)});
+
+function setLang(l){document.body.setAttribute('lang',l); LS('nl_lang',l);
+  document.getElementById('langRu').classList.toggle('on',l==='ru');
+  document.getElementById('langEn').classList.toggle('on',l==='en')}
+document.getElementById('langRu').onclick=()=>setLang('ru');
+document.getElementById('langEn').onclick=()=>setLang('en');
+const queryLang=new URLSearchParams(location.search).get('lang');const savedLang=queryLang==='en'||queryLang==='ru'?queryLang:LS('nl_lang');if(savedLang==='ru'||savedLang==='en')setLang(savedLang);
+
+const games=[
+ {id:'flappy',name:'Flappy Bird',desc:'Аркада • Классика',file:'games/flappy.html',tag:'FREE',cat:['Popular','Action'],icon:'bird',
+  full_ru:'Классическая аркада с птицей-путешественницей. Нажимай на экран или пробел, чтобы взмахивать крыльями и лавировать между препятствиями.\n\nКаждая пройденная труба приносит очки и монеты. Собирай рекорды и не врезайся!',
+  full_en:'The classic arcade with a travelling bird. Tap the screen or press space to flap and weave between the obstacles.\n\nEvery pipe you pass earns points and coins. Beat your records and don\u2019t crash!',catName:'Экшен · Action',reward:'+1 V / труба · per pipe'},
+ {id:'2048',name:'2048',desc:'Головоломка • Числа',file:'games/game2048.html',tag:'NEW',cat:['Popular','Puzzles'],icon:'puzzle',
+  full_ru:'Логическая игра-головоломка. Сдвигай плитки стрелками или свайпами и объединяй одинаковые числа.\n\nСобери плитку 2048 и открой новые уровни! Каждая сотня очков приносит монеты.',
+  full_en:'A logic puzzle. Move the tiles with arrows or swipes and merge matching numbers.\n\nReach the 2048 tile! Every hundred points rewards you with coins.',catName:'Головоломки · Puzzles',reward:'+3 V / 100 очков'},
+ {id:'platformer',name:'Platformer',desc:'Платформер • Экшен',file:'games/platformer.html',tag:'HOT',cat:['Action','Popular'],icon:'platforms',
+  full_ru:'Бесконечный раннер: беги направо, прыгай по платформам и уворачивайся от красных шипов.\n\nДвойной прыжок и движущиеся платформы. Чем дальше бежишь — тем быстрее темп и тем больше монет за дистанцию.',
+  full_en:'An endless runner: run right, jump across platforms, dodge obstacles and use springs.\n\nDouble jump and moving platforms make every run exciting. The further you go, the more coins for distance.',catName:'Экшен · Action',reward:'+0.5/2/5 V за дистанцию'},
+ {id:'pong',name:'Pong',desc:'Аркада • Ретро',file:'games/pong.html',tag:'FREE',cat:['Popular'],icon:'ball',
+  full_ru:'Ретро-теннис. Отбивай мяч ракеткой, набирай комбо и не пропускай голы.\n\nКаждые 5 очков повышают уровень — мяч ускоряется. Серия подряд до +2 монет!',
+  full_en:'Retro tennis. Return the ball with your paddle, build combos and don\u2019t concede goals.\n\nEvery 5 points raise the level. Streak grants up to +2 coins!',catName:'Аркада · Arcade',reward:'+2 V / комбо 5'},
+ {id:'shooter',name:'Shooter',desc:'Шутер • Действие',file:'games/shooter.html',tag:'HOT',cat:['Shooters','Action'],icon:'target',
+  full_ru:'Космический шутер: управляй кораблём, сбивай врагов и уворачивайся от атак.\n\nВолны идут одна за другой; сбивай врагов, собирай бонусы и наращивай комбо.',
+  full_en:'A space shooter: pilot your ship, shoot down enemies and dodge attacks.\n\nEvery cleared wave starts the next; grab power-ups and build combos.',catName:'Шутеры · Shooters',reward:'+3 V / волна · бонусы за комбо'},
+ {id:'snake',name:'Snake',desc:'Аркада • Классика',file:'games/snake.html',tag:'FREE',cat:['Popular'],icon:'snake',
+  full_ru:'Легендарная змейка. Собирай еду, расти и не врезайся в себя.\n\nКаждые 5 очков — новый уровень скорости и +5 монет.',
+  full_en:'The legendary snake. Eat food, grow longer and don\u2019t crash into yourself.\n\nEvery 5 points raise the speed level and give +5 coins.',catName:'Аркада · Arcade',reward:'+5 V / уровень'},
+ {id:'minicraft',name:'MiniCraft 3D',desc:'Песочница • Выживание • 3D',file:'games/minicraft.html',tag:'NEW',cat:['Action','Popular'],icon:'cube',
+  full_ru:'Кубический мир 256 × 256: строй из шести видов блоков, исследуй ландшафт и сражайся с зомби мечом.\n\nWASD — движение, мышь — обзор, пробел — прыжок. ЛКМ — ломать блоки / атаковать, ПКМ — строить, 1–6 — выбор блока. На телефоне доступны сенсорные кнопки и обзор свайпом.\n\nРаунд длится 3 минуты. Каждая собранная монета сразу добавляет +3 на баланс аккаунта. После смерти можно возродиться, сохранив монеты и оставшееся время. Esc — пауза.',
+  full_en:'Explore a 256 × 256 voxel world, build with six block types and battle zombies with a sword.\n\nWASD to move, mouse to look, Space to jump. Left click to break / attack, right click to build, 1–6 to select a block. Touch controls and swipe-to-look are available on mobile.\n\nEach round lasts 3 minutes. Every collected coin instantly adds +3 to your account balance. Respawn after death without losing coins or remaining time. Esc pauses the game.',catName:'Песочница · Survival',reward:'+3 / монета · per coin'},
+ {id:'doodle',name:'Doodle Jump',desc:'Прыжки • Аркада • Текстуры',file:'games/doodle.html',tag:'NEW',cat:['Popular','Action'],icon:'doodle',
+  full_ru:'Теперь сложнее: узкие платформы, большие промежутки и более частые монстры! Чем выше, тем сложнее. Текстурированный зелёный прыгун отскакивает сам: направляй его стрелками или A/D, стреляй пробелом. На телефоне — крупные кнопки движения и выстрела.\n\nЗелёные платформы надёжные, голубые двигаются, коричневые ломаются. Пружины подбрасывают выше. Можно выходить за край и появляться с другой стороны! Берегись монстров: стреляй или прыгай им на голову.\n\n+1 монета за каждые 50 метров и за каждую найденную монетку. Esc/P — пауза. Работает из одного HTML без внешних файлов.',
+  full_en:'Now harder: narrow platforms, larger gaps and more monsters! The higher you climb, the tougher it gets. Your textured green jumper bounces automatically: steer with arrows or A/D, shoot with Space. Big touch buttons make it playable on phones.\n\nGreen platforms are safe, blue ones move and brown ones break. Springs boost you higher. Wrap around the sides of the screen! Shoot monsters or stomp on them.\n\nEarn +1 coin per 50 metres and per coin collected. Esc/P pauses. A self-contained HTML game with no external dependencies.',catName:'Аркада · Arcade',reward:'+1 / 50 м · +1 / монета'},
+ {id:'redline',name:'Redline: Розыск',name_en:'Redline: Wanted',desc:'Новый город • Аркадное управление • Погони',file:'games/redline.html',tag:'NEW',cat:['Popular','Action'],icon:'racecar',
+  full_ru:"Redline v3: заново настроенное аркадное управление — быстрый отклик руля, устойчивость на скорости, короткий контролируемый занос. На телефоне газ и руль джойстика независимы: диагональ не отнимает полный газ.\n\nВместо прямоугольной сетки — связная сеть из 18 дорожных участков, примерно 8,4 км. Длинные дуги, бульвары, объездные пути, набережная, арочный тоннель, промзона и пригород. Новая архитектура: закруглённые офисные фасады, кирпичные витрины, склады с арочными крышами и дома с четырёхскатными кровлями.\n\nМеню → Город / радары: пять мест на карте и три скоростных радара. Мастерская уже известна; новые открытия дают 750 гоночных кредитов один раз. Радары — 80 / 120 / 160 км/ч, по 500 за новую ступень. Три трассы: Литейный круг, От причала к каньону и Большой круг Нортпорта.\n\nИгровой пролог: въезд на Spectre GTR, встреча с Воссом, саботаж, потеря машины и мастерская Миры. 15 соперников, 10 разных автомобилей, гараж, покупки и тюнинг. Погони с шестью уровнями розыска, поиском и охлаждением, заслонами, шипами, вертолётом, укрытиями и разрушаемыми конструкциями.\n\nТелефон: джойстик — газ/тормоз/руль; отдельные нитро, ручник и замедление, свайп камеры. ПК: WASD/стрелки, Shift, пробел, E; G — гараж, R — вернуть на дорогу, Esc — меню. Поддержка геймпада.\n\nОдин автономный HTML, без внешних ресурсов. Старая карьера, машины и деньги сохраняются; позиция вне новой дорожной сети переносится на ближайшую дорогу. Гоночные кредиты не являются монетами VertGames. Оригинальная процедурная браузерная аркада, не симулятор и не точная копия Most Wanted.",
+  full_en:"Redline v3: rebuilt arcade handling with faster steering response, stable high-speed driving and a short controllable handbrake slide. Mobile joystick throttle and steering are independent, so diagonal input no longer reduces full throttle.\n\nA connected network of 18 road sections, about 8.4 km, replaces the rectangular grid: sweeping curves, boulevards, bypasses, a waterfront, a vaulted tunnel, industrial yards and suburbs. Rebuilt architecture includes rounded office facades, brick storefronts, barrel-roof factories and hipped residential roofs.\n\nMenu → City / speed traps: five destinations and three speed traps. The workshop is already known; discovering each other place pays 750 racing credits once. Speed traps award 500 per new 80 / 120 / 160 km/h tier. Three rebuilt courses: Foundry Run, Coast to Canyon and the Northport Grand Tour.\n\nThe playable prologue, 15 rivals, 10 distinct cars, garage and upgrades remain. Six police heat levels, search/cooldown, roadblocks, spikes, helicopter, hideouts and pursuit breakers.\n\nPhone: analog joystick, separate nitro, handbrake and slow-motion buttons; swipe camera. PC: WASD/arrows, Shift, Space, E; G for garage, R to recover, Esc for menu. Gamepad support.\n\nA fully offline single HTML. Existing careers, cars and money are preserved; positions outside the new network move to the nearest road. Racing credits are separate from VertGames coins. Original procedural browser graphics, not a simulator or an exact Most Wanted recreation.",catName:'Гонки · Racing',reward:'Гоночные кредиты · Racing credits'},
+ {id:'skyisle',name:'Sky-Isle Logistics',desc:'Полёты • Доставка • 3D',file:'games/sky-isle.html',tag:'NEW',cat:['Popular','Action'],icon:'drone',
+  full_ru:'Уютный парящий остров Аэро-Вилль и почтовый квадрокоптер. Забирайте посылки в зелёном круге у депо и доставляйте их в пять домов, обсерваторию и солнечную мастерскую. Облетайте медленно вращающиеся мельницы, снижайтесь к подсвеченной площадке и зависайте для передачи груза.\n\nПлавная инерция, наклоны дрона, карта и высота от 1,5 до 20 метров. Ни таймеров, ни повреждений, ни штрафов. Каждая доставка приносит ровно 5 монет на баланс аккаунта. Маршруты длиной примерно 0,67–1,4 км в одну сторону проходят через архипелаг с промежуточными островами и маяками.\n\nПК: WASD/стрелки — полёт, пробел/Shift — вверх, C/Ctrl — вниз, ЛКМ с перетаскиванием — камера, R — вернуть обзор, Esc — пауза. На телефоне: джойстик, кнопки высоты и свайп камеры. Автосохранение. Babylon.js и Babylon GUI, процедурный мир. Один HTML работает локально, в том числе без интернета.',
+  full_en:'Fly a little postal quadcopter around the floating island of Aéro-Ville. Pick up parcels at the green depot circle and deliver to five houses, the observatory and the solar workshop. Fly around slow windmills, descend to the highlighted pad and hover to hand over your parcel.\n\nSmooth acceleration, drone tilt, a minimap and a 1.5–20 m altitude range. No deadlines, damage or penalties. Each delivery pays exactly 5 account coins. One-way routes of roughly 0.67–1.4 km cross an archipelago of wooded islands and navigation beacons.\n\nPC: WASD/arrows to fly, Space/Shift to ascend, C/Ctrl to descend, LMB drag to orbit, R to reset and Esc to pause. Touch: joystick, altitude buttons and camera swipes. Local autosave. Babylon.js and Babylon GUI with procedural scenery. A single HTML file also works offline.',catName:'Полёты · Доставка',reward:'+5 V / доставка · per delivery'},
+ {id:'rover',name:'Космокухня: Дороги Аурелии',name_en:'Cosmic Kitchen: Roads of Aurelia',desc:'Исследование • Готовка • 3D',file:'games/chefs-rover.html',tag:'NEW',cat:['Popular','Action'],icon:'rover',
+  full_ru:'Космокухня: Дороги Аурелии. Леса четырёх биомов, десять деревень с рынками и огородами, жители и стоянки вдоль дорог. Путешествуй на уютном фудтраке-вездеходе. Гуляй по лугам и каньону пешком: собирай маленькие ягодные кусты, грибы и минералку из голубых источников. Вездеход — для дальних поездок; F — сесть или выйти. Кнопка «Найти минералку» показывает ближайший источник.\n\nНа борту — настоящая 3D-кухня: вручную нарезай, нагревай сковороду, перемешивай и запекай. В каньоне пониженная гравитация, поэтому ингредиенты подлетают!\n\nИсследуй мир 1 × 1 км с четырьмя биомами. Собирай 12 ингредиентов и готовь 16 блюд на восьми станциях кухни. Узнавай вкусы десяти жителей восьми видов, принимай и доставляй заказы. Правильный заказ приносит от +2 до +15 монет по сложности. За неверный рецепт или испорченное блюдо — компенсация −1 монета. За 2 и 4 доставки устанавливаются турбоколёса и магнитная столешница. Все рецепты доступны в книге.\n\nWASD/стрелки — ходьба или вождение, F — сесть/выйти, E — сбор и общение, K — кухня только после посадки, Esc — пауза. Есть управление для телефона и локальное автосохранение. Все ресурсы встроены в один HTML.',
+  full_en:'Cosmic Kitchen: Roads of Aurelia. Explore forests, ten villages with markets and gardens, and roadside shelters in a cozy six-wheeled food truck. Explore on foot, collecting small berry bushes, mushrooms and mineral water springs. Use the truck for longer journeys; F gets in or out. A resource guide leads to water.\n\nWork inside a real 3D kitchen: chop, heat the frying pan, stir and bake by hand. Low gravity makes ingredients float in the canyon!\n\nExplore a 1 × 1 km world, four biomes, 12 ingredients and 16 recipes with eight kitchen stations. Meet ten residents of eight species, learn their tastes and deliver orders. Correct orders earn 2–15 coins depending on complexity. Wrong recipes or spoiled food cost 1 coin in compensation. Two and four deliveries install turbo wheels and a magnetic worktop. All recipes are available in the recipe book.\n\nWASD/arrows to drive, E to gather/talk, K for the kitchen, Esc to pause. Touch controls and local autosave included. All resources are embedded in one HTML file.',catName:'Исследование · Готовка',reward:'+2–15 / заказ · ошибка −1'},
+];
+const cats=[['All','grid','Все','All'],['Popular','spark','Популярное','Popular'],['Action','bolt','Экшен','Action'],['Puzzles','puzzle','Головоломки','Puzzles'],['Shooters','target','Шутеры','Shooters']];
+function renderChips(){const c=document.getElementById('chips'); c.innerHTML=''; cats.forEach(([id,icn,ru,en])=>{const b=document.createElement('button'); b.className='chip'+(id==='All'?' on':''); b.innerHTML=ic(icn,15)+(id==='All'?'':'&nbsp;')+`<span class="label-ru">${ru}</span><span class="label-en">${en}</span>`; b.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); b.classList.add('on'); renderGrid(id)}; c.appendChild(b)})}
+function renderGrid(cat='All'){const g=document.getElementById('grid'); g.innerHTML=''; const list=games.filter(x=>cat==='All'||x.cat.includes(cat)); if(!list.length){g.innerHTML='<div class="empty">Пусто / Nothing here yet</div>';return} list.forEach(x=>{const card=document.createElement('article'); card.className='card'; card.innerHTML=`
+  <div class="thumb"><span class="ghost">${ic(x.icon,44)}</span><div class="tag ${x.tag.toLowerCase()}">${x.tag}</div></div>
+  <div class="cbody"><h3>${document.body.getAttribute('lang')==='en'&&x.name_en?x.name_en:x.name}</h3><p>${x.desc}</p>
+    <div class="cbot"><button class="info-btn" title="Описание">${ic('info',16)}</button><span class="rate">${ic('star',15)} ${(4.5+Math.random()).toFixed(1)}</span><button class="play">${ic('play',15)} <span class="label-ru">Играть</span><span class="label-en">Play</span></button></div></div>`;
+  card.querySelector('.play').onclick=e=>{e.stopPropagation(); play(x.id,x.file)};
+  card.querySelector('.info-btn').onclick=e=>{e.stopPropagation(); openGameInfo(x.id)};
+  card.onclick=()=>openGameInfo(x.id); g.appendChild(card)})}
+let currentGame=null;
+function openGameInfo(id){const x=games.find(g=>g.id===id); if(!x)return; currentGame=x;
+  document.getElementById('gmEmoji').innerHTML=ic(x.icon,44);
+  document.getElementById('gmTitle').textContent=document.body.getAttribute('lang')==='en'&&x.name_en?x.name_en:x.name;
+  document.getElementById('gmSub').textContent=x.desc;
+  const lang=document.body.getAttribute('lang')==='en';
+  document.getElementById('gmDesc').textContent=lang?x.full_en:x.full_ru;
+  document.getElementById('gmCat').textContent=x.catName;
+  document.getElementById('gmRate').innerHTML=ic('star',15)+' '+(4.5+Math.random()).toFixed(1);
+  document.getElementById('gmReward').textContent=x.reward;
+  document.getElementById('gmPlay').onclick=()=>{closeGameInfo(); play(x.id,x.file)};
+  document.getElementById('gameModal').classList.add('open');
+}
+function closeGameInfo(){document.getElementById('gameModal').classList.remove('open'); currentGame=null}
+document.getElementById('gameModal').addEventListener('click',e=>{if(e.target===document.getElementById('gameModal'))closeGameInfo()});
+function play(id,file){const u=getCurrentUser();let nativeGuest=false;try{nativeGuest=!u&&!!window.VertGamesAndroid?.isNativeApp?.()}catch{}
+  if(!u&&!nativeGuest){showToast('Войдите, чтобы получать монеты / sign in to earn');toggleAuth(true);return}
+  const f=document.getElementById('gameFrame');f.src=file+'?v='+(id==='redline'?'6':id==='skyisle'?'2':id==='rover'?'5':id==='doodle'?'2':id==='minicraft'?'6':'standalone2')+'&lang='+(document.body.getAttribute('lang')==='en'?'en':'ru');
+  document.getElementById('playFrame').classList.add('open');document.body.style.overflow='hidden';
+  try{window.VertGamesAndroid?.keepScreenOn?.(true)}catch{}
+  if(nativeGuest)showToast(document.body.getAttribute('lang')==='en'?'Guest play · no online account required':'Гостевой режим · онлайн-аккаунт не нужен');}
+function closeGame(){if(document.pointerLockElement)document.exitPointerLock();document.getElementById('playFrame').classList.remove('open');document.getElementById('gameFrame').src='about:blank';document.body.style.overflow='';try{window.VertGamesAndroid?.keepScreenOn?.(false)}catch{}}
+const aboutModal=document.getElementById('aboutModal');
+function toggleAbout(o){aboutModal.classList.toggle('open',o)}
+aboutModal.addEventListener('click',e=>{if(e.target===aboutModal)toggleAbout(false)});
+// receive coins earned in-game + navigation from the embedded game (games postMessage to the parent)
+window.addEventListener('message',e=>{if(e.source!==document.getElementById('gameFrame').contentWindow||e.origin!==location.origin)return; const d=e.data; if(!d||typeof d!=='object')return; const u=getCurrentUser();
+  if(d.type==='home'){closeGame();return}
+  if(!u)return;
+  const isRover=new URL(document.getElementById('gameFrame').src,location.href).pathname.endsWith('/games/chefs-rover.html');
+  const isSky=new URL(document.getElementById('gameFrame').src,location.href).pathname.endsWith('/games/sky-isle.html');
+  const isRedline=new URL(document.getElementById('gameFrame').src,location.href).pathname.endsWith('/games/redline.html');
+  if(isRedline&&d.game==='redline'&&d.account===u){
+    const reply=data=>e.source.postMessage({...data,game:'redline',account:u},location.origin);
+    if(d.type==='redlineExchangeHello'){reply({type:'redlineExchangeReady',ready:!!db()[u]&&(!window.VA||VA.storageStatus().persistent)});return}
+    if(d.type==='redlineExchange'){
+      if(d.credits!==1000||d.coins!==100||typeof d.id!=='string'||! /^[a-f0-9-]{20,90}$/.test(d.id))return;
+      const users=db(),record=users[u];if(!record)return;
+      const receipts=Array.isArray(record.redlineExchangeReceipts)?record.redlineExchangeReceipts:[];
+      if(receipts.includes(d.id)){reply({type:'redlineExchangeAck',id:d.id,ok:true});return}
+      let intent;try{intent=JSON.parse(localStorage.getItem('vg_redline_v1:'+u)||'null')?.exchange?.pending}catch{}
+      if(!intent||intent.id!==d.id||intent.account!==u||intent.credits!==1000||intent.coins!==100){reply({type:'redlineExchangeAck',id:d.id,ok:false});return}
+      const previous=JSON.parse(JSON.stringify(users));record.balance=(Number(record.balance)||0)+100;record.redlineExchangeReceipts=[...receipts,d.id];
+      if(save(users)===false){save(previous);reply({type:'redlineExchangeAck',id:d.id,ok:false});return}
+      updateCoin();applyMetaToHeader();reply({type:'redlineExchangeAck',id:d.id,ok:true});showToast('Redline: обмен 1000 кредитов → +100 V');return;
+    }
+  }
+  if(isRedline&&d.type==='addCoins')return;
+  if(isSky&&d.type==='skyDeliveryReward'){
+    if(d.game!=='skyisle'||d.amount!==5||d.account!==u||typeof d.deliveryId!=='string'||!/^[a-f0-9-]{36}$/.test(d.deliveryId))return;
+    const users=db(),record=users[u];if(!record)return;const receipts=Array.isArray(record.skyDeliveryReceipts)?record.skyDeliveryReceipts:[];
+    if(!receipts.includes(d.deliveryId)){record.balance=(Number(record.balance)||0)+5;record.skyDeliveryReceipts=[...receipts,d.deliveryId];if(save(users)===false)return;updateCoin();applyMetaToHeader();showToast('Доставка выполнена: +5 монет / Delivery complete: +5 coins')}
+    e.source.postMessage({type:'skyDeliveryAck',game:'skyisle',amount:5,account:u,deliveryId:d.deliveryId},location.origin);return;
+  }
+  if(isSky&&d.type==='addCoins')return;
+  if(isRover&&d.type==='roverPenalty'&&d.game==='rover'&&d.amount===1){const before=window.VA?VA.getUserBalance(u):Number(db()[u]?.balance||0);adjustUserBalance(u,-1);updateCoin();applyMetaToHeader();showToast(before>=1?'Компенсация заказчику: −1 монета / Customer compensation: −1 coin':'Заказ отклонён. Баланс: 0 / Order rejected. Balance: 0');e.source.postMessage({type:'roverPenaltyResult',charged:before>=1?1:0},location.origin);return}
+  if(d.type==='addCoins'&&typeof d.amount==='number'&&Number.isFinite(d.amount)&&d.amount>0){if(isRover&&(!Number.isInteger(d.amount)||d.amount<2||d.amount>15))return;adjustUserBalance(u,Math.round(d.amount)); updateCoin(); applyMetaToHeader()}
+  if(d.type==='gameOver'){showToast('Игра окончена / Game over')}})
+
+renderChips(); renderGrid(); refreshAccount(); applyMetaToHeader(); hydrateIcons();
+cleanFakes(); ensureMeta(); updateCoin(); renderStats();
+function renderStats(){const d=db();const all=Object.values(d).filter(u=>!u.banned);const pc=document.getElementById('playerCount');if(pc)pc.textContent=all.length;
+  const ct=document.getElementById('coinTotal');if(ct)ct.textContent=all.reduce((s,u)=>s+(Number(u.balance)||0),0)}
+</script>
+<script id="auth-client-runtime">
+/* Auth UI bridge. Email confirmation is performed by server.py, never simulated. */
+(function(){
+'use strict';
+const $=id=>document.getElementById(id),VA=window.VA;
+if(!VA)return;
+let pending=null,migrating=false,busy=false,availabilityTimer=0,availabilitySeq=0,authEpoch=0;
+try{pending=JSON.parse(sessionStorage.getItem('vg_pending_email')||'null')}catch(e){}
+const style=document.createElement('style');style.textContent=`.auth-note{font-size:12px;line-height:1.6;color:var(--muted);margin:12px 0;overflow-wrap:anywhere}.email-status{border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:12px;margin:14px 0}.email-status .btn{margin-top:8px;max-width:100%;white-space:normal}.verify-actions{display:flex;gap:8px;flex-wrap:wrap}.verify-actions .btn{flex:1;font-size:12px;padding:10px}.verification-code{font:700 24px monospace!important;letter-spacing:8px;text-align:center}.msg{overflow-wrap:anywhere}`;document.head.appendChild(style);
+const form=document.createElement('form');form.id='formVerifyEmail';form.hidden=true;form.innerHTML='<p class="auth-note" id="verifyDescription"></p><label><span>Код из письма</span><input id="emailCode" class="verification-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="000000"></label><p class="auth-note">Код действует 10 минут. Если письма нет, проверьте «Спам».</p><button class="btn btn-primary" type="submit" style="width:100%">Подтвердить почту</button><div class="verify-actions" style="margin-top:10px"><button id="resendEmail" class="btn btn-ghost" type="button">Отправить ещё раз</button><button id="cancelVerification" class="btn btn-ghost" type="button">Назад</button></div>';
+$('formReg').after(form);
+const regNote=document.createElement('p');regNote.className='auth-note';regNote.textContent='Аккаунт создаётся только после ввода кода из настоящего письма. Уже регистрировались? Откройте вкладку «Вход».';$('formReg').appendChild(regNote);
+const storageNote=document.createElement('p');storageNote.className='auth-note';storageNote.textContent='Старые аккаунты доступны в том же браузере и по тому же адресу сайта. Не нужно регистрироваться повторно.';$('formLogin').appendChild(storageNote);
+const notice=document.createElement('div');notice.className='email-status';notice.id='emailStatus';notice.hidden=true;notice.innerHTML='<div id="emailStatusText" class="auth-note" style="margin:0"></div><button id="migrateAccount" class="btn btn-ghost" type="button">Подтвердить почту и сохранить аккаунт на сервере</button>';if($('profLogged'))$('profLogged').prepend(notice);
+// Google uses a server-side code flow, not an email/password form or a fake picker.
+const gt=(ru,en)=>document.body.getAttribute('lang')==='en'?en:ru;
+const googleArea=document.createElement('div');googleArea.id='googleAuth';googleArea.className='google-auth';
+googleArea.innerHTML='<button type="button" id="googleSignIn" class="google-button"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48"><path fill="#4285F4" d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.18v5.14h6.61c3.87-3.56 6.08-8.82 6.08-14.82Z"/><path fill="#34A853" d="M24 44c5.4 0 9.92-1.79 13.23-4.86l-6.61-5.14c-1.83 1.23-4.17 1.98-6.62 1.98-5.22 0-9.64-3.52-11.22-8.26H5.95v5.3A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.78 27.72a12 12 0 0 1 0-7.44v-5.3H5.95a20 20 0 0 0 0 18.04l6.83-5.3Z"/><path fill="#EA4335" d="M24 12.02c2.94 0 5.57 1.01 7.65 3L37.4 9.3A19.3 19.3 0 0 0 24 4 20 20 0 0 0 5.95 14.98l6.83 5.3C14.36 15.54 18.78 12.02 24 12.02Z"/></svg><span class="label-ru">Войти через Google</span><span class="label-en">Sign in with Google</span></button><p class="auth-note"><span class="label-ru">Выберите аккаунт на странице Google. Пароль от почты сюда вводить не нужно.</span><span class="label-en">Choose your account on Google. Do not enter your email password here.</span></p><p class="auth-note" id="googleAvailability" role="status"></p><div class="google-divider"><span class="label-ru">или по email и паролю сайта</span><span class="label-en">or with email and site password</span></div>';
+$('formLogin').before(googleArea);
+const linkGoogle=document.createElement('button');linkGoogle.id='linkGoogle';linkGoogle.type='button';linkGoogle.className='btn btn-ghost';linkGoogle.hidden=true;linkGoogle.innerHTML='<span class="label-ru">Привязать Google к этому аккаунту</span><span class="label-en">Link Google to this account</span>';notice.appendChild(linkGoogle);
+const googleStyle=document.createElement('style');googleStyle.textContent=`#authModal{padding:16px}#authModal>.panel{max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain}#authModal .tabs{padding-right:28px}#authModal .close{min-width:44px;min-height:44px;top:6px;right:6px}#authModal button{min-height:44px}.google-auth{margin:18px 0}.google-auth[hidden],#linkGoogle[hidden]{display:none!important}.google-button{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:48px;min-width:44px;padding:10px 14px;background:#fff;border:1px solid #dadce0;border-radius:6px;color:#1f1f1f;font:500 14px system-ui,sans-serif;cursor:pointer}.google-button:hover{background:#f3f7fc}.google-button:focus-visible{outline:3px solid #66d0c7;outline-offset:3px}.google-button:disabled{opacity:.6;cursor:wait}.google-button svg{flex:0 0 20px}.google-divider{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;margin:16px 0}.google-divider:before,.google-divider:after{content:'';height:1px;flex:1;background:var(--line)}#googleAvailability:empty{display:none}#linkGoogle{min-height:44px;white-space:normal}#authModal .auth-note{font-size:12px} @media(max-width:480px){#authModal>.panel{padding:20px}}`;document.head.appendChild(googleStyle);
+const googleMessages={
+ GOOGLE_LOGIN_REQUIRED:['Этот аккаунт создан через Google. Нажмите «Войти через Google» — пароля сайта у него нет.','This account was created with Google. Choose Sign in with Google; it has no site password.'],
+ GOOGLE_NOT_CONFIGURED:['Вход через Google ещё не настроен владельцем сайта. Нужны сервер и ключи Google OAuth.','The owner has not configured Google sign-in yet. A server and Google OAuth credentials are required.'],
+ BACKEND_UNAVAILABLE:['Сервер входа недоступен. Google-вход не работает из отдельного HTML или на статическом хостинге без сервера.','The sign-in server is unavailable. Google sign-in needs a backend, not just a standalone HTML file or static host.'],
+ GOOGLE_CANCELLED:['Вы отменили вход через Google. Можно попробовать снова.','Google sign-in was cancelled. You can try again.'],
+ GOOGLE_STATE_INVALID:['Сеанс Google-входа истёк или cookie недоступны. Откройте сайт в отдельной вкладке и начните снова.','The Google sign-in attempt expired or cookies are unavailable. Open the site in its own tab and try again.'],
+ GOOGLE_TOKEN_FAILED:['Не удалось безопасно подтвердить ответ Google. Попробуйте снова; если ошибка повторяется, проверьте настройки OAuth.','The Google response could not be verified safely. Try again; if it persists, check the OAuth configuration.'],
+ GOOGLE_EMAIL_UNVERIFIED:['Google не подтвердил адрес почты. Используйте регистрацию с кодом из письма.','Google did not verify this email. Use registration with an emailed code.'],
+ GOOGLE_EMAIL_EXTERNAL:['Для этого способа подтверждения нужен Gmail или Google Workspace. Для внешнего адреса используйте код из письма.','This verification method supports Gmail and Google Workspace. Use an emailed code for an external address.'],
+ GOOGLE_ACCOUNT_EXISTS:['Этот email уже есть на сервере. Войдите прежним способом, затем в профиле нажмите «Привязать Google». Аккаунты не объединяются автоматически.','This email already has a server account. Sign in with your existing method, then choose Link Google in your profile. Accounts are not merged automatically.'],
+ GOOGLE_LINK_SESSION:['Для привязки нужно оставаться в том же серверном аккаунте. Войдите заново и повторите.','Linking requires the same active server session. Sign in again and retry.'],
+ GOOGLE_LINK_EMAIL:['Выберите Google-аккаунт с той же почтой, что указана в профиле.','Choose the Google account with the same email as your profile.'],
+ GOOGLE_ACCOUNT_CONFLICT:['Этот Google-аккаунт или адрес уже связан с другой записью. Данные не объединены.','This Google account or email is associated with a different record. No records were merged.'],
+ LOGIN_REQUIRED:['Сначала войдите в существующий серверный аккаунт.','First sign in to your existing server account.']
+};
+function googleMessage(code){const pair=googleMessages[code]||googleMessages.GOOGLE_TOKEN_FAILED;return gt(...pair)}
+let googleAvailable=null,googleBackend=null;
+function googleVisibility(){const name=VA.getCurrentUser(),u=name&&VA.getUser(name);googleArea.hidden=!!name||!!pending||migrating;linkGoogle.hidden=!(u?.authSource==='server'&&u.emailVerified&&!u.googleLinked);$('googleAvailability').textContent=googleBackend===false?googleMessage('BACKEND_UNAVAILABLE'):googleAvailable===false?googleMessage('GOOGLE_NOT_CONFIGURED'):''}
+new MutationObserver(googleVisibility).observe(document.body,{attributes:true,attributeFilter:['lang']});
+async function beginGoogle(mode='login'){
+ if(busy)return;
+ if(mode==='link'){if(oldToggleProfile)oldToggleProfile(false);oldToggleAuth(true);window.openTab('acct')}
+ if(window.self!==window.top){msg(gt('Для входа через Google откройте сам сайт в отдельной вкладке, а не во встроенном предпросмотре.','For Google sign-in, open the site in its own tab, not in an embedded preview.'));return}
+ if(!/^https?:$/.test(location.protocol)){msg(googleMessage('BACKEND_UNAVAILABLE'));return}
+ setBusy(true);msg(gt('Подключаемся к Google…','Connecting to Google…'),false);
+ try{
+  const next=location.pathname.split('/').pop()||'index.html';
+  const r=await api('/api/auth/google/start',{mode,next,lang:document.body.getAttribute('lang')==='en'?'en':'ru'});
+  if(!r.ok){msg(googleMessages[r.code]?googleMessage(r.code):r.msg);return}
+  const destination=new URL(r.url);if(destination.origin!=='https://accounts.google.com'||destination.pathname!=='/o/oauth2/v2/auth')throw Error('Invalid authorization URL');
+  location.assign(destination.href);
+ }catch{msg(googleMessage('GOOGLE_TOKEN_FAILED'))}finally{setBusy(false)}
+}
+$('googleSignIn').onclick=()=>beginGoogle('login');linkGoogle.onclick=()=>beginGoogle('link');
+const googleQuery=new URLSearchParams(location.search),googleOutcome=googleQuery.get('google_login'),googleError=googleQuery.get('google_error');
+if(googleOutcome||googleError){
+ try{const clean=new URL(location.href);clean.searchParams.delete('google_login');clean.searchParams.delete('google_error');history.replaceState(null,'',clean.pathname+clean.search+clean.hash)}catch{}
+ if(['ru','en'].includes(googleQuery.get('lang'))&&typeof window.setLang==='function')window.setLang(googleQuery.get('lang'));
+}
+
+function msg(text,error=true){const m=$('authMsg');m.textContent=text||'';m.className='msg'+(error?' err':'');m.setAttribute('role',error?'alert':'status')}
+async function api(path,data){
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
+ try{const response=await fetch(path,{method:data===undefined?'GET':'POST',credentials:'same-origin',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:controller.signal});
+  if(!(response.headers.get('content-type')||'').includes('application/json'))throw Error('No API');const result=await response.json();return {...result,status:response.status};
+ }catch(e){return {ok:false,code:'BACKEND_UNAVAILABLE',msg:'Сервер аккаунтов недоступен. Владельцу нужно запустить server.py и настроить SMTP для писем или Google OAuth для Google-входа. Старый локальный аккаунт можно открыть через «Вход».'}}
+ finally{clearTimeout(timeout)}
+}
+function pendingSave(){try{pending?sessionStorage.setItem('vg_pending_email',JSON.stringify(pending)):sessionStorage.removeItem('vg_pending_email')}catch(e){}}
+function setBusy(value){busy=value;for(const b of document.querySelectorAll('#formLogin button,#formReg button,#formVerifyEmail button,#googleSignIn,#linkGoogle'))b.disabled=value;updateResend()}
+function updateResend(){const b=$('resendEmail');const remaining=pending?Math.max(0,Math.ceil((pending.resendAt-Date.now())/1000)):0;b.disabled=busy||remaining>0;b.textContent=remaining?`Повторить через ${remaining} с`:'Отправить ещё раз'}
+setInterval(updateResend,1000);
+function emailStatus(){googleVisibility();const name=VA.getCurrentUser(),user=name?VA.getUser(name):null;notice.hidden=!user;if(!user)return;
+ $('emailStatusText').textContent=user.authSource==='server'&&user.emailVerified?`Почта подтверждена: ${user.email}. Аккаунт хранится на сервере.`:'Локальный аккаунт: почта ещё не подтверждена. На другом устройстве он недоступен. Подтвердите адрес, чтобы сохранить вход на сервере.';
+ if(user.googleLinked)$('emailStatusText').textContent=gt('Почта подтверждена: '+user.email+'. Google привязан к аккаунту.','Email verified: '+user.email+'. Google is linked to this account.');
+ $('migrateAccount').hidden=user.authSource==='server'&&user.emailVerified;
+}
+function refresh(){const name=VA.getCurrentUser();if(typeof logged!=='undefined')logged=name;
+ if(typeof refreshAccount==='function')refreshAccount();if(typeof updateCoin==='function')updateCoin();if(typeof applyMetaToHeader==='function')applyMetaToHeader();if(typeof renderFreeNote==='function')renderFreeNote();emailStatus();
+}
+window.getCurrentUser=()=>VA.getCurrentUser();window.setCurrent=name=>VA.setCurrent(name);
+const oldToggleProfile=window.toggleProfile;
+if(oldToggleProfile)window.toggleProfile=function(open){oldToggleProfile(open);emailStatus()};
+const oldTab=window.openTab;
+window.openTab=function(tab){form.hidden=true;msg('');oldTab(tab);googleVisibility();if(tab==='reg'){migrating=false;window.bindRegChecks()}};
+function showVerification(){
+ if(!pending)return;oldTab('verify');form.hidden=false;googleVisibility();
+ for(const id of ['formLogin','formReg','accountPanel'])if($(id))$(id).style.display='none';
+ $('verifyDescription').textContent=`Отправили код на ${pending.email}. Введите его ниже — до подтверждения аккаунт не создаётся.`;
+ updateResend();$('emailCode').focus();
+}
+const oldToggleAuth=window.toggleAuth;
+window.toggleAuth=function(open){oldToggleAuth(open);if(open){refresh();if(pending)showVerification();else if(migrating)oldTab('login')}};
+function saveServerUser(user){
+ const all=VA.getUsers(),old=all[user.username],same=old&&String(old.email||'').toLowerCase()===user.email.toLowerCase();
+ if(old&&!same){try{localStorage.setItem('vg_legacy_backup_'+Date.now(),JSON.stringify(old))}catch(e){}}
+ const record=Object.assign({balance:100,banned:false,owned:['av:rocket','col:teal','t:new'],avatar:'av:rocket',color:'col:teal',title:'t:new'},same?old:{},user);
+ delete record.pass;delete record.salt;all[user.username]=record;VA.saveUsers(all);VA.setCurrent(user.username);
+ try{localStorage.removeItem('vg_signed_out')}catch(e){}refresh();
+}
+function signedIn(name,local=false){authEpoch++;VA.setCurrent(name);refresh();$('authModal').classList.remove('open');$('lgPass').value='';$('rgPass').value='';$('rgPass2').value='';msg('');if(typeof showToast==='function')showToast(local?'Вход выполнен в локальный аккаунт. Почту можно подтвердить в профиле.':'Вы вошли как '+name)}
+async function beginRegistration(username,email,password){
+ const result=await api('/api/auth/register',{username,email,password});if(!result.ok){msg(result.msg);return false}
+ pending={id:result.registrationId,email:result.email,username,resendAt:Date.now()+result.resendAfter*1000};pendingSave();$('lgPass').value='';$('rgPass').value='';$('rgPass2').value='';msg('');showVerification();return true;
+}
+window.doLogin=async function(e){e.preventDefault();if(busy)return;msg('');const identifier=$('lgUser').value.trim(),password=$('lgPass').value;setBusy(true);
+ try{
+  const local=VA.loginCheck(identifier,password);
+  if(migrating){if(!local.ok){msg(local.msg);return}const user=VA.getUser(local.username);if(!VA.isValidEmail(user.email||'')){msg('В старом аккаунте нет корректной почты. Для переноса обратитесь к владельцу сайта.');return}await beginRegistration(local.username,user.email,password);return}
+  // Legacy logins remain usable without SMTP, and never create another account.
+  if(local.ok){signedIn(local.username,true);return}
+  const result=await api('/api/auth/login',{identifier,password});
+  if(result.ok){saveServerUser(result.user);signedIn(result.user.username);return}
+  if(result.code==='ACCOUNT_NOT_FOUND'||result.code==='BACKEND_UNAVAILABLE'){
+   const known=VA.usernameTaken(identifier)||VA.findByEmail(identifier);msg(known?local.msg:result.msg);
+  }else msg(googleMessages[result.code]?googleMessage(result.code):result.msg);
+ }finally{setBusy(false)}
+};
+window.doRegister=async function(e){e.preventDefault();if(busy)return;msg('');const username=$('rgUser').value.trim(),email=$('rgEmail').value.trim().toLowerCase(),password=$('rgPass').value;
+ if(!username){msg('Введите ник');return}if(!VA.isValidEmail(email)){msg('Некорректный email');return}if(password.length<4){msg('Пароль от 4 символов');return}if(password!==$('rgPass2').value){msg('Пароли не совпадают');return}
+ if(VA.usernameTaken(username)||VA.emailTaken(email)){msg('Этот ник или email уже есть в этом браузере. Используйте вкладку «Вход», затем подтвердите почту в профиле.');return}
+ setBusy(true);try{await beginRegistration(username,email,password)}finally{setBusy(false)}
+};
+form.onsubmit=async function(e){e.preventDefault();if(busy||!pending)return;setBusy(true);msg('');try{const result=await api('/api/auth/verify',{registrationId:pending.id,code:$('emailCode').value.trim()});if(!result.ok){msg(result.msg);return}pending=null;pendingSave();migrating=false;form.hidden=true;$('emailCode').value='';saveServerUser(result.user);signedIn(result.user.username)}finally{setBusy(false)}};
+$('resendEmail').onclick=async()=>{if(busy||!pending)return;setBusy(true);msg('');try{const r=await api('/api/auth/resend',{registrationId:pending.id});if(!r.ok){msg(r.msg);return}pending.resendAt=Date.now()+r.resendAfter*1000;pendingSave();msg('Новое письмо отправлено. Используйте последний код.',false)}finally{setBusy(false)}};
+$('cancelVerification').onclick=()=>{pending=null;pendingSave();migrating=false;form.hidden=true;window.openTab('login')};
+$('migrateAccount').onclick=()=>{const name=VA.getCurrentUser();if(!name)return;pending=null;pendingSave();migrating=true;if(oldToggleProfile)oldToggleProfile(false);oldToggleAuth(true);oldTab('login');form.hidden=true;$('lgUser').value=name;msg('Введите текущий пароль. После проверки мы отправим код на почту этого аккаунта.',false)};
+window.logout=async()=>{authEpoch++;pending=null;pendingSave();migrating=false;VA.setCurrent(null);try{localStorage.setItem('vg_signed_out','1')}catch(e){}refresh();if(oldToggleProfile)oldToggleProfile(false);oldToggleAuth(false);await api('/api/auth/logout',{});};
+window.checkRegInputs=function(){
+ const seq=++availabilitySeq;clearTimeout(availabilityTimer);const name=$('rgUser').value.trim(),email=$('rgEmail').value.trim(),hint=$('regHint');if(!hint)return;
+ const localMessage=name&&VA.usernameTaken(name)?'Этот ник уже зарегистрирован. Используйте вход.':email&&!VA.isValidEmail(email)?'Некорректный email':email&&VA.emailTaken(email)?'Эта почта уже зарегистрирована. Используйте вход.':'';
+ hint.textContent=localMessage;hint.className='reg-hint'+(localMessage?' bad':'');if(localMessage||(!name&&!email))return;
+ availabilityTimer=setTimeout(async()=>{const result=await api('/api/auth/availability?'+new URLSearchParams({username:name,email}));if(seq!==availabilitySeq)return;
+  if(result.ok){const taken=result.usernameTaken||result.emailTaken;hint.textContent=taken?'Ник или email уже зарегистрирован на сервере. Используйте вход.':email?'Формат корректен. Для регистрации понадобится код из письма.':'';hint.className='reg-hint'+(taken?' bad':'')}
+ },300);
+};
+window.bindRegChecks=function(){for(const id of ['rgUser','rgEmail']){const field=$(id);if(!field._authBound){field.addEventListener('input',window.checkRegInputs);field._authBound=true}}window.checkRegInputs()};
+// Recover a valid server session; preserve unverified legacy accounts in this browser.
+(async()=>{const epoch=authEpoch,result=await api('/api/auth/session');if(epoch!==authEpoch)return;let signedOut=false;try{signedOut=localStorage.getItem('vg_signed_out')==='1'}catch(e){}
+ googleBackend=!!result.ok;googleAvailable=result.ok?!!result.googleConfigured:null;
+ const fromGoogle=['success','linked'].includes(googleOutcome)&&result.ok&&result.user?.googleLinked;
+ if(result.ok&&result.user&&(!signedOut||fromGoogle))saveServerUser(result.user);
+ else if(result.ok&&!result.user){const name=VA.getCurrentUser(),user=name&&VA.getUser(name);if(user?.authSource==='server')VA.setCurrent(null)}
+ refresh();
+ if(fromGoogle){pending=null;pendingSave();migrating=false;form.hidden=true;signedIn(result.user.username);googleVisibility();if(googleOutcome==='linked'&&typeof showToast==='function')showToast(gt('Google привязан. Можно входить обоими способами.','Google linked. Both sign-in methods are available.'))}
+ else if(googleError||googleOutcome){window.toggleAuth(true);window.openTab(VA.getCurrentUser()?'acct':'login');msg(googleMessage(googleError||'GOOGLE_TOKEN_FAILED'))}
+ if(!VA.storageStatus().persistent)storageNote.textContent='Браузер не разрешает постоянное локальное хранение. Старые аккаунты здесь могут быть недоступны. Для регистрации и серверного входа откройте сайт по его обычному адресу.';
+})();
+})();
+
+</script>
+</body>
+</html>

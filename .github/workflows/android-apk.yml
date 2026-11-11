@@ -1,0 +1,119 @@
+name: Android APK
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-apk.yml'
+      - 'index.html'
+      - 'top.html'
+      - 'roulette.html'
+      - 'admin.html'
+      - 'about.html'
+      - 'support.html'
+      - 'api.html'
+      - 'privacy.html'
+      - 'database.js'
+      - 'auth-client.js'
+      - 'coin.svg'
+      - 'games/**'
+      - 'assets/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release-apk:
+    name: Build and verify release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 35 build tools
+        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-provider: basic
+
+      - name: Verify the complete offline web bundle
+        run: python3 android/verify_web_assets.py
+
+      - name: Parse bundled and inline JavaScript
+        run: python3 android/verify_javascript.py
+
+      - name: Create one-run APK signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          STORE_PASSWORD="$(openssl rand -hex 24)"
+          KEY_PASSWORD="$(openssl rand -hex 24)"
+          KEYSTORE="$RUNNER_TEMP/vertgames-ci-release.jks"
+          echo "::add-mask::$STORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          keytool -genkeypair -noprompt -v \
+            -keystore "$KEYSTORE" \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -alias vertgames \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname 'CN=VertGames, OU=Android, O=VertGames'
+          {
+            echo "VERTGAMES_KEYSTORE=$KEYSTORE"
+            echo "VERTGAMES_STORE_PASSWORD=$STORE_PASSWORD"
+            echo 'VERTGAMES_KEY_ALIAS=vertgames'
+            echo "VERTGAMES_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        run: gradle --no-daemon --stacktrace -p android clean assembleRelease
+
+      - name: Verify package, assets, version, and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK='android/app/build/outputs/apk/release/app-release.apk'
+          python3 android/verify_apk.py "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.vertgames.mobile' versionCode='1' versionName='1.0.0'"
+          mkdir -p "$RUNNER_TEMP/vertgames-release"
+          cp "$APK" "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk"
+          sha256sum "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk" > "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk.sha256"
+          {
+            echo 'Application: VertGames'
+            echo 'Application ID: com.vertgames.mobile'
+            echo 'Version: 1.0.0 (versionCode 1)'
+            echo 'Build type: release'
+            echo 'Minimum Android: API 23'
+            echo 'Target Android: API 35'
+            echo 'Signing: temporary CI release key (not retained)'
+            echo "Commit: $GITHUB_SHA"
+            echo "Built UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "APK bytes: $(stat -c '%s' "$RUNNER_TEMP/vertgames-release/VertGames-1.0.0-release.apk")"
+          } > "$RUNNER_TEMP/vertgames-release/build-info.txt"
+
+      - name: Upload installable APK and build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: VertGames-1.0.0-APK
+          path: ${{ runner.temp }}/vertgames-release/*
+          if-no-files-found: error
+          retention-days: 30

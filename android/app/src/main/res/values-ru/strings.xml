@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">VertGames</string>
+    <string name="exit_title">Выйти из VertGames?</string>
+    <string name="exit_message">Игры и локальный прогресс останутся сохранены на этом устройстве.</string>
+    <string name="stay">Остаться</string>
+    <string name="exit">Выйти</string>
+    <string name="retry">Повторить</string>
+    <string name="load_error_title">Не удалось запустить VertGames</string>
+    <string name="load_error_message">Библиотека игр находится в приложении. Перезапустите VertGames или переустановите его, если проблема повторится.</string>
+</resources>

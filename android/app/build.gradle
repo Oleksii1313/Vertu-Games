@@ -1,0 +1,97 @@
+plugins {
+    id 'com.android.application'
+}
+
+def repositoryRoot = rootProject.projectDir.parentFile
+
+def generatedWebAssets = layout.buildDirectory.dir('generated/web-assets')
+
+tasks.register('syncWebAssets', Sync) {
+    from(repositoryRoot) {
+        include 'index.html'
+        include 'top.html'
+        include 'roulette.html'
+        include 'admin.html'
+        include 'about.html'
+        include 'support.html'
+        include 'api.html'
+        include 'privacy.html'
+        include 'database.js'
+        include 'auth-client.js'
+        include 'coin.svg'
+        include 'games/**'
+        include 'assets/**'
+    }
+    into(generatedWebAssets.map { it.dir('www') })
+}
+
+android {
+    namespace 'com.vertgames.mobile'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.vertgames.mobile'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    sourceSets {
+        main.assets.srcDir(generatedWebAssets)
+    }
+
+    androidResources {
+        noCompress += ['glb', 'gz']
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        release {
+            def env = System.getenv()
+            def keyPath = env['VERTGAMES_KEYSTORE']
+            def signingRequested = keyPath || env['VERTGAMES_STORE_PASSWORD'] || env['VERTGAMES_KEY_ALIAS'] || env['VERTGAMES_KEY_PASSWORD']
+            if (signingRequested) {
+                if (!(keyPath && env['VERTGAMES_STORE_PASSWORD'] && env['VERTGAMES_KEY_ALIAS'] && env['VERTGAMES_KEY_PASSWORD'])) {
+                    throw new GradleException('Set all four VERTGAMES_KEYSTORE / VERTGAMES_STORE_PASSWORD / VERTGAMES_KEY_ALIAS / VERTGAMES_KEY_PASSWORD variables to use a release key.')
+                }
+                storeFile rootProject.file(keyPath)
+                storePassword env['VERTGAMES_STORE_PASSWORD']
+                keyAlias env['VERTGAMES_KEY_ALIAS']
+                keyPassword env['VERTGAMES_KEY_PASSWORD']
+            } else {
+                // Convenient installable local build. CI supplies its own temporary signing key.
+                initWith signingConfigs.debug
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+            debuggable false
+        }
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('syncWebAssets')
+}
