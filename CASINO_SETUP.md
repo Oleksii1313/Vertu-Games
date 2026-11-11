@@ -16,6 +16,8 @@
 
 Монетка везде — **тот же `coin.svg` / V-иконка**, что уже была в проекте (в шапке, в ставках, в магазине).
 
+Как это выглядит: `docs/casino-desktop.png`, `docs/casino-shop.png`, `docs/casino-mobile.png`.
+
 ## Быстрый старт
 
 ```bash
