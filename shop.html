@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080c">
+<meta name="description" content="Магазин Vertu Games: аватары, цвета профиля, титулы и пакеты V-монет. Покупки на сервере.">
+<title>Магазин — Vertu Games</title>
+<link rel="icon" href="coin.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="assets/vg/css/platform.css">
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</head>
+<body data-page="shop">
+<header class="site-header" data-page="shop"></header>
+<main class="wrap">
+  <section class="section" style="margin-top:24px">
+    <div class="section-head">
+      <div><span class="eyebrow"><span data-ico="bag"></span> Магазин</span>
+        <h1 style="font-size:clamp(26px,3.4vw,38px);margin-top:8px">Призы за V-монеты</h1>
+        <p>Все покупки выполняются на сервере: списание и предмет записываются в одной транзакции.</p></div>
+      <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
+    </div>
+    <div class="chips" style="margin-bottom:20px" id="shopTabs">
+      <button class="chip on" data-jump="kind-avatar">Аватары</button>
+      <button class="chip" data-jump="kind-color">Цвета</button>
+      <button class="chip" data-jump="kind-title">Титулы</button>
+      <button class="chip" data-jump="kind-boost">Пакеты V</button>
+      <button class="chip" data-jump="kind-owned">Мои покупки</button>
+    </div>
+    <div class="stack" style="gap:18px" id="shopBody"><div class="card panel" id="kind-avatar">
+  <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Avatars</span><h2 style="font-size:20px">Аватары</h2></div></div>
+  <div class="shop-grid"><div class="shop-item" data-item="av:rocket">
+  <div class="preview" style="">
+    <span data-ico="rocket" data-size="44"></span>
+  </div>
+  <h4>Ракета</h4>
+  <div class="price"> Бесплатно</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:rocket">Получить</button>
+</div><div class="shop-item" data-item="av:fox">
+  <div class="preview" style="">
+    <span data-ico="fox" data-size="44"></span>
+  </div>
+  <h4>Лис</h4>
+  <div class="price"><span data-ico="coin"></span> 100 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:fox">Купить</button>
+</div><div class="shop-item" data-item="av:tiger">
+  <div class="preview" style="">
+    <span data-ico="tiger" data-size="44"></span>
+  </div>
+  <h4>Тигр</h4>
+  <div class="price"><span data-ico="coin"></span> 130 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:tiger">Купить</button>
+</div><div class="shop-item" data-item="av:alien">
+  <div class="preview" style="">
+    <span data-ico="alien" data-size="44"></span>
+  </div>
+  <h4>Инопланетянин</h4>
+  <div class="price"><span data-ico="coin"></span> 120 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:alien">Купить</button>
+</div><div class="shop-item" data-item="av:dragon">
+  <div class="preview" style="">
+    <span data-ico="dragon" data-size="44"></span>
+  </div>
+  <h4>Дракон</h4>
+  <div class="price"><span data-ico="coin"></span> 180 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:dragon">Купить</button>
+</div><div class="shop-item" data-item="av:bot">
+  <div class="preview" style="">
+    <span data-ico="bot" data-size="44"></span>
+  </div>
+  <h4>Кибербот</h4>
+  <div class="price"><span data-ico="coin"></span> 220 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:bot">Купить</button>
+</div><div class="shop-item" data-item="av:phoenix">
+  <div class="preview" style="">
+    <span data-ico="phoenix" data-size="44"></span>
+  </div>
+  <h4>Феникс</h4>
+  <div class="price"><span data-ico="coin"></span> 280 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:phoenix">Купить</button>
+</div><div class="shop-item" data-item="av:gem">
+  <div class="preview" style="">
+    <span data-ico="gem" data-size="44"></span>
+  </div>
+  <h4>Самоцвет</h4>
+  <div class="price"><span data-ico="coin"></span> 320 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="av:gem">Купить</button>
+</div></div>
+</div><div class="card panel" id="kind-color">
+  <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Profile colors</span><h2 style="font-size:20px">Цвета профиля</h2></div></div>
+  <div class="shop-grid"><div class="shop-item" data-item="col:teal">
+  <div class="preview" style="background:radial-gradient(circle at 50% 40%,#2ee6c844,rgba(9,11,17,.9))">
+    <span class="swatch" style="background:#2ee6c8"></span>
+  </div>
+  <h4>Бирюза</h4>
+  <div class="price"> Бесплатно</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="col:teal">Получить</button>
+</div><div class="shop-item" data-item="col:lime">
+  <div class="preview" style="background:radial-gradient(circle at 50% 40%,#c6ff3d44,rgba(9,11,17,.9))">
+    <span class="swatch" style="background:#c6ff3d"></span>
+  </div>
+  <h4>Неон-лайм</h4>
+  <div class="price"><span data-ico="coin"></span> 60 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="col:lime">Купить</button>
+</div><div class="shop-item" data-item="col:violet">
+  <div class="preview" style="background:radial-gradient(circle at 50% 40%,#8b5cf644,rgba(9,11,17,.9))">
+    <span class="swatch" style="background:#8b5cf6"></span>
+  </div>
+  <h4>Фиолетовый</h4>
+  <div class="price"><span data-ico="coin"></span> 120 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="col:violet">Купить</button>
+</div><div class="shop-item" data-item="col:magenta">
+  <div class="preview" style="background:radial-gradient(circle at 50% 40%,#ff2d9544,rgba(9,11,17,.9))">
+    <span class="swatch" style="background:#ff2d95"></span>
+  </div>
+  <h4>Магента</h4>
+  <div class="price"><span data-ico="coin"></span> 140 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="col:magenta">Купить</button>
+</div><div class="shop-item" data-item="col:gold">
+  <div class="preview" style="background:radial-gradient(circle at 50% 40%,#e8b64c44,rgba(9,11,17,.9))">
+    <span class="swatch" style="background:#e8b64c"></span>
+  </div>
+  <h4>Золото</h4>
+  <div class="price"><span data-ico="coin"></span> 180 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="col:gold">Купить</button>
+</div><div class="shop-item" data-item="col:cyan">
+  <div class="preview" style="background:radial-gradient(circle at 50% 40%,#22d3ee44,rgba(9,11,17,.9))">
+    <span class="swatch" style="background:#22d3ee"></span>
+  </div>
+  <h4>Кибер-циан</h4>
+  <div class="price"><span data-ico="coin"></span> 200 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="col:cyan">Купить</button>
+</div></div>
+</div><div class="card panel" id="kind-title">
+  <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Titles</span><h2 style="font-size:20px">Титулы</h2></div></div>
+  <div class="shop-grid"><div class="shop-item" data-item="t:new">
+  <div class="preview" style="">
+    <span data-ico="bag" data-size="44"></span>
+  </div>
+  <h4>Новичок</h4>
+  <div class="price"> Бесплатно</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="t:new">Получить</button>
+</div><div class="shop-item" data-item="t:vet">
+  <div class="preview" style="">
+    <span data-ico="bag" data-size="44"></span>
+  </div>
+  <h4>Ветеран</h4>
+  <div class="price"><span data-ico="coin"></span> 80 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="t:vet">Купить</button>
+</div><div class="shop-item" data-item="t:ace">
+  <div class="preview" style="">
+    <span data-ico="bag" data-size="44"></span>
+  </div>
+  <h4>Ас</h4>
+  <div class="price"><span data-ico="coin"></span> 160 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="t:ace">Купить</button>
+</div><div class="shop-item" data-item="t:legend">
+  <div class="preview" style="">
+    <span data-ico="bag" data-size="44"></span>
+  </div>
+  <h4>Легенда</h4>
+  <div class="price"><span data-ico="coin"></span> 260 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="t:legend">Купить</button>
+</div></div>
+</div><div class="card panel" id="kind-boost">
+  <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">V packs</span><h2 style="font-size:20px">Пакеты V</h2></div></div>
+  <div class="shop-grid"><div class="shop-item" data-item="boost:500">
+  <div class="preview" style="">
+    <span data-ico="coin" data-size="44"></span>
+  </div>
+  <h4>Пакет 500 V</h4>
+  <div class="price"><span data-ico="coin"></span> 250 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="boost:500">Купить</button>
+</div><div class="shop-item" data-item="boost:1500">
+  <div class="preview" style="">
+    <span data-ico="coin" data-size="44"></span>
+  </div>
+  <h4>Пакет 1 500 V</h4>
+  <div class="price"><span data-ico="coin"></span> 700 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="boost:1500">Купить</button>
+</div><div class="shop-item" data-item="boost:5000">
+  <div class="preview" style="">
+    <span data-ico="coin" data-size="44"></span>
+  </div>
+  <h4>Пакет 5 000 V</h4>
+  <div class="price"><span data-ico="coin"></span> 2000 V</div>
+  <button class="btn btn-sm btn-primary btn-block" data-buy="boost:5000">Купить</button>
+</div></div>
+</div>
+      <div class="card panel" id="kind-owned">
+        <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Inventory</span><h2 style="font-size:20px">Мои покупки</h2></div></div>
+        <div id="ownedList"><div class="loading-row"><span class="spinner"></span> Загружаем покупки…</div></div>
+      </div>
+      <div class="card panel" id="kind-payments">
+        <div class="section-head" style="margin-bottom:8px"><div><span class="eyebrow">V-коины</span><h2 style="font-size:20px">Покупка монет за деньги</h2></div></div>
+        <p class="muted" style="font-size:13.5px;margin:0">V-монеты зарабатываются в играх и казино и не имеют денежной стоимости.
+          Пакеты за реальные деньги отключены владельцем платформы и не влияют на игровой баланс.</p>
+        <div class="msg" id="paymentsNote"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <div style="max-width:320px">
+        <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
+      </div>
+      <div class="footer-col">
+        <h5>Платформа</h5>
+        <a href="index.html">Главная</a>
+        <a href="top.html">Каталог игр</a>
+        <a href="casino.html">Казино</a>
+        <a href="roulette.html">Рулетка</a>
+        <a href="shop.html">Магазин</a>
+      </div>
+      <div class="footer-col">
+        <h5>Аккаунт</h5>
+        <a href="profile.html">Профиль</a>
+        <a href="login.html?tab=login">Вход</a>
+        <a href="login.html?tab=register">Регистрация</a>
+        <a href="profile.html#security">Смена пароля</a>
+      </div>
+      <div class="footer-col">
+        <h5>Помощь</h5>
+        <a href="about.html">О проекте</a>
+        <a href="support.html">Поддержка</a>
+        <a href="api.html">API</a>
+        <a href="privacy.html">Конфиденциальность</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Vertu Games · Все права защищены</span>
+      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
+    </div>
+  </div>
+</footer>
+<script src="assets/vg/js/catalog-data.js"></script>
+<script src="assets/vg/js/platform.js"></script>
+<script src="assets/vg/js/shop.js"></script>
+</body>
+</html>

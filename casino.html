@@ -1,602 +1,187 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Казино V — VertGames</title>
-<meta name="description" content="Казино V: слоты и билеты на внутренние монеты V. Только развлечение: без ставок деньгами и без вывода реальных средств.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080c">
+<meta name="description" content="Социальное казино Vertu Games: слоты и колесо фортуны на виртуальные V-монеты. Вся логика и выплаты — на сервере.">
+<title>Казино — Vertu Games</title>
+<link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" href="coin.svg" type="image/svg+xml">
-<style>
-  :root{--bg:#1a2230;--surface:#202a3a;--card:#1b2432;--card2:#24303f;--line:rgba(255,255,255,.10);--line2:rgba(255,255,255,.16);
-    --text:#f3f7fb;--muted:#a7b7ca;--teal:#2b99a0;--blue:#2f63a8;--blue2:#2f4898;--indigo:#3730a0;
-    --grad:linear-gradient(135deg,#2b99a0 0%,#2f63a8 55%,#3730a0 100%);--shadow:0 14px 40px rgba(0,0,0,.4);
-    /* casino accents */
-    --gold:#e8b64c;--gold2:#f8d98d;--red:#e02340;--violet:#8a6bff;--emerald:#2fbf71;--ink:#0c1320;
-    --gold-grad:linear-gradient(135deg,#f8d98d 0%,#e8b64c 45%,#b3834f 100%);
-    --head:"Oswald",-apple-system,"Segoe UI",sans-serif;--body:"Lato",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:var(--body);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-  h1,h2,h3,.logo-text{font-family:var(--head);letter-spacing:.5px}
-  a{color:inherit}
-  .bg{position:fixed;inset:0;z-index:-2;background:
-    radial-gradient(760px 520px at 12% -8%,rgba(232,182,76,.10),transparent 62%),
-    radial-gradient(820px 620px at 86% 2%,rgba(138,107,255,.13),transparent 62%),
-    radial-gradient(720px 520px at 50% 104%,rgba(43,153,160,.10),transparent 62%),var(--bg)}
-  .bg-grid{position:fixed;inset:0;z-index:-1;opacity:.45;background-image:linear-gradient(rgba(255,255,255,.024) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.024) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(circle at 50% 20%,#000,transparent 82%);mask-image:radial-gradient(circle at 50% 20%,#000,transparent 82%)}
-  .bg-edge{position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(120% 90% at 50% -10%,rgba(232,182,76,.08),transparent 55%),radial-gradient(120% 90% at 50% 110%,rgba(55,48,160,.12),transparent 55%)}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="assets/vg/css/platform.css">
 
-  /* ---------- header (как на остальных страницах) ---------- */
-  .header{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:14px 26px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:rgba(10,14,22,.78);border-bottom:1px solid var(--line)}
-  .logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);font-weight:800;letter-spacing:.4px;flex-shrink:0}
-  .logo-icon{width:30px;height:30px;display:grid;place-items:center}
-  .logo-text span{color:var(--teal)}
-  .nav{display:flex;gap:4px;margin:0 auto}
-  .nav a{color:var(--muted);text-decoration:none;padding:8px 12px;border-radius:9px;font-size:14px;font-weight:600;transition:.2s;white-space:nowrap;flex-shrink:0}
-  .nav a:hover{color:var(--text);background:var(--card2)}
-  .nav a.active{color:var(--text);background:var(--card2)}
-  .header-actions{display:flex;align-items:center;gap:9px;margin-left:auto;flex-shrink:0;min-width:0;max-width:100%}
-  .label-ru,body[lang="en"] .label-en{display:inline}.label-en,body[lang="en"] .label-ru{display:none}
-  .coin{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;background:var(--card2);border:1px solid var(--line);font-weight:700;font-size:14px;white-space:nowrap}
-  .coin-icon{display:inline-block;width:20px;height:20px;flex:none;vertical-align:middle;color:var(--teal)}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font:inherit;font-weight:700;border-radius:10px;padding:10px 18px;transition:.2s;font-size:14px;text-decoration:none}
-  .btn-primary{background:var(--grad);color:#fff}.btn-primary:hover{filter:brightness(1.15)}
-  .btn-gold{background:var(--gold-grad);color:#231a06;box-shadow:0 8px 24px rgba(232,182,76,.28)}.btn-gold:hover{filter:brightness(1.06)}
-  .btn-ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}.btn-ghost:hover{background:#132032;border-color:var(--line2)}
-  .btn-danger{background:rgba(66,58,176,.25);color:#c9c4ef;border:1px solid rgba(66,58,176,.4)}.btn-danger:hover{background:rgba(66,58,176,.4)}
-  .btn-lg{padding:14px 26px;font-size:16px;border-radius:12px}
-  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
-  .lang-switch{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .lang-switch button{background:transparent;border:none;color:var(--muted);padding:8px 12px;cursor:pointer;font-weight:700;font-size:13px}
-  .lang-switch button.on{color:#fff;background:var(--grad)}
-  .menuBtn{display:none;width:40px;height:40px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--text);cursor:pointer;place-items:center;padding:0}
-  .menuBtn .bars{display:grid;gap:4px}
-  .menuBtn .bars i{display:block;width:18px;height:2px;background:var(--text);border-radius:2px}
-  .profile-btn{display:inline-flex;align-items:center;gap:8px}
-  .header-actions #authButton{min-width:0;max-width:180px;white-space:nowrap;overflow:hidden}
-  #authButton>span:not(.pavatar){min-width:0;overflow:hidden;text-overflow:ellipsis}
-  #authButton>.pavatar{flex-shrink:0}
-  @media(max-width:1200px){
-    .menuBtn{display:grid}
-    .nav{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;align-items:stretch;gap:2px;margin:0;padding:10px 16px 14px;background:rgba(10,14,22,.98);border-bottom:1px solid var(--line);box-shadow:0 20px 40px rgba(0,0,0,.45);z-index:60}
-    .header.open .nav{display:flex}
-    .nav a{padding:12px 14px;border-radius:10px;font-size:15px}
-    .header{padding:10px 14px}
-    .logo-text{font-size:16px}
-    .header-actions #authButton>.pavatar~span:last-child{display:none}
-  }
-  @media(max-width:560px){
-    .header{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 12px}
-    .header>.logo{min-height:44px;max-width:calc(100% - 54px);justify-self:start}
-    .header-actions{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(80px,1.2fr);gap:8px;width:100%;margin-left:0}
-    .header-actions>.menuBtn{position:absolute;right:12px;top:10px;width:44px;height:44px}
-    .header-actions>.lang-switch{height:44px}
-    .header-actions>.lang-switch button{min-width:37px;padding:8px 6px}
-    .header-actions>.coin{height:44px;max-width:none;padding:6px 8px;justify-content:center}
-    .header-actions #authButton{width:100%;max-width:none;min-height:44px;padding:8px 10px;font-size:13px;gap:5px}
-  }
-
-  /* ---------- каркас ---------- */
-  .wrap{max-width:1180px;margin:0 auto;padding:34px 24px 80px}
-  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .grad-gold{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:var(--shadow);position:relative;overflow:hidden}
-  .card-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-  .card-h h2{margin:0;font-size:20px;font-weight:700}
-  .eyebrow{font:700 11px/1 var(--body);letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
-  .soft{color:var(--muted);font-size:13.5px;line-height:1.6}
-  .hidden{display:none !important}
-  .spacer{flex:1}
-
-  /* ---------- hero ---------- */
-  .hero{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(150px,.7fr);gap:26px;align-items:center;margin-bottom:26px}
-  .hero-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;border:1px solid rgba(232,182,76,.35);background:rgba(232,182,76,.10);color:var(--gold2);font:700 11.5px/1 var(--body);letter-spacing:1.4px;text-transform:uppercase}
-  .hero h1{font-size:clamp(30px,4.4vw,48px);line-height:1.04;margin:16px 0 12px;font-weight:700}
-  .hero p{color:var(--muted);font-size:15.5px;line-height:1.65;margin:0 0 20px;max-width:56ch}
-  .hero-actions{display:flex;gap:10px;flex-wrap:wrap}
-  .chiprow{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
-  .chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:700}
-  .chip b{color:var(--text)}
-  .hero-art{position:relative;width:100%;max-width:330px;justify-self:center;aspect-ratio:1;margin:0 auto;display:grid;place-items:center}
-  .wheel-deco{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#e8b64c 0 30deg,#1a2432 30deg 60deg,#2b99a0 60deg 90deg,#1a2432 90deg 120deg,#8a6bff 120deg 150deg,#1a2432 150deg 180deg,#e02340 180deg 210deg,#1a2432 210deg 240deg,#e8b64c 240deg 270deg,#1a2432 270deg 300deg,#2b99a0 300deg 330deg,#1a2432 330deg 360deg);box-shadow:0 0 0 6px rgba(255,255,255,.05),0 0 60px rgba(232,182,76,.18),inset 0 0 60px rgba(0,0,0,.55);animation:slowspin 26s linear infinite}
-  .wheel-hub{position:relative;width:52%;height:52%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#26313f,#0d1520 70%);border:1px solid var(--line2);display:grid;place-items:center;box-shadow:0 12px 30px rgba(0,0,0,.5),inset 0 0 24px rgba(232,182,76,.15)}
-  .wheel-hub .coin-icon{width:44px;height:44px;color:var(--gold)}
-  .wheel-pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:20px solid var(--gold);filter:drop-shadow(0 0 10px rgba(232,182,76,.8));z-index:3}
-  @keyframes slowspin{to{transform:rotate(360deg)}}
-
-  /* ---------- layout ---------- */
-  .layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.85fr);gap:22px;align-items:start;margin-bottom:22px}
-  .aside{display:grid;gap:22px;min-width:0}
-  .lower{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:22px;align-items:start}
-
-  /* ---------- слоты ---------- */
-  .slots-card{padding:22px}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font:800 10.5px/1 var(--body);letter-spacing:1.1px;text-transform:uppercase;background:rgba(43,153,160,.14);color:#7fd6dc;border:1px solid rgba(43,153,160,.34)}
-  .badge.gold{background:rgba(232,182,76,.14);color:var(--gold2);border-color:rgba(232,182,76,.34)}
-  .badge.violet{background:rgba(138,107,255,.15);color:#c3b4ff;border-color:rgba(138,107,255,.35)}
-  .cabinet{margin:16px 0 18px;padding:16px;border-radius:18px;background:linear-gradient(180deg,#151d28,#0e151f 60%,#121a24);border:1px solid rgba(232,182,76,.22);box-shadow:inset 0 0 60px rgba(0,0,0,.6),0 18px 40px rgba(0,0,0,.35);position:relative}
-  .cab-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--gold2);font:700 11px/1 var(--body);letter-spacing:1.6px;text-transform:uppercase}
-  .cab-top .lights{margin-left:auto;display:flex;gap:5px}
-  .cab-top .lights i{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);animation:blink 1.6s infinite}
-  .cab-top .lights i:nth-child(2){animation-delay:.4s}.cab-top .lights i:nth-child(3){animation-delay:.8s}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-  .reels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;--cell:96px}
-  .reel{position:relative;height:calc(var(--cell) * 3);overflow:hidden;border-radius:14px;background:radial-gradient(circle at 50% 0%,rgba(255,255,255,.055),transparent 65%),#0b1119;border:1px solid rgba(255,255,255,.07)}
-  .reel:before,.reel:after{content:"";position:absolute;left:0;right:0;height:38%;z-index:2;pointer-events:none}
-  .reel:before{top:0;background:linear-gradient(#0b1119,rgba(11,17,25,0))}
-  .reel:after{bottom:0;background:linear-gradient(rgba(11,17,25,0),#0b1119)}
-  .strip{position:absolute;left:0;right:0;top:0;will-change:transform;transform:translateY(0)}
-  .sym{height:var(--cell);display:grid;place-items:center;color:var(--muted);transition:color .2s,transform .3s}
-  .sym svg{width:46px;height:46px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-  .reel.spinning .strip{filter:blur(1.2px)}
-  .payline{position:absolute;left:-6px;right:-6px;top:var(--cell);height:var(--cell);border-top:1px solid rgba(232,182,76,.35);border-bottom:1px solid rgba(232,182,76,.35);border-radius:6px;pointer-events:none;z-index:3;transition:box-shadow .3s,border-color .3s}
-  .payline.win{border-color:rgba(232,182,76,.9);box-shadow:0 0 34px rgba(232,182,76,.45),inset 0 0 26px rgba(232,182,76,.16)}
-  .sym.hot{color:#fff;transform:scale(1.08)}
-  .sym.hot svg{filter:drop-shadow(0 0 12px rgba(232,182,76,.95))}
-  .win-line{min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;font-family:var(--head);font-weight:700;font-size:19px;color:var(--muted);letter-spacing:.6px}
-  .win-line.win{color:var(--gold2);text-shadow:0 0 18px rgba(232,182,76,.5)}
-  .win-line small{display:block;font:700 11px/1.4 var(--body);letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
-
-  .bet-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  .stake{padding:9px 16px;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--text);font:800 14px/1 var(--body);cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
-  .stake:hover{border-color:var(--line2)}
-  .stake.on{background:var(--gold-grad);border-color:transparent;color:#231a06;box-shadow:0 6px 18px rgba(232,182,76,.25)}
-  .stake .coin-icon{width:14px;height:14px;color:currentColor}
-  .spin-btn{width:100%;padding:16px;font-family:var(--head);font-size:19px;letter-spacing:1.6px;text-transform:uppercase;border-radius:14px}
-  .spin-btn.ready{animation:pulse 2.4s ease-in-out infinite}
-  @keyframes pulse{0%,100%{box-shadow:0 8px 24px rgba(232,182,76,.25)}50%{box-shadow:0 8px 32px rgba(232,182,76,.5)}}
-  .paytable{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.1)}
-  .pt{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid var(--line);font:800 11.5px/1 var(--body);color:var(--muted)}
-  .pt svg{width:15px;height:15px}
-  .pt b{color:var(--gold2)}
-  .note{margin:14px 0 0;font-size:12px;line-height:1.6;color:var(--muted);display:flex;gap:8px;align-items:flex-start}
-  .note svg{flex:none;margin-top:2px;color:var(--gold)}
-
-  /* ---------- rewarded ads ---------- */
-  .ad-card{background:
-    radial-gradient(340px 200px at 100% 0%,rgba(232,182,76,.14),transparent 65%),
-    linear-gradient(180deg,#1b2432,#161e29);border-color:rgba(232,182,76,.22)}
-  .ad-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  .ad-amount{font-family:var(--head);font-size:30px;font-weight:700;color:var(--gold2);line-height:1;display:flex;align-items:center;gap:8px}
-  .ad-amount .coin-icon{width:26px;height:26px;color:var(--gold)}
-  .ad-btn{width:100%;margin:14px 0 10px}
-  .ad-track{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;display:flex;gap:3px}
-  .ad-track i{flex:1;background:rgba(255,255,255,.08);border-radius:99px;transition:.3s}
-  .ad-track i.on{background:var(--gold-grad);box-shadow:0 0 10px rgba(232,182,76,.5)}
-  .ad-meta{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted);font-weight:700}
-
-  /* ---------- daily ---------- */
-  .daily-top{display:flex;align-items:center;gap:12px}
-  .daily-coin{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:rgba(232,182,76,.12);border:1px solid rgba(232,182,76,.3);color:var(--gold)}
-  .daily-reward{font-family:var(--head);font-size:24px;font-weight:700;color:var(--gold2);line-height:1}
-  .dots{display:flex;gap:5px;margin:14px 0 10px}
-  .dots i{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.08)}
-  .dots i.on{background:var(--gold-grad)}
-
-  /* ---------- билеты ---------- */
-  .tk-row{display:flex;align-items:flex-end;gap:12px;margin:12px 0}
-  .tk-num{font-family:var(--head);font-size:40px;line-height:1;font-weight:700;color:#c3b4ff}
-  .tk-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
-
-  /* ---------- биржа / лента ---------- */
-  .ex-row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);margin-bottom:8px}
-  .ex-rank{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;font:800 12px/1 var(--body);background:var(--card2);color:var(--muted);flex:none}
-  .ex-row:first-child .ex-rank{background:var(--gold-grad);color:#231a06}
-  .ex-name{flex:1;min-width:0;font-weight:800;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ex-val{font:800 13px/1 var(--body);color:#c3b4ff;white-space:nowrap}
-  .log{display:grid;gap:6px}
-  .log-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:13px}
-  .log-kind{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
-  .log-val{font-weight:800;white-space:nowrap}
-  .log-val.up{color:var(--emerald)}.log-val.down{color:#e88aa1}
-
-  /* ---------- модалки (как на остальных страницах) ---------- */
-  .modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(6,9,15,.72);backdrop-filter:blur(6px)}
-  .modal.open{display:flex}
-  .panel{width:100%;max-width:440px;max-height:calc(100dvh - 40px);overflow:auto;background:var(--surface);border:1px solid var(--line2);border-radius:18px;padding:26px;box-shadow:var(--shadow);position:relative;animation:pop .3s ease}
-  @keyframes pop{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:none;opacity:1}}
-  .modal>.panel>.close{position:absolute;top:-52px;right:-8px;width:38px;height:38px;border:none;border-radius:50%;background:var(--card2);color:var(--muted);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.15s}
-  .modal>.panel>.close:hover{background:var(--grad);color:#fff;transform:scale(1.08)}
-  .tabs{display:flex;gap:5px;background:var(--card);border:1px solid var(--line);padding:5px;border-radius:10px;margin-bottom:20px}
-  .tabs button{flex:1;padding:9px;border:none;background:none;color:var(--muted);font-weight:700;border-radius:7px;cursor:pointer}
-  .tabs button.on{background:var(--grad);color:#fff}
-  label{display:block;margin-bottom:14px}
-  label>span{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
-  input[type=text],input[type=password],input[type=email]{width:100%;padding:12px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;outline:none;transition:.2s}
-  input:focus{border-color:var(--teal)}
-  .msg{font-size:13px;margin:12px 0 0;min-height:16px}.msg.ok{color:var(--teal)}.msg.err{color:#d083a0}
-  .reg-hint{display:block;font-size:12px;margin:4px 0 0;min-height:15px}
-  .reg-hint.bad{color:#d083a0}.reg-hint.good{color:var(--teal)}
-  .account{text-align:left}.account .title{color:var(--muted);font-size:13px}.account .user{font-size:19px;font-weight:800;margin:4px 0 14px}
-
-  /* ---------- магазин монет ---------- */
-  .packs{display:grid;gap:10px;margin:16px 0}
-  .pack{display:flex;align-items:center;gap:14px;padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border:1px solid var(--line);cursor:pointer;transition:.18s;text-align:left;width:100%;color:inherit;font:inherit}
-  .pack:hover{border-color:rgba(232,182,76,.45);transform:translateY(-1px)}
-  .pack.on{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,182,76,.35),0 10px 26px rgba(232,182,76,.16);background:linear-gradient(135deg,rgba(232,182,76,.12),rgba(232,182,76,.03))}
-  .pack-ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:rgba(232,182,76,.13);color:var(--gold);flex:none}
-  .pack-main{flex:1;min-width:0}
-  .pack-name{font:700 16px/1.2 var(--head);display:flex;align-items:center;gap:7px}
-  .pack-sub{font-size:12px;color:var(--muted);margin-top:3px}
-  .pack-price{font-weight:900;font-size:15px;white-space:nowrap;color:var(--gold2)}
-  .pack-best{position:absolute;top:8px;right:8px;font:800 9.5px/1 var(--body);letter-spacing:1px;text-transform:uppercase;background:var(--gold-grad);color:#231a06;padding:4px 7px;border-radius:6px}
-  .pay-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 14px}
-  .pm{padding:11px 8px;border-radius:11px;border:1px solid var(--line);background:var(--card2);color:var(--text);font:700 12.5px/1.3 var(--body);cursor:pointer;transition:.15s;display:grid;justify-items:center;gap:5px}
-  .pm.on{border-color:var(--teal);background:rgba(43,153,160,.14);color:#fff}
-  .pm small{display:block;font-size:10px;color:var(--muted);font-weight:700}
-  .promo{display:flex;gap:8px;margin-bottom:12px}
-  .promo input{flex:1;text-transform:uppercase}
-  .demo-strip{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgba(138,107,255,.12);border:1px dashed rgba(138,107,255,.45);color:#c3b4ff;font-size:12px;line-height:1.55}
-  .figma-legal{font-size:11.5px;line-height:1.6;color:var(--muted);margin:14px 0 0}
-
-  /* ---------- магазин монет: секция страницы ---------- */
-  .shop-section{overflow:hidden;margin:0}
-  .shop-section.pulse{animation:shopPulse 1.1s ease}
-  @keyframes shopPulse{0%,100%{box-shadow:var(--shadow)}35%{box-shadow:0 0 0 2px rgba(232,182,76,.45),0 18px 50px rgba(232,182,76,.22)}}
-  .shop-glow{position:absolute;inset:-40% 40% 40% -20%;background:radial-gradient(closest-side,rgba(232,182,76,.16),transparent);pointer-events:none}
-  .shop-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:26px;align-items:start;position:relative}
-  .shop-left,.shop-right{min-width:0}
-  @media(max-width:860px){.shop-grid{grid-template-columns:1fr}}
-
-  /* ---------- демо-реклама ---------- */
-  .ad-stage{margin:16px 0;padding:22px;border-radius:14px;background:linear-gradient(135deg,#241a3f,#111a2a);border:1px solid rgba(138,107,255,.35);text-align:center}
-  .ad-stage .sp{width:56px;height:56px;margin:0 auto 12px;border-radius:16px;display:grid;place-items:center;background:rgba(138,107,255,.2);color:#c3b4ff;animation:blink 2s infinite}
-  .ad-progress{height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin:14px 0 8px}
-  .ad-progress i{display:block;height:100%;width:0;background:var(--gold-grad);transition:width .25s linear}
-
-  /* ---------- выигрыш: вспышка и монеты ---------- */
-  .burst{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:18px;z-index:5}
-  .burst i{position:absolute;top:40%;left:50%;width:10px;height:10px;border-radius:3px;background:var(--gold);opacity:0;animation:coinfly .95s ease-out forwards}
-  @keyframes coinfly{0%{opacity:1;transform:translate(-50%,-50%) scale(.7)}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.35) rotate(var(--rot))}}
-
-  /* ---------- toast / footer ---------- */
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;z-index:200;background:var(--surface);border:1px solid var(--line2);color:var(--text);padding:12px 20px;border-radius:10px;font-weight:600;font-size:14px;box-shadow:var(--shadow);transition:.3s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .footer{border-top:1px solid var(--line);margin-top:60px;padding:28px 26px;background:rgba(10,14,22,.6)}
-  .fbottom{max-width:1180px;margin:0 auto;color:var(--muted);font-size:13px;text-align:center;line-height:1.7}
-
-  @media(max-width:980px){
-    .hero{grid-template-columns:1fr}
-    .hero-art{max-width:168px;order:-1;margin:0 auto 2px}
-    .hero h1{margin:12px 0 10px}
-    .hero p{font-size:14.5px;margin-bottom:16px}
-    .layout,.lower{grid-template-columns:1fr}
-  }
-  @media(max-width:560px){
-    .wrap{padding:20px 12px 60px}
-    .card{padding:18px;border-radius:16px}
-    .reels{--cell:74px}
-    .sym svg{width:36px;height:36px}
-    .win-line{font-size:16px;min-height:44px}
-    .stake{padding:8px 12px;font-size:13px}
-    .spin-btn{font-size:16px;padding:14px}
-    .modal>.panel>.close{top:10px;right:10px;background:var(--card)}
-    .panel{padding:20px}
-  }
-  @media(prefers-reduced-motion:reduce){
-    .wheel-deco,.spin-btn.ready,.cab-top .lights i,.ad-stage .sp{animation:none}
-    .burst{display:none}
-  }
-</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
-<body lang="ru">
-<div class="bg"></div><div class="bg-grid"></div><div class="bg-edge"></div>
-
-<header class="header">
-  <a href="index.html" class="logo"><span class="logo-icon"><svg class="logo-svg" width="30" height="30" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect width="40" height="40" rx="10" fill="#1A2230"/>
-  <path d="M11 13L20 28L29 13H24L20 20L16 13H11Z" fill="url(#vert-grad)"/>
-  <circle cx="20" cy="10" r="2" fill="#2B99A0"/>
-  <defs><linearGradient id="vert-grad" x1="11" y1="13" x2="29" y2="28" gradientUnits="userSpaceOnUse"><stop stop-color="#2B99A0"/><stop offset="1" stop-color="#3730A0"/></linearGradient></defs>
-</svg></span><span class="logo-text">VERT<span>GAMES</span></span></a>
-  <nav class="nav">
-    <a href="index.html"><span class="label-ru">Главная</span><span class="label-en">Home</span></a>
-    <a href="casino.html" class="active"><span class="label-ru">Казино</span><span class="label-en">Casino</span></a>
-    <a href="top.html"><span class="label-ru">Топ по балансу</span><span class="label-en">Top by balance</span></a>
-    <a href="roulette.html"><span class="label-ru">Рулетка</span><span class="label-en">Roulette</span></a>
-    <a href="#shop" onclick="navClick()"><span class="label-ru">Магазин монет</span><span class="label-en">Coin shop</span></a>
-    <a href="#" onclick="navClick();toggleProfile(true);return false"><span class="label-ru">Профиль</span><span class="label-en">Profile</span></a>
-    <a href="admin.html"><span class="label-ru">Админ</span><span class="label-en">Admin</span></a>
-  </nav>
-  <div class="header-actions">
-    <button class="menuBtn" onclick="toggleMenu()" aria-label="Меню" title="Меню"><span class="bars"><i></i><i></i><i></i></span></button>
-    <div class="lang-switch"><button id="langRu" class="on">RU</button><button id="langEn">EN</button></div>
-    <div class="coin"><svg class="coin-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width=".8" opacity=".5"/><path d="M8.5 8.5 12 16l3.5-7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="coinCounter">0</span></div>
-    <button class="btn btn-primary" id="authButton"><span class="label-ru">Войти</span><span class="label-en">Sign In</span></button>
-  </div>
-</header>
-
+<body data-page="casino">
+<header class="site-header" data-page="casino"></header>
 <main class="wrap">
-  <!-- ================= HERO ================= -->
-  <section class="hero">
-    <div class="hero-copy">
-      <span class="hero-kicker"><span data-ic="spark" data-s="13"></span><span class="label-ru">Социальное казино VertGames</span><span class="label-en">VertGames social casino</span></span>
-      <h1>
-        <span class="label-ru">Крути слоты.<br><span class="grad-gold">Собирай V.</span> Копи билеты.</span>
-        <span class="label-en">Spin the slots.<br><span class="grad-gold">Stack V.</span> Bank tickets.</span>
-      </h1>
-      <p>
-        <span class="label-ru">Монеты V ты зарабатываешь в играх каталога. Здесь их можно умножить на слотах, получить за просмотр рекламы или купить пакетом. Каждая ставка приносит билеты розыгрыша — пока на внутренние награды.</span>
-        <span class="label-en">You earn V coins in the catalogue games. Here you can multiply them on the slots, get more for watching an ad, or buy a pack. Every bet earns draw tickets — for in-game rewards only.</span>
-      </p>
-      <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="index.html"><span data-ic="game" data-s="18"></span><span class="label-ru">Заработать V в играх</span><span class="label-en">Earn V in games</span></a>
-        <a class="btn btn-ghost btn-lg" href="#shop"><span data-ic="cart" data-s="18"></span><span class="label-ru">Магазин монет</span><span class="label-en">Coin shop</span></a>
-      </div>
-      <div class="chiprow">
-        <span class="chip"><span data-ic="coin" data-s="13"></span><span class="label-ru">Баланс: <b id="heroBalance">0 V</b></span><span class="label-en">Balance: <b id="heroBalanceEn">0 V</b></span></span>
-        <span class="chip"><span data-ic="tag" data-s="13"></span><span class="label-ru">Билеты: <b id="heroTickets">0</b></span><span class="label-en">Tickets: <b id="heroTicketsEn">0</b></span></span>
-        <span class="chip"><span data-ic="shield" data-s="13"></span><span class="label-ru">Без реальных ставок</span><span class="label-en">No real-money stakes</span></span>
-      </div>
+  <section class="section" style="margin-top:22px">
+    <div class="section-head">
+      <div><span class="eyebrow"><span data-ico="wheel"></span> Vertu Casino</span>
+        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Социальное казино</h1>
+        <p>Только виртуальные V-монеты. Результаты, ставки и выплаты рассчитывает сервер.</p></div>
+      <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
     </div>
-    <div class="hero-art" aria-hidden="true">
-      <div class="wheel-deco"></div>
-      <div class="wheel-pointer"></div>
-      <div class="wheel-hub"><svg class="coin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12"/><path d="M8.5 8.5 12 16l3.5-7.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="casino-tabs" id="casinoTabs" role="tablist">
+      <button class="on" data-tab="slots" role="tab" aria-selected="true"><span data-ico="dice"></span> Слоты</button>
+      <button data-tab="wheel" role="tab" aria-selected="false"><span data-ico="wheel"></span> Колесо</button>
+      <button data-tab="history" role="tab" aria-selected="false"><span data-ico="clock"></span> История</button>
+      <button data-tab="rules" role="tab" aria-selected="false"><span data-ico="info"></span> Правила</button>
+    </div>
+
+    <div class="casino-layout" style="margin-top:18px">
+      <div class="card machine">
+        <div id="panel-slots">
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">3 барабана</span><h2 style="font-size:20px">Vert Slots · Neon</h2></div>
+            <span class="badge badge-line">RTP 92.4%</span></div>
+          <div class="slot-window">
+            <div class="slot-grid">
+              <div class="slot-cell" data-cell="0"><span class="sym" data-ico="coin" data-size="56"></span></div>
+              <div class="slot-cell" data-cell="1"><span class="sym" data-ico="star" data-size="56"></span></div>
+              <div class="slot-cell" data-cell="2"><span class="sym" data-ico="crown" data-size="56"></span></div>
+            </div>
+          </div>
+          <div class="stake-row" id="stakeRow"><button class="stake" data-stake="5">5 V</button><button class="stake" data-stake="10">10 V</button><button class="stake" data-stake="20">20 V</button><button class="stake on" data-stake="25">25 V</button><button class="stake" data-stake="50">50 V</button><button class="stake" data-stake="100">100 V</button></div>
+          <div class="machine-foot">
+            <button class="btn btn-primary spin-btn" id="spinSlots"><span data-ico="spark"></span> Крутить слоты</button>
+            <span class="potential">Возможный выигрыш: до <b id="slotMax">1 750 V</b> (x70)</span>
+          </div>
+          <div class="result-banner" id="slotResult">Выберите ставку и запустите барабаны</div>
+        </div>
+
+        <div id="panel-wheel" class="hidden">
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Колесо фортуны</span><h2 style="font-size:20px">Roulette Wheel</h2></div>
+            <span class="badge badge-line">RTP 93.5%</span></div>
+          <div class="wheel-stage">
+            <div class="wheel-pointer"></div>
+            <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны"></canvas>
+          </div>
+          <div class="stake-row" id="wheelStakes"><button class="stake" data-stake="5">5 V</button><button class="stake" data-stake="10">10 V</button><button class="stake" data-stake="20">20 V</button><button class="stake on" data-stake="25">25 V</button><button class="stake" data-stake="50">50 V</button><button class="stake" data-stake="100">100 V</button></div>
+          <div class="machine-foot">
+            <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> Крутить колесо</button>
+            <span class="potential">Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 · <b id="freeSpinNote"></b></span>
+          </div>
+          <div class="result-banner" id="wheelResult">Крутите колесо — результат придёт с сервера</div>
+        </div>
+
+        <div id="panel-history" class="hidden">
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Прозрачность</span><h2 style="font-size:20px">История ставок</h2></div></div>
+          <div class="history-tabs" id="historyFilter">
+            <button class="on" data-game="">Все</button><button data-game="slots">Слоты</button><button data-game="wheel">Колесо</button>
+          </div>
+          <div id="historyBody"><div class="loading-row"><span class="spinner"></span> Загружаем историю…</div></div>
+        </div>
+
+        <div id="panel-rules" class="hidden">
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Честность</span><h2 style="font-size:20px">Правила и вероятности</h2></div></div>
+          <p class="muted" style="font-size:13px">Все результаты генерируются на сервере криптографическим генератором случайных чисел.
+            Ставка списывается до розыгрыша, выигрыш начисляется в той же транзакции. Клиент не может повлиять на результат.</p>
+          <h4 style="margin:16px 0 8px;font-size:15px">Слоты: выплаты за три в ряд</h4>
+          <div class="table-wrap"><table><thead><tr><th>Символ</th><th>Множитель</th><th>Вероятность</th></tr></thead>
+            <tbody><tr><td>V</td><td>x12</td><td>3.25%</td></tr><tr><td>Spark</td><td>x23</td><td>0.49%</td></tr><tr><td>Dice</td><td>x29</td><td>0.33%</td></tr><tr><td>Star</td><td>x35</td><td>0.21%</td></tr><tr><td>Gem</td><td>x47</td><td>0.06%</td></tr><tr><td>Wheel</td><td>x53</td><td>0.06%</td></tr><tr><td>Crown</td><td>x70</td><td>0.03%</td></tr><tr><td>Пара</td><td>x0.4</td><td>—</td></tr></tbody></table></div>
+          <p class="muted" style="font-size:12px;margin-top:8px">Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован.</p>
+          <h4 style="margin:16px 0 8px;font-size:15px">Колесо: секторы и вероятности</h4>
+          <div class="table-wrap"><table><thead><tr><th>Множитель</th><th>Вес</th><th>Вероятность</th><th>Вклад в RTP</th></tr></thead>
+            <tbody><tr><td>x5</td><td>4</td><td>4.0%</td><td>20.0%</td></tr><tr><td>x3</td><td>7</td><td>7.0%</td><td>21.0%</td></tr><tr><td>x2</td><td>8</td><td>8.0%</td><td>16.0%</td></tr><tr><td>x1</td><td>17</td><td>17.0%</td><td>17.0%</td></tr><tr><td>x0.5</td><td>26</td><td>26.0%</td><td>13.0%</td></tr><tr><td>x0.25</td><td>26</td><td>26.0%</td><td>6.5%</td></tr><tr><td>x0</td><td>12</td><td>12.0%</td><td>0.0%</td></tr></tbody></table></div>
+          <p class="muted" style="font-size:12px;margin-top:8px">RTP колеса: 93.5%. Первый спин за сутки — бесплатный при любой ставке.</p>
+          <div class="divider"></div>
+          <h4 style="margin:0 0 8px;font-size:15px">Ограничения</h4>
+          <p class="muted" style="font-size:13px">Ставки: от 5 до 100 V. Доступен дневной лимит ставок и добровольное
+            самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn btn-ghost btn-sm" data-limits="open">Настроить ограничения</button>
+            <a class="btn btn-ghost btn-sm" href="roulette.html">Классическая рулетка</a>
+          </div>
+        </div>
+      </div>
+
+      <aside class="stack" style="gap:16px">
+        <div class="card panel">
+          <h3 style="font-size:16px;margin-bottom:12px">Ваш прогресс</h3>
+          <div class="stat-grid" style="grid-template-columns:1fr 1fr">
+            <div class="stat-card coins"><span>Баланс</span><b data-stat="balance">—</b></div>
+            <div class="stat-card"><span>Ставок</span><b data-stat="bets">—</b></div>
+            <div class="stat-card"><span>Всего ставок на</span><b data-stat="staked">—</b></div>
+            <div class="stat-card"><span>Лучший выигрыш</span><b data-stat="best">—</b></div>
+          </div>
+          <div class="divider"></div>
+          <div class="list" id="limitsInfo">
+            <div class="list-row"><span class="ico" data-ico="shield"></span><span class="meta"><b>Добровольные ограничения</b><small id="limitText">Не заданы</small></span></div>
+          </div>
+          <button class="btn btn-ghost btn-sm btn-block" style="margin-top:12px" data-limits="open">Ограничить игру</button>
+        </div>
+        <div class="card panel">
+          <h3 style="font-size:16px;margin-bottom:10px">Честная игра</h3>
+          <div class="list">
+            <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b>Серверный RNG</b><small>результат генерирует сервер, не браузер</small></span></div>
+            <div class="list-row"><span class="ico" data-ico="lock"></span><span class="meta"><b>Атомарные ставки</b><small>списание и выигрыш в одной транзакции</small></span></div>
+            <div class="list-row"><span class="ico" data-ico="info"></span><span class="meta"><b>Опубликованные шансы</b><small>вероятности и RTP открыты</small></span></div>
+          </div>
+        </div>
+      </aside>
     </div>
   </section>
-
-  <!-- ================= СЛОТЫ + ASIDE ================= -->
-  <div class="layout">
-    <section class="card slots-card" id="slot">
-      <div class="card-h">
-        <h2><span class="grad-gold" data-ic="spark" data-s="20"></span> <span class="label-ru">Слоты «Тройка V»</span><span class="label-en">"Triple V" slots</span></h2>
-        <span class="spacer"></span>
-        <span class="badge gold" id="rtpBadge">RTP —</span>
-      </div>
-      <p class="soft">
-        <span class="label-ru">Три барабана, семь символов, одна линия. Три одинаковых — множитель ставки (до ×70), два одинаковых — 40 % ставки. Средний возврат: <b id="rtpInline">—</b>.</span><span class="label-en">Three reels, seven symbols, one payline. Three of a kind pays the multiplier (up to ×70); two of a kind pays 40% of your stake. Average return: <b id="rtpInline">—</b>.</span></p>
-
-      <div class="cabinet">
-        <div class="cab-top"><span data-ic="bolt" data-s="13"></span><span>Triple V · VertGames</span><span class="lights"><i></i><i></i><i></i></span></div>
-        <div class="reels" id="reels">
-          <div class="reel" id="reel0"><div class="strip" id="strip0"></div></div>
-          <div class="reel" id="reel1"><div class="strip" id="strip1"></div></div>
-          <div class="reel" id="reel2"><div class="strip" id="strip2"></div></div>
-          <div class="payline" id="payline"></div>
-        </div>
-        <div class="win-line" id="winLine">
-          <span><span class="label-ru">Выбери ставку и жми «Крутить»</span><span class="label-en">Pick a stake and hit Spin</span></span>
-        </div>
-      </div>
-
-      <div class="bet-row" id="stakeRow"></div>
-      <button class="btn btn-gold spin-btn" id="spinBtn"><span data-ic="wheel" data-s="20"></span><span class="label-ru">Крутить</span><span class="label-en">Spin</span></button>
-      <p class="note"><span data-ic="info" data-s="15"></span><span class="label-ru">Ставка списывается сразу, выигрыш начисляется после остановки барабанов. Играй ответственно: V нельзя обменять на деньги.</span><span class="label-en">The stake is taken up front and the win is credited after the reels stop. Play responsibly: V cannot be cashed out.</span></p>
-      <div class="paytable" id="paytable"></div>
-    </section>
-
-    <div class="aside">
-      <!-- Rewarded ad -->
-      <section class="card ad-card">
-        <div class="ad-top">
-          <span class="badge gold"><span data-ic="play" data-s="12"></span><span class="label-ru">Rewarded</span><span class="label-en">Rewarded</span></span>
-          <span class="spacer"></span>
-          <span class="eyebrow" id="adDailyLeft">5 / 5</span>
-        </div>
-        <div class="ad-amount"><span id="adReward">+100</span> V</div>
-        <p class="soft" style="margin:6px 0 0">
-          <span class="label-ru">Бонус за просмотр рекламы до конца. Не до конца — бонуса нет.</span>
-          <span class="label-en">A bonus for watching the ad to the end. Skip it and there is no bonus.</span>
-        </p>
-        <button class="btn btn-gold ad-btn" id="adBtn"><span data-ic="play" data-s="16"></span><span id="adBtnText"><span class="label-ru">Смотреть рекламу</span><span class="label-en">Watch the ad</span></span></button>
-        <div class="ad-track" id="adTrack"><i></i><i></i><i></i><i></i><i></i></div>
-        <div class="ad-meta"><span id="adMetaL">—</span><span id="adMetaR"></span></div>
-        <p class="note" style="margin-top:12px"><span data-ic="info" data-s="14"></span><span class="label-ru">После подключения рекламной сети ролик открывается настоящий; сейчас работает демо-режим.</span><span class="label-en">Once an ad network is connected a real ad opens; for now a demo mode is used.</span></p>
-      </section>
-
-      <!-- Daily bonus -->
-      <section class="card">
-        <div class="daily-top">
-          <div class="daily-coin"><span data-ic="spark" data-s="22"></span></div>
-          <div>
-            <div class="eyebrow"><span class="label-ru">Ежедневный бонус</span><span class="label-en">Daily bonus</span></div>
-            <div class="daily-reward" id="dailyReward">+100 V</div>
-          </div>
-          <span class="spacer"></span>
-          <span class="badge violet" id="dailyStreak">×1</span>
-        </div>
-        <div class="dots" id="dailyDots"><i></i><i></i><i></i><i></i><i></i></div>
-        <button class="btn btn-ghost" id="dailyBtn" style="width:100%"><span data-ic="check" data-s="16"></span><span id="dailyBtnText"><span class="label-ru">Забрать бонус</span><span class="label-en">Claim bonus</span></span></button>
-      </section>
-
-      <!-- Tickets -->
-      <section class="card" id="ticketsCard">
-        <div class="card-h">
-          <h2 style="font-size:17px"><span data-ic="tag" data-s="18"></span> <span class="label-ru">Билеты розыгрыша</span><span class="label-en">Draw tickets</span></h2>
-          <span class="spacer"></span>
-          <span class="badge violet"><span data-ic="crown" data-s="12"></span><span class="label-ru">Скоро</span><span class="label-en">Soon</span></span>
-        </div>
-        <div class="tk-row">
-          <div class="tk-num" id="ticketNum">0</div>
-          <div class="soft" style="margin-bottom:4px">
-            <span class="label-ru">билетов<br>1 билет за каждые 100 V ставки</span>
-            <span class="label-en">tickets<br>1 ticket per 100 V wagered</span>
-          </div>
-        </div>
-        <p class="soft" style="margin:0">
-          <span class="label-ru">Билеты — вклад в будущий розыгрыш мерча и бустов. Пока их можно обменять на V.</span>
-          <span class="label-en">Tickets count towards the upcoming merch &amp; boost draw. For now you can swap them for V.</span>
-        </p>
-        <div class="tk-actions">
-          <button class="btn btn-ghost" id="convertBtn" disabled><span data-ic="refresh" data-s="16"></span><span class="label-ru">Обменять 500 билетов → +500 V</span><span class="label-en">Swap 500 tickets → +500 V</span></button>
-          <a class="btn btn-primary" href="#shop"><span data-ic="cart" data-s="16"></span><span class="label-ru">Купить монеты</span><span class="label-en">Buy coins</span></a>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <!-- ================= БИРЖА + ЛЕНТА ================= -->
-  <div class="lower">
-    <section class="card">
-      <div class="card-h">
-        <h2><span data-ic="crown" data-s="20"></span> <span class="label-ru">Витрина наград</span><span class="label-en">Reward shelf</span></h2>
-        <span class="spacer"></span>
-        <span class="badge"><span class="label-ru">следующий этап</span><span class="label-en">next phase</span></span>
-      </div>
-      <p class="soft" style="margin:0 0 14px">
-        <span class="label-ru">Копим V и билеты не в пустоту: в планах обмен на мерч VertGames, бусты каталога и место в закрытом дропе. Ниже — кто копит активнее всех.</span>
-        <span class="label-en">Your V and tickets are not going nowhere: merch, catalogue boosts and a closed drop slot are planned. Below are the busiest collectors.</span>
-      </p>
-      <div id="exList"></div>
-      <p class="note"><span data-ic="lock" data-s="14"></span><span class="label-ru">Награды выдаются внутри сайта и не имеют денежного эквивалента. Вывод средств не предусмотрен.</span><span class="label-en">Rewards are in-site only and have no cash value. Withdrawal is not supported.</span></p>
-    </section>
-
-    <section class="card">
-      <div class="card-h">
-        <h2><span data-ic="refresh" data-s="20"></span> <span class="label-ru">Лента операций</span><span class="label-en">Activity</span></h2>
-      </div>
-      <p class="soft" style="margin:0 0 12px"><span class="label-ru">Последние движения монет в этом браузере.</span><span class="label-en">Recent coin movements in this browser.</span></p>
-      <div class="log" id="logList"></div>
-    </section>
-  </div>
-
-<!-- ================= МАГАЗИН МОНЕТ (секция страницы) ================= -->
-<section class="shop-section card" id="shop">
-  <div class="shop-glow" aria-hidden="true"></div>
-<div class="shop-grid"><div class="shop-left">
-
-    <div class="card-h" style="margin-bottom:14px">
-      <h2 style="font-size:24px"><span data-ic="cart" data-s="20"></span> <span class="label-ru">Магазин монет</span><span class="label-en">Coin shop</span></h2>
-      <span class="spacer"></span>
-      <div class="coin"><svg class="coin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12"/><path d="M8.5 8.5 12 16l3.5-7.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="shopCoins">0</span></div>
-    </div>
-    <p class="soft" style="margin:0 0 10px"><span class="label-ru">Пакеты V для слотов и косметики. Внутренняя валюта сайта.</span><span class="label-en">V packs for the slots and cosmetics. In-site currency.</span></p>
-
-    <div class="packs" id="packs"></div>
-
-    </div><div class="shop-right">
-    <div class="eyebrow" style="margin:6px 0 8px"><span class="label-ru">Способ оплаты</span><span class="label-en">Payment method</span></div>
-    <div class="pay-methods" id="payMethods"></div>
-
-    <div class="promo">
-      <input id="promoInput" type="text" placeholder="PROMO" aria-label="Промокод / promo code" maxlength="24">
-      <button class="btn btn-ghost" id="promoBtn" style="flex:none"><span class="label-ru">Применить</span><span class="label-en">Apply</span></button>
-    </div>
-
-    <button class="btn btn-gold btn-lg" id="payBtn" style="width:100%">
-      <span id="payBtnText"><span class="label-ru">Оплатить</span><span class="label-en">Pay</span></span>
-    </button>
-    <p class="msg" id="shopMsg" style="min-height:18px"></p>
-    <p class="demo-strip" id="demoStrip"><b>DEMO</b> · <span class="label-ru">платёжный шлюз не подключён: нажатие «Оплатить» показывает демо-оплату и начисляет монеты локально. Реальные списания не происходят.</span><span class="label-en">no payment gateway connected: "Pay" runs a demo checkout and credits coins locally. Nothing is charged.</span></p>
-    <p class="figma-legal">
-      <span class="label-ru">V — виртуальная валюта внутри VertGames: не является деньгами, не подлежит обратному обмену и выводу. Покупки доступны с 18 лет и предназначены для развлечения. Возврат за неиспользованные пакеты — по правилам поддержки.</span>
-      <span class="label-en">V is a virtual in-game currency: it is not money, cannot be exchanged back or withdrawn. Purchases are 18+ and for entertainment only. Refunds for unused packs follow the support policy.</span>
-    </p>
-  
-</div></div>
-</section>
-
-  <p class="note" style="justify-content:center;text-align:center;margin:26px auto 0;max-width:820px">
-    <span data-ic="shield" data-s="15"></span>
-    <span class="label-ru">VertGames — развлечение, а не азартная игра на деньги: ставки делаются только внутренними монетами, выигрыш нельзя вывести. 18+.</span>
-    <span class="label-en">VertGames is entertainment, not money gambling: stakes use internal coins only and winnings cannot be withdrawn. 18+.</span>
-  </p>
 </main>
-
-<footer class="footer"><div class="fbottom">
-  <span class="label-ru">© 2026 VestGames.org · Казино V — играй ответственно.</span>
-  <span class="label-en">© 2026 VestGames.org · Casino V — play responsibly.</span>
-</div></footer>
-
-<div class="toast" id="toast"></div>
-
-<!-- ================= AUTH ================= -->
-<div class="modal" id="authModal">
-  <div class="panel">
-    <button class="close" onclick="toggleAuth(false)">×</button>
-    <div class="tabs">
-      <button id="tabLogin" class="on" onclick="openTab('login')"><span class="label-ru">Вход</span><span class="label-en">Sign In</span></button>
-      <button id="tabReg" onclick="openTab('reg')"><span class="label-ru">Регистрация</span><span class="label-en">Register</span></button>
-    </div>
-    <form id="formLogin" onsubmit="doLogin(event)">
-      <label><span>Имя пользователя / Username</span><input id="lgUser" type="text" autocomplete="username" required></label>
-      <label><span>Пароль / Password</span><input id="lgPass" type="password" autocomplete="current-password" required></label>
-      <button class="btn btn-primary" type="submit" style="width:100%"><span class="label-ru">Войти</span><span class="label-en">Sign In</span></button>
-    </form>
-    <form id="formReg" class="hidden" onsubmit="doRegister(event)">
-      <label><span>Имя пользователя / Username</span><input id="rgUser" type="text" autocomplete="username" required></label>
-      <label><span>Email</span><input id="rgEmail" type="email" autocomplete="email" placeholder="you@example.com" required></label>
-      <label><span>Пароль / Password</span><input id="rgPass" type="password" autocomplete="new-password" required></label>
-      <label><span>Повторите пароль / Confirm</span><input id="rgPass2" type="password" autocomplete="new-password" required></label>
-      <p class="reg-hint" id="regHint"></p>
-      <button class="btn btn-primary" type="submit" style="width:100%"><span class="label-ru">Создать аккаунт</span><span class="label-en">Create Account</span></button>
-    </form>
-    <div class="account hidden" id="accountPanel">
-      <p class="title"><span class="label-ru">Вы вошли как</span><span class="label-en">Logged in as</span></p>
-      <p class="user" id="acctName"></p>
-      <button class="btn btn-danger" type="button" style="width:100%" onclick="logout()"><span class="label-ru">Выйти</span><span class="label-en">Logout</span></button>
-    </div>
-    <p class="msg" id="authMsg"></p>
-  </div>
-</div>
-
-<!-- ================= PROFILE ================= -->
-<div class="modal" id="profileModal">
-  <div class="panel">
-    <button class="close" onclick="toggleProfile(false)">×</button>
-    <h2 style="font-family:var(--head);margin:0 0 6px"><span class="label-ru">Профиль</span><span class="label-en">Profile</span></h2>
-    <div class="account hidden" id="profLogged">
-      <div class="tk-row" style="align-items:center;margin:8px 0 4px">
-        <span class="daily-coin" id="profAvatar" style="width:58px;height:58px;border-radius:16px;display:grid;place-items:center"></span>
-        <div style="min-width:0">
-          <p class="pack-name" id="profName" style="margin:0">—</p>
-          <p class="soft" id="profTitle" style="margin:2px 0 0">—</p>
-        </div>
-        <span class="spacer"></span>
-        <div class="coin"><svg class="coin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor" fill-opacity=".12"/><path d="M8.5 8.5 12 16l3.5-7.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="profCoins">0</span></div>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <div style="max-width:320px">
+        <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
       </div>
-      <h4 style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin:18px 0 8px"><span class="label-ru">Аватар</span><span class="label-en">Avatar</span></h4>
-      <div class="tk-num" id="pickerAv" style="display:flex;flex-wrap:wrap;gap:8px;font-family:var(--body);font-size:14px"></div>
-      <h4 style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin:18px 0 8px"><span class="label-ru">Цвет акцента</span><span class="label-en">Accent color</span></h4>
-      <div id="pickerCol" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      <h4 style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin:18px 0 8px"><span class="label-ru">Титул</span><span class="label-en">Title</span></h4>
-      <div id="pickerTitle" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-      <div style="display:flex;gap:10px;margin-top:22px">
-        <a class="btn btn-ghost" style="flex:1" href="index.html"><span data-ic="bag" data-s="16"></span><span class="label-ru">Каталог и косметика</span><span class="label-en">Catalogue &amp; cosmetics</span></a>
-        <button class="btn btn-danger" style="flex:1" onclick="logout()"><span class="label-ru">Выйти</span><span class="label-en">Logout</span></button>
+      <div class="footer-col">
+        <h5>Платформа</h5>
+        <a href="index.html">Главная</a>
+        <a href="top.html">Каталог игр</a>
+        <a href="casino.html">Казино</a>
+        <a href="roulette.html">Рулетка</a>
+        <a href="shop.html">Магазин</a>
+      </div>
+      <div class="footer-col">
+        <h5>Аккаунт</h5>
+        <a href="profile.html">Профиль</a>
+        <a href="login.html?tab=login">Вход</a>
+        <a href="login.html?tab=register">Регистрация</a>
+        <a href="profile.html#security">Смена пароля</a>
+      </div>
+      <div class="footer-col">
+        <h5>Помощь</h5>
+        <a href="about.html">О проекте</a>
+        <a href="support.html">Поддержка</a>
+        <a href="api.html">API</a>
+        <a href="privacy.html">Конфиденциальность</a>
       </div>
     </div>
-    <div class="account" id="profGuest">
-      <p class="soft" style="margin:10px 0"><span class="label-ru">Войдите, чтобы сохранять баланс, билеты и покупки.</span><span class="label-en">Sign in to keep your balance, tickets and purchases.</span></p>
-      <button class="btn btn-primary" style="width:100%" onclick="toggleProfile(false);toggleAuth(true)"><span class="label-ru">Войти / Регистрация</span><span class="label-en">Sign In / Register</span></button>
+    <div class="footer-bottom">
+      <span>© 2026 Vertu Games · Все права защищены</span>
+      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
     </div>
   </div>
-</div>
-
-<!-- ================= ДЕМО-РЕКЛАМА ================= -->
-<div class="modal" id="adDemoModal">
-  <div class="panel" style="max-width:420px;text-align:center">
-    <button class="close" onclick="closeAdDemo(false)">×</button>
-    <div class="ad-stage">
-      <div class="sp"><span data-ic="play" data-s="26"></span></div>
-      <div class="eyebrow"><span class="label-ru">Демонстрация рекламы</span><span class="label-en">Ad demo</span></div>
-      <p style="margin:8px 0 0;font-weight:700"><span class="label-ru">Здесь откроется ролик рекламной сети</span><span class="label-en">A real ad network video opens here</span></p>
-      <div class="ad-progress"><i id="adProgress"></i></div>
-      <p class="soft" id="adCountdown" style="margin:0">0 / 5</p>
-    </div>
-    <p class="soft" style="margin:0 0 12px"><span class="label-ru">Награда начисляется только после полного просмотра — как в боевом режиме с onRewarded.</span><span class="label-en">The reward is granted only after the full view — exactly like production with onRewarded.</span></p>
-    <button class="btn btn-ghost" id="adSkipBtn" style="width:100%"><span class="label-ru">Закрыть без награды</span><span class="label-en">Close without reward</span></button>
-  </div>
-</div>
-
-<!-- ================= ДЕМО-ОПЛАТА ================= -->
-<div class="modal" id="payDemoModal">
-  <div class="panel" style="max-width:420px">
-    <button class="close" onclick="togglePayDemo(false)">×</button>
-    <div class="card-h" style="margin-bottom:8px"><h2 style="font-size:21px"><span class="label-ru">Демо-оплата</span><span class="label-en">Demo checkout</span></h2></div>
-    <p class="soft" style="margin:0 0 12px"><span class="label-ru">Так выглядит шаг оплаты. В боевом режиме пользователя перенаправят на страницу ЮKassa, Stripe или CryptoBot.</span><span class="label-en">This is the payment step. In production the user is redirected to YooKassa, Stripe or CryptoBot.</span></p>
-    <div class="ex-row" style="margin-bottom:10px"><span class="ex-rank">V</span><span class="ex-name" id="payDemoPack">—</span><span class="ex-val" id="payDemoCoins">0 V</span></div>
-    <div class="ex-row" style="margin-bottom:14px"><span class="ex-rank">₽</span><span class="ex-name" id="payDemoMethod">—</span><span class="ex-val" id="payDemoPrice">0 ₽</span></div>
-    <button class="btn btn-gold" id="payDemoOk" style="width:100%"><span class="label-ru">Подтвердить демо-оплату</span><span class="label-en">Confirm demo payment</span></button>
-    <p class="figma-legal"><span class="label-ru">Демо-режим не списывает деньги. В боевом режиме начисление выполняется сервером после вебхука платёжной системы.</span><span class="label-en">Demo mode charges nothing. In production the server credits coins only after the payment webhook.</span></p>
-  </div>
-</div>
-
-<script src="database.js"></script>
-<script src="casino-app.js"></script>
+</footer>
+<div class="modal" id="limitsModal"><div class="panel card">
+  <button class="close" data-close-limits aria-label="Закрыть">×</button>
+  <h2 style="font-size:20px;margin-bottom:6px">Ограничения игры</h2>
+  <p class="muted" style="font-size:13px">Дневной лимит ставок и самоисключение применяются на сервере и не могут быть обойдены из браузера.</p>
+  <label class="field"><span>Дневной лимит ставок, V (0 — без лимита)</span>
+    <input type="number" id="dailyLimit" min="0" max="100000" step="50" value="0"></label>
+  <label class="field"><span>Самоисключение</span>
+    <select id="excludeSelect">
+      <option value="0">Не ограничивать</option>
+      <option value="60">1 час</option>
+      <option value="1440">1 день</option>
+      <option value="10080">7 дней</option>
+      <option value="43200">30 дней</option>
+    </select></label>
+  <div class="row"><button class="btn btn-primary" id="saveLimits">Сохранить</button>
+    <button class="btn btn-ghost" data-close-limits>Отмена</button></div>
+  <p class="msg" id="limitsMsg" role="status"></p>
+</div></div>
+<script src="assets/vg/js/catalog-data.js"></script>
+<script src="assets/vg/js/platform.js"></script>
+<script src="assets/vg/js/casino.js"></script>
 </body>
 </html>
-

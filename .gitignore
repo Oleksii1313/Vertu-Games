@@ -11,3 +11,7 @@ __pycache__/
 .env
 # game build cache used by tools/*.cjs
 .cache/
+# локальный embedded Postgres из tools/dev_pg.py
+.pgdata/
+# артефакты сборки/архивы
+*.zip

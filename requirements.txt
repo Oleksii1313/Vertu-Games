@@ -1,3 +1,8 @@
-# Required only for Google sign-in. Email-code auth still uses Python stdlib.
-google-auth>=2.40,<3
+# Продакшн-стек
+flask>=3.0,<4
+gunicorn>=21.2,<24
+psycopg[binary,pool]>=3.1,<4
 requests>=2.32.5,<3
+
+# Необязательно: только для старого входа через Google (google_oauth.py)
+google-auth>=2.40,<3

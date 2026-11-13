@@ -1,0 +1,385 @@
+#!/usr/bin/env python3
+"""Единый каталог Vertu Games: игры, награды, магазин, достижения, казино.
+
+Этот модуль — единственный источник правды. Из него берут данные:
+
+* сервер (``server.py``) — список игр, лимиты наград, товары, достижения;
+* генератор страниц (``tools/build_platform.py``) — карточки игр, магазин, тексты.
+
+Награды за игры ограничены суточным лимитом: клиент больше не может «начислить»
+себе монеты, он может лишь сообщить о событии с квитанцией, а сумму определяет
+сервер.
+"""
+from __future__ import annotations
+
+# --------------------------------------------------------------------------- #
+#  Игры
+# --------------------------------------------------------------------------- #
+# reward: сколько V начисляется за событие; daily: суточный лимит на игру.
+GAMES = [
+    {
+        'id': 'flappy', 'name': 'Flappy Bird', 'name_en': 'Flappy Bird',
+        'file': 'games/flappy.html', 'icon': 'bird', 'tag': 'CLASSIC',
+        'cat': ['Аркады', 'Популярное'], 'cat_en': ['Arcades', 'Popular'],
+        'desc': 'Классическая аркада с птицей-путешественницей',
+        'desc_en': 'The classic arcade with a travelling bird',
+        'reward': 2, 'daily': 400, 'event': 'pipe',
+        'how_ru': 'Нажимай на экран или пробел, чтобы взмахивать крыльями. Каждая пройденная труба '
+                  'приносит 2 V (лимит 400 V в сутки).',
+        'how_en': 'Tap the screen or press space to flap. Every pipe you pass pays 2 V '
+                  '(400 V daily cap).',
+        'long_ru': 'Классическая аркада с птицей-путешественницей. Нажимай на экран или пробел, чтобы '
+                   'взмахивать крыльями и лавировать между препятствиями.\n\nКаждая пройденная труба '
+                   'приносит очки и монеты. Собирай рекорды и не врезайся!',
+        'long_en': 'The classic arcade with a travelling bird. Tap the screen or press space to flap and '
+                   'weave between the obstacles.\n\nEvery pipe you pass earns points and coins. Beat your '
+                   'records and don’t crash!',
+        'controls_ru': 'Пробел / тап — взмах',
+        'controls_en': 'Space / tap — flap',
+    },
+    {
+        'id': '2048', 'name': '2048', 'name_en': '2048',
+        'file': 'games/game2048.html', 'icon': 'grid', 'tag': 'PUZZLE',
+        'cat': ['Головоломки'], 'cat_en': ['Puzzles'],
+        'desc': 'Логическая головоломка с плитками', 'desc_en': 'A logic puzzle with sliding tiles',
+        'reward': 3, 'daily': 300, 'event': 'merge',
+        'how_ru': 'Двигай плитки стрелками или свайпами. Каждые 100 очков — 3 V (лимит 300 V в сутки).',
+        'how_en': 'Move tiles with arrows or swipes. Every 100 points pays 3 V (300 V daily cap).',
+        'long_ru': 'Логическая игра-головоломка. Сдвигай плитки стрелками или свайпами и объединяй '
+                   'одинаковые числа.\n\nСобери плитку 2048 и открой новые уровни!',
+        'long_en': 'A logic puzzle. Move the tiles with arrows or swipes and merge matching numbers.\n\n'
+                   'Reach the 2048 tile!',
+        'controls_ru': 'Стрелки / свайп — сдвиг поля',
+        'controls_en': 'Arrows / swipe — move the board',
+    },
+    {
+        'id': 'platformer', 'name': 'Platformer', 'name_en': 'Platformer',
+        'file': 'games/platformer.html', 'icon': 'platforms', 'tag': 'HOT',
+        'cat': ['Экшен', 'Популярное'], 'cat_en': ['Action', 'Popular'],
+        'desc': 'Бесконечный раннер по платформам', 'desc_en': 'An endless platform runner',
+        'reward': 5, 'daily': 400, 'event': 'distance',
+        'how_ru': 'Беги вправо, прыгай по платформам и уворачивайся. За каждые 500 метров — 5 V '
+                  '(лимит 400 V в сутки).',
+        'how_en': 'Run right, jump across platforms and dodge. Every 500 metres pays 5 V '
+                  '(400 V daily cap).',
+        'long_ru': 'Бесконечный раннер: беги направо, прыгай по платформам и уворачивайся от шипов.\n\n'
+                   'Двойной прыжок и движущиеся платформы. Чем дальше бежишь — тем быстрее темп.',
+        'long_en': 'An endless runner: run right, jump across platforms and dodge spikes.\n\nDouble jump '
+                   'and moving platforms make every run exciting.',
+        'controls_ru': 'Стрелки / A, D — бег, пробел — прыжок',
+        'controls_en': 'Arrows / A, D — run, Space — jump',
+    },
+    {
+        'id': 'pong', 'name': 'Pong', 'name_en': 'Pong',
+        'file': 'games/pong.html', 'icon': 'ball', 'tag': 'RETRO',
+        'cat': ['Аркады'], 'cat_en': ['Arcades'],
+        'desc': 'Ретро-теннис с комбо', 'desc_en': 'Retro tennis with combos',
+        'reward': 2, 'daily': 300, 'event': 'combo',
+        'how_ru': 'Отбивай мяч ракеткой. Каждое комбо из 5 отбитий — 2 V (лимит 300 V в сутки).',
+        'how_en': 'Return the ball with your paddle. Every 5-hit combo pays 2 V (300 V daily cap).',
+        'long_ru': 'Ретро-теннис. Отбивай мяч ракеткой, набирай комбо и не пропускай голы.\n\nКаждые '
+                   '5 очков повышают уровень — мяч ускоряется.',
+        'long_en': 'Retro tennis. Return the ball with your paddle, build combos and don’t concede '
+                   'goals.\n\nEvery 5 points raise the level.',
+        'controls_ru': 'Мышь / стрелки — ракетка',
+        'controls_en': 'Mouse / arrows — paddle',
+    },
+    {
+        'id': 'shooter', 'name': 'Shooter', 'name_en': 'Shooter',
+        'file': 'games/shooter.html', 'icon': 'target', 'tag': 'HOT',
+        'cat': ['Шутеры', 'Экшен'], 'cat_en': ['Shooters', 'Action'],
+        'desc': 'Космический шутер с волнами врагов', 'desc_en': 'A space shooter with enemy waves',
+        'reward': 5, 'daily': 500, 'event': 'wave',
+        'how_ru': 'Сбивай врагов и проходи волны. Каждая волна — 5 V (лимит 500 V в сутки).',
+        'how_en': 'Blast enemies and clear waves. Each wave pays 5 V (500 V daily cap).',
+        'long_ru': 'Космический шутер: управляй кораблём, сбивай врагов и уворачивайся от атак.\n\n'
+                   'Волны идут одна за другой; собирай бонусы и наращивай комбо.',
+        'long_en': 'A space shooter: pilot your ship, shoot down enemies and dodge attacks.\n\nEvery '
+                   'cleared wave starts the next.',
+        'controls_ru': 'Стрелки / WASD — полёт, пробел — огонь',
+        'controls_en': 'Arrows / WASD — fly, Space — fire',
+    },
+    {
+        'id': 'snake', 'name': 'Snake', 'name_en': 'Snake',
+        'file': 'games/snake.html', 'icon': 'snake', 'tag': 'CLASSIC',
+        'cat': ['Аркады'], 'cat_en': ['Arcades'],
+        'desc': 'Легендарная змейка', 'desc_en': 'The legendary snake',
+        'reward': 5, 'daily': 300, 'event': 'level',
+        'how_ru': 'Собирай еду и расти. Каждые 5 очков — 5 V (лимит 300 V в сутки).',
+        'how_en': 'Eat food and grow. Every 5 points pays 5 V (300 V daily cap).',
+        'long_ru': 'Легендарная змейка. Собирай еду, расти и не врезайся в себя.\n\nКаждые 5 очков — '
+                   'новый уровень скорости.',
+        'long_en': 'The legendary snake. Eat food, grow longer and don’t crash into yourself.\n\nEvery '
+                   '5 points raise the speed level.',
+        'controls_ru': 'Стрелки / WASD — направление',
+        'controls_en': 'Arrows / WASD — direction',
+    },
+    {
+        'id': 'minicraft', 'name': 'MiniCraft 3D', 'name_en': 'MiniCraft 3D',
+        'file': 'games/minicraft.html', 'icon': 'cube', 'tag': 'NEW',
+        'cat': ['Песочницы', 'Популярное'], 'cat_en': ['Sandbox', 'Popular'],
+        'desc': 'Кубический мир 256 × 256', 'desc_en': 'A 256 × 256 voxel world',
+        'reward': 3, 'daily': 450, 'event': 'coin',
+        'how_ru': 'Строй, исследуй мир и сражайся с зомби. Каждая собранная монета — 3 V '
+                  '(лимит 450 V в сутки).',
+        'how_en': 'Build, explore and fight zombies. Each coin collected pays 3 V (450 V daily cap).',
+        'long_ru': 'Кубический мир 256 × 256: строй из шести видов блоков, исследуй ландшафт и сражайся '
+                   'с зомби мечом.\n\nWASD — движение, мышь — обзор, пробел — прыжок. ЛКМ — ломать / '
+                   'атаковать, ПКМ — строить, 1–6 — выбор блока. На телефоне доступны сенсорные кнопки '
+                   'и обзор свайпом.\n\nРаунд длится 3 минуты. Esc — пауза.',
+        'long_en': 'Explore a 256 × 256 voxel world, build with six block types and battle zombies with '
+                   'a sword.\n\nWASD to move, mouse to look, Space to jump. Left click to break / '
+                   'attack, right click to build, 1–6 to select a block. Touch controls and '
+                   'swipe-to-look are available on mobile.\n\nEach round lasts 3 minutes. Esc pauses.',
+        'controls_ru': 'WASD, мышь, ЛКМ / ПКМ, 1–6',
+        'controls_en': 'WASD, mouse, LMB / RMB, 1–6',
+    },
+    {
+        'id': 'doodle', 'name': 'Doodle Jump', 'name_en': 'Doodle Jump',
+        'file': 'games/doodle.html', 'icon': 'doodle', 'tag': 'NEW',
+        'cat': ['Аркады', 'Популярное'], 'cat_en': ['Arcades', 'Popular'],
+        'desc': 'Прыжки по платформам вверх', 'desc_en': 'Bounce your way upwards',
+        'reward': 2, 'daily': 400, 'event': 'metre',
+        'how_ru': 'Прыгай всё выше. Каждые 100 метров — 2 V (лимит 400 V в сутки).',
+        'how_en': 'Climb as high as you can. Every 100 metres pays 2 V (400 V daily cap).',
+        'long_ru': 'Прыгун отскакивает сам: направляй его стрелками или A/D, стреляй пробелом. Зелёные '
+                   'платформы надёжные, голубые двигаются, коричневые ломаются.\n\nНа телефоне — крупные '
+                   'кнопки движения и выстрела. Esc/P — пауза.',
+        'long_en': 'Your jumper bounces automatically: steer with arrows or A/D, shoot with Space. Green '
+                   'platforms are safe, blue ones move and brown ones break.\n\nBig touch buttons make it '
+                   'playable on phones. Esc/P pauses.',
+        'controls_ru': 'Стрелки / A, D — движение, пробел — выстрел',
+        'controls_en': 'Arrows / A, D — move, Space — shoot',
+    },
+    {
+        'id': 'redline', 'name': 'Redline: Розыск', 'name_en': 'Redline: Wanted',
+        'file': 'games/redline.html', 'icon': 'racecar', 'tag': 'NEW',
+        'cat': ['Гонки', 'Популярное'], 'cat_en': ['Racing', 'Popular'],
+        'desc': 'Городские гонки и погони', 'desc_en': 'City racing and police pursuits',
+        'reward': 10, 'daily': 300, 'event': 'exchange',
+        'how_ru': 'Гоночные кредиты Redline обмениваются на V-монеты: 1000 кредитов = 10 V '
+                  '(лимит 300 V в сутки).',
+        'how_en': 'Redline racing credits convert to V-coins: 1000 credits = 10 V (300 V daily cap).',
+        'long_ru': 'Аркадные городские гонки: сеть из 18 дорожных участков, около 8,4 км, сюжетный '
+                   'пролог, 15 соперников, гараж и тюнинг, погони с шестью уровнями розыска.\n\n'
+                   'Телефон: джойстик — газ и руль, отдельные нитро, ручник и замедление. ПК: WASD, '
+                   'Shift, пробел, E, G — гараж, R — вернуть на дорогу.\n\nГоночные кредиты — отдельная '
+                   'экономика Redline, но обмен на V-монеты выполняется на сервере.',
+        'long_en': 'Arcade city racing: 18 road sections covering about 8.4 km, a story prologue, '
+                   '15 rivals, a garage and tuning, six-level police pursuits.\n\nPhone: joystick for '
+                   'throttle and steering, separate nitro, handbrake and slow-motion buttons. PC: WASD, '
+                   'Shift, Space, E, G for garage, R to recover.\n\nRacing credits are Redline’s own '
+                   'economy, but the exchange into V-coins is performed on the server.',
+        'controls_ru': 'WASD / джойстик, Shift — нитро, пробел — ручник',
+        'controls_en': 'WASD / joystick, Shift — nitro, Space — handbrake',
+    },
+    {
+        'id': 'skyisle', 'name': 'Sky-Isle Logistics', 'name_en': 'Sky-Isle Logistics',
+        'file': 'games/sky-isle.html', 'icon': 'drone', 'tag': 'NEW',
+        'cat': ['Полёты', 'Популярное'], 'cat_en': ['Flight', 'Popular'],
+        'desc': 'Доставка почты дроном между островами', 'desc_en': 'Postal drone deliveries between islands',
+        'reward': 5, 'daily': 300, 'event': 'delivery',
+        'how_ru': 'Каждая доставка — 5 V (лимит 300 V в сутки).',
+        'how_en': 'Each delivery pays 5 V (300 V daily cap).',
+        'long_ru': 'Уютный парящий остров Аэро-Вилль и почтовый квадрокоптер. Забирайте посылки в '
+                   'зелёном круге у депо и доставляйте их в дома, обсерваторию и мастерскую.\n\nПлавная '
+                   'инерция, наклоны дрона, карта и высота от 1,5 до 20 метров. Ни таймеров, ни штрафов.',
+        'long_en': 'Fly a little postal quadcopter around the floating island of Aéro-Ville. Pick up '
+                   'parcels at the green depot circle and deliver them to houses, the observatory and the '
+                   'workshop.\n\nSmooth acceleration, drone tilt, a minimap and a 1.5–20 m altitude range. '
+                   'No deadlines or penalties.',
+        'controls_ru': 'WASD — полёт, пробел / Shift — вверх, C — вниз',
+        'controls_en': 'WASD — fly, Space / Shift — ascend, C — descend',
+    },
+    {
+        'id': 'rover', 'name': 'Космокухня', 'name_en': 'Cosmic Kitchen',
+        'file': 'games/chefs-rover.html', 'icon': 'rover', 'tag': 'NEW',
+        'cat': ['Приключения', 'Популярное'], 'cat_en': ['Adventure', 'Popular'],
+        'desc': 'Фудтрак-вездеход по дорогам Аурелии', 'desc_en': 'A food-truck rover across Aurelia',
+        'reward': 6, 'daily': 300, 'event': 'order',
+        'how_ru': 'Выполненные заказы приносят 6 V (лимит 300 V в сутки).',
+        'how_en': 'Completed orders pay 6 V (300 V daily cap).',
+        'long_ru': 'Космокухня: Дороги Аурелии. Леса четырёх биомов, десять деревень с рынками и '
+                   'огородами, жители и стоянки вдоль дорог. Путешествуй на уютном фудтраке-вездеходе, '
+                   'готовь заказы и исследуй мир.',
+        'long_en': 'Cosmic Kitchen: Roads of Aurelia. Forests of four biomes, ten villages with markets '
+                   'and gardens, roadside stops and locals. Travel in a cosy food-truck rover, cook orders '
+                   'and explore the world.',
+        'controls_ru': 'WASD — движение, мышь — обзор, E — взаимодействие',
+        'controls_en': 'WASD — move, mouse — look, E — interact',
+    },
+]
+
+GAME_IDS = {g['id'] for g in GAMES}
+GAMES_BY_ID = {g['id']: g for g in GAMES}
+
+
+def public_games():
+    """Каталог без серверных лимитов (то, что видит браузер)."""
+    out = []
+    for g in GAMES:
+        out.append({
+            'id': g['id'], 'name': g['name'], 'name_en': g['name_en'], 'file': g['file'],
+            'icon': g['icon'], 'tag': g['tag'], 'cat': g['cat'], 'cat_en': g['cat_en'],
+            'desc': g['desc'], 'desc_en': g['desc_en'], 'reward': g['reward'],
+            'event': g['event'], 'daily': g['daily'], 'how_ru': g['how_ru'], 'how_en': g['how_en'],
+            'long_ru': g['long_ru'], 'long_en': g['long_en'],
+            'controls_ru': g['controls_ru'], 'controls_en': g['controls_en'],
+        })
+    return out
+
+
+# --------------------------------------------------------------------------- #
+#  Магазин
+# --------------------------------------------------------------------------- #
+SHOP_ITEMS = [
+    # Аватары
+    {'id': 'av:rocket', 'kind': 'avatar', 'name_ru': 'Ракета', 'name_en': 'Rocket', 'price': 0,
+     'icon': 'rocket', 'payload': 'av:rocket', 'order': 10},
+    {'id': 'av:fox', 'kind': 'avatar', 'name_ru': 'Лис', 'name_en': 'Fox', 'price': 100,
+     'icon': 'fox', 'payload': 'av:fox', 'order': 11},
+    {'id': 'av:tiger', 'kind': 'avatar', 'name_ru': 'Тигр', 'name_en': 'Tiger', 'price': 130,
+     'icon': 'tiger', 'payload': 'av:tiger', 'order': 12},
+    {'id': 'av:alien', 'kind': 'avatar', 'name_ru': 'Инопланетянин', 'name_en': 'Alien', 'price': 120,
+     'icon': 'alien', 'payload': 'av:alien', 'order': 13},
+    {'id': 'av:dragon', 'kind': 'avatar', 'name_ru': 'Дракон', 'name_en': 'Dragon', 'price': 180,
+     'icon': 'dragon', 'payload': 'av:dragon', 'order': 14},
+    {'id': 'av:bot', 'kind': 'avatar', 'name_ru': 'Кибербот', 'name_en': 'Cyborg', 'price': 220,
+     'icon': 'bot', 'payload': 'av:bot', 'order': 15},
+    {'id': 'av:phoenix', 'kind': 'avatar', 'name_ru': 'Феникс', 'name_en': 'Phoenix', 'price': 280,
+     'icon': 'phoenix', 'payload': 'av:phoenix', 'order': 16},
+    {'id': 'av:gem', 'kind': 'avatar', 'name_ru': 'Самоцвет', 'name_en': 'Gem', 'price': 320,
+     'icon': 'gem', 'payload': 'av:gem', 'order': 17},
+    # Цвета профиля
+    {'id': 'col:teal', 'kind': 'color', 'name_ru': 'Бирюза', 'name_en': 'Teal', 'price': 0,
+     'icon': '', 'payload': '#2ee6c8', 'order': 20},
+    {'id': 'col:lime', 'kind': 'color', 'name_ru': 'Неон-лайм', 'name_en': 'Neon lime', 'price': 60,
+     'icon': '', 'payload': '#c6ff3d', 'order': 21},
+    {'id': 'col:violet', 'kind': 'color', 'name_ru': 'Фиолетовый', 'name_en': 'Violet', 'price': 120,
+     'icon': '', 'payload': '#8b5cf6', 'order': 22},
+    {'id': 'col:magenta', 'kind': 'color', 'name_ru': 'Магента', 'name_en': 'Magenta', 'price': 140,
+     'icon': '', 'payload': '#ff2d95', 'order': 23},
+    {'id': 'col:gold', 'kind': 'color', 'name_ru': 'Золото', 'name_en': 'Gold', 'price': 180,
+     'icon': '', 'payload': '#e8b64c', 'order': 24},
+    {'id': 'col:cyan', 'kind': 'color', 'name_ru': 'Кибер-циан', 'name_en': 'Cyber cyan', 'price': 200,
+     'icon': '', 'payload': '#22d3ee', 'order': 25},
+    # Титулы
+    {'id': 't:new', 'kind': 'title', 'name_ru': 'Новичок', 'name_en': 'Rookie', 'price': 0,
+     'icon': '', 'payload': 'Новичок', 'order': 30},
+    {'id': 't:vet', 'kind': 'title', 'name_ru': 'Ветеран', 'name_en': 'Veteran', 'price': 80,
+     'icon': '', 'payload': 'Ветеран', 'order': 31},
+    {'id': 't:ace', 'kind': 'title', 'name_ru': 'Ас', 'name_en': 'Ace', 'price': 160,
+     'icon': '', 'payload': 'Ас', 'order': 32},
+    {'id': 't:legend', 'kind': 'title', 'name_ru': 'Легенда', 'name_en': 'Legend', 'price': 260,
+     'icon': '', 'payload': 'Легенда', 'order': 33},
+    # Одноразовые бонусы
+    {'id': 'boost:500', 'kind': 'boost', 'name_ru': 'Пакет 500 V', 'name_en': '500 V pack', 'price': 250,
+     'icon': 'coin', 'payload': '500', 'order': 40},
+    {'id': 'boost:1500', 'kind': 'boost', 'name_ru': 'Пакет 1 500 V', 'name_en': '1 500 V pack', 'price': 700,
+     'icon': 'coin', 'payload': '1500', 'order': 41},
+    {'id': 'boost:5000', 'kind': 'boost', 'name_ru': 'Пакет 5 000 V', 'name_en': '5 000 V pack', 'price': 2000,
+     'icon': 'coin', 'payload': '5000', 'order': 42},
+]
+
+SHOP_KINDS = ['avatar', 'color', 'title', 'boost']
+
+# Пакеты V за реальные деньги (выключены, пока не задан SHOP_PROVIDER).
+SHOP_PACKS = {
+    'start': {'coins': 1000, 'rub': 99, 'usd': 1.5, 'title_ru': 'Старт', 'title_en': 'Start'},
+    'major': {'coins': 6050, 'rub': 449, 'usd': 5.9, 'title_ru': 'Мажор', 'title_en': 'Major'},
+    'whale': {'coins': 18000, 'rub': 990, 'usd': 12.9, 'title_ru': 'Кит', 'title_en': 'Whale'},
+}
+
+# --------------------------------------------------------------------------- #
+#  Достижения
+# --------------------------------------------------------------------------- #
+ACHIEVEMENTS = [
+    {'id': 'first_login', 'name_ru': 'Добро пожаловать', 'name_en': 'Welcome', 'icon': 'spark',
+     'desc_ru': 'Первый вход в аккаунт', 'desc_en': 'First sign-in', 'coins': 50, 'order': 10},
+    {'id': 'first_game', 'name_ru': 'Первый запуск', 'name_en': 'First launch', 'icon': 'play',
+     'desc_ru': 'Сыграйте в любую игру', 'desc_en': 'Play any game', 'coins': 25, 'order': 20},
+    {'id': 'games_10', 'name_ru': 'Во вкусе', 'name_en': 'Getting hooked', 'icon': 'gamepad',
+     'desc_ru': '10 сыгранных игр', 'desc_en': '10 games played', 'coins': 100, 'order': 30},
+    {'id': 'games_50', 'name_ru': 'Заядлый игрок', 'name_en': 'Hardcore player', 'icon': 'trophy',
+     'desc_ru': '50 сыгранных игр', 'desc_en': '50 games played', 'coins': 300, 'order': 40},
+    {'id': 'first_shop', 'name_ru': 'Шопоголик', 'name_en': 'Shopper', 'icon': 'bag',
+     'desc_ru': 'Первая покупка в магазине', 'desc_en': 'First shop purchase', 'coins': 30, 'order': 50},
+    {'id': 'first_bet', 'name_ru': 'Первая ставка', 'name_en': 'First bet', 'icon': 'dice',
+     'desc_ru': 'Первая ставка в казино', 'desc_en': 'First casino bet', 'coins': 20, 'order': 60},
+    {'id': 'big_win', 'name_ru': 'Крупный куш', 'name_en': 'Big win', 'icon': 'crown',
+     'desc_ru': 'Выигрыш 500 V за одну ставку', 'desc_en': 'Win 500 V on a single bet', 'coins': 100,
+     'order': 70},
+    {'id': 'collector', 'name_ru': 'Коллекционер', 'name_en': 'Collector', 'icon': 'gem',
+     'desc_ru': 'Куплено 5 предметов', 'desc_en': '5 items purchased', 'coins': 150, 'order': 80},
+    {'id': 'balance_5k', 'name_ru': 'Богач', 'name_en': 'Wealthy', 'icon': 'coin',
+     'desc_ru': 'Баланс 5 000 V', 'desc_en': 'Balance of 5 000 V', 'coins': 200, 'order': 90},
+    {'id': 'wheel_master', 'name_ru': 'Мастер колеса', 'name_en': 'Wheel master', 'icon': 'wheel',
+     'desc_ru': '20 вращений колеса', 'desc_en': '20 wheel spins', 'coins': 120, 'order': 100},
+]
+
+# --------------------------------------------------------------------------- #
+#  Казино
+# --------------------------------------------------------------------------- #
+# Колесо: множители и веса (совпадают с прежним интерфейсом roulette.html).
+WHEEL_SEGMENTS = [5, 3, 2, 1, 0.5, 0.25, 0]
+WHEEL_WEIGHTS = [4, 7, 8, 17, 26, 26, 12]
+
+# Слоты: символы, выплата за три в ряд и вес.
+SLOT_SYMBOLS = [
+    {'id': 'v', 'icon': 'coin', 'name': 'V', 'm3': 12, 'w': 30, 'color': '#2ee6c8'},
+    {'id': 'spark', 'icon': 'spark', 'name': 'Spark', 'm3': 23, 'w': 16, 'color': '#3b82f6'},
+    {'id': 'dice', 'icon': 'dice', 'name': 'Dice', 'm3': 29, 'w': 14, 'color': '#a7b7ca'},
+    {'id': 'star', 'icon': 'star', 'name': 'Star', 'm3': 35, 'w': 12, 'color': '#e8b64c'},
+    {'id': 'gem', 'icon': 'gem', 'name': 'Gem', 'm3': 47, 'w': 8, 'color': '#8b5cf6'},
+    {'id': 'wheel', 'icon': 'wheel', 'name': 'Wheel', 'm3': 53, 'w': 8, 'color': '#22c55e'},
+    {'id': 'crown', 'icon': 'crown', 'name': 'Crown', 'm3': 70, 'w': 6, 'color': '#f59e0b'},
+]
+SLOT_TWO_PAY = 0.4
+CASINO_STAKES = [5, 10, 20, 25, 50, 100]
+
+
+def wheel_probabilities() -> list[dict]:
+    total = sum(WHEEL_WEIGHTS)
+    return [{'multiplier': m, 'weight': w, 'chance': round(w / total, 4),
+             'rtp': round(w / total * m, 4)} for m, w in zip(WHEEL_SEGMENTS, WHEEL_WEIGHTS)]
+
+
+def wheel_rtp() -> float:
+    return round(sum(item['rtp'] for item in wheel_probabilities()), 4)
+
+
+def slot_probabilities() -> list[dict]:
+    total = sum(s['w'] for s in SLOT_SYMBOLS)
+    rows, rtp = [], 0.0
+    for s in SLOT_SYMBOLS:
+        p = s['w'] / total
+        chance = p ** 3
+        rows.append({'symbol': s['id'], 'chance': round(chance, 6),
+                     'payout': s['m3'], 'rtp': round(chance * s['m3'], 6)})
+        rtp += chance * s['m3']
+    pair = sum(3 * (s['w'] / total) ** 2 * (1 - s['w'] / total) * SLOT_TWO_PAY for s in SLOT_SYMBOLS)
+    rows.append({'symbol': 'pair', 'chance': None, 'payout': SLOT_TWO_PAY,
+                 'rtp': round(pair, 6)})
+    rtp += pair
+    return rows
+
+
+def slot_rtp() -> float:
+    return round(slot_rtp_value(), 4)
+
+
+def slot_rtp_value() -> float:
+    total = sum(s['w'] for s in SLOT_SYMBOLS)
+    three = sum((s['w'] / total) ** 3 * s['m3'] for s in SLOT_SYMBOLS)
+    pair = sum(3 * (s['w'] / total) ** 2 * (1 - s['w'] / total) * SLOT_TWO_PAY for s in SLOT_SYMBOLS)
+    return three + pair
+
+
+def casino_rules() -> dict:
+    return {
+        'stakes': CASINO_STAKES,
+        'wheel': {'segments': WHEEL_SEGMENTS, 'weights': WHEEL_WEIGHTS,
+                  'probabilities': wheel_probabilities(), 'rtp': wheel_rtp()},
+        'slots': {'symbols': SLOT_SYMBOLS, 'two_pay': SLOT_TWO_PAY,
+                  'probabilities': slot_probabilities(), 'rtp': slot_rtp()},
+    }
