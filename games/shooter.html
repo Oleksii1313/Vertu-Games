@@ -104,13 +104,6 @@
   });
 })();
 </script>
-
-
-
-
-
-
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Neon Blaster — Shooter</title>
@@ -328,7 +321,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
 <div class="cheat-overlay" id="cheatOverlay"><div class="cheat-box"><div class="ic">🛡</div><h3><span data-ru="Окно слишком маленькое" data-en="The window is too small">Окно слишком маленькое</span></h3><p class="ch-why"><span data-ru="Игра приостановлена — размер окна ниже допустимого." data-en="The game is paused — the window is smaller than the minimum size.">Игра приостановлена — размер окна ниже допустимого.</span></p><p><span data-ru="Разверни окно или вернись на вкладку, чтобы продолжить." data-en="Maximise the window or return to the tab to continue.">Разверни окно или вернись на вкладку, чтобы продолжить.</span></p></div></div>
 
 <script>
-window.cheatPaused=false;(function(){var MIN_W=300,MIN_H=220;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT(((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'),'The window is minimised or hidden'))||((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто')):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
+window.cheatPaused=false;(function(){var MIN_W=300,MIN_H=220;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
 </script>
 
 <script>
@@ -361,11 +354,11 @@ function initBoard(){
 function updateLives(){livesEl.textContent='❤️'.repeat(Math.max(0,lives))}
 
 function readyState(){
-  document.getElementById('ovTitle').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?'),'READY?'))||((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?'));
-  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.','Hold the arrows to move and Fire to shoot. You can press both at once. AUTO shoots for you.'))||'Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.'),'Hold the arrows to move and Fire to shoot. You can press both at once. AUTO shoots for you.'))||((window.VGT&&window.VGT('Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.','Hold the arrows to move and Fire to shoot. You can press both at once. AUTO shoots for you.'))||'Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.'));
+  document.getElementById('ovTitle').textContent=((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?');
+  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.','Hold the arrows to move and Fire to shoot. You can press both at once. AUTO shoots for you.'))||'Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.');
   document.getElementById('fEarn').textContent='';
   document.getElementById('fScore').textContent='—';document.getElementById('fWave').textContent='—';document.getElementById('fKills').textContent='—';document.getElementById('fCombo').textContent='—';
-  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('▶ В бой','▶ To battle'))||'▶ В бой'),'▶ To battle'))||((window.VGT&&window.VGT('▶ В бой','▶ To battle'))||'▶ В бой'));
+  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('▶ В бой','▶ To battle'))||'▶ В бой');
   overlay.classList.add('show');
   initBoard();
 }
@@ -571,10 +564,10 @@ function takeDamage(x,y){
 
 function gameOver(){over=true;running=false;
   document.getElementById('ovTitle').textContent='GAME OVER';
-  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('Враги одолели твой корабль','The enemies got your ship'))||'Враги одолели твой корабль'),'The enemies got your ship'))||((window.VGT&&window.VGT('Враги одолели твой корабль','The enemies got your ship'))||'Враги одолели твой корабль'));
+  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Враги одолели твой корабль','The enemies got your ship'))||'Враги одолели твой корабль');
   document.getElementById('fScore').textContent=score;document.getElementById('fWave').textContent=wave;document.getElementById('fKills').textContent=kills;document.getElementById('fCombo').textContent=maxCombo;
   document.getElementById('fEarn').textContent='+'+coins+' V';
-  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова'),'Play again'))||((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова'));
+  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова');
   overlay.classList.add('show');
   burst(player.x,player.y,'#3730a0',40,7);
   try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
@@ -589,7 +582,7 @@ function addFloat(x,y,txt,color){floaters.push({x,y,txt,color,l:1,vy:-1})}
 
 /* input */
 VGInput.hold('btnLeft',v=>keys.left=v);VGInput.hold('btnRight',v=>keys.right=v);VGInput.hold('btnFire',v=>keys.firing=v);
-VGInput.tap('btnAuto',()=>{autoFire=!autoFire;document.getElementById('btnAuto').setAttribute('aria-pressed',String(autoFire));document.getElementById('autoStatus').textContent=autoFire?((window.VGT&&window.VGT(((window.VGT&&window.VGT('ВКЛ','ON'))||'ВКЛ'),'ON'))||((window.VGT&&window.VGT('ВКЛ','ON'))||'ВКЛ')):((window.VGT&&window.VGT('ВЫКЛ','OFF'))||'ВЫКЛ')});
+VGInput.tap('btnAuto',()=>{autoFire=!autoFire;document.getElementById('btnAuto').setAttribute('aria-pressed',String(autoFire));document.getElementById('autoStatus').textContent=autoFire?((window.VGT&&window.VGT('ВКЛ','ON'))||'ВКЛ'):((window.VGT&&window.VGT('ВЫКЛ','OFF'))||'ВЫКЛ')});
 document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;
   if(e.key==='ArrowRight'||e.key==='d')keys.right=true;

@@ -104,13 +104,6 @@
   });
 })();
 </script>
-
-
-
-
-
-
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>2048 — VertGames</title>
@@ -316,7 +309,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
 </div>
 
 <script>
-window.cheatPaused=false;(function(){var MIN_W=320,MIN_H=240;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT(((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'),'The window is minimised or hidden'))||((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто')):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
+window.cheatPaused=false;(function(){var MIN_W=320,MIN_H=240;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
 </script>
 <script>
 
@@ -430,7 +423,7 @@ function checkOver(){
   over=true;let mx=0;board.forEach(r=>r.forEach(v=>{if(v>mx)mx=v}));
   document.getElementById('fScore').textContent=score;document.getElementById('fMax').textContent=mx;
   document.getElementById('fEarn').textContent='+'+coins+' V';document.getElementById('fEarn').style.display='block';
-  document.getElementById('sub').textContent=(mx>=2048?((window.VGT&&window.VGT(((window.VGT&&window.VGT('Невероятно! Ты собрал 2048!','Incredible! You reached 2048!'))||'Невероятно! Ты собрал 2048!'),'Incredible! You reached 2048!'))||((window.VGT&&window.VGT('Невероятно! Ты собрал 2048!','Incredible! You reached 2048!'))||'Невероятно! Ты собрал 2048!')):((window.VGT&&window.VGT(((window.VGT&&window.VGT('Ходов нет — поле заполнено','No moves left — the board is full'))||'Ходов нет — поле заполнено'),'No moves left — the board is full'))||((window.VGT&&window.VGT('Ходов нет — поле заполнено','No moves left — the board is full'))||'Ходов нет — поле заполнено')));
+  document.getElementById('sub').textContent=(mx>=2048?((window.VGT&&window.VGT('Невероятно! Ты собрал 2048!','Incredible! You reached 2048!'))||'Невероятно! Ты собрал 2048!'):((window.VGT&&window.VGT('Ходов нет — поле заполнено','No moves left — the board is full'))||'Ходов нет — поле заполнено'));
   document.getElementById('overlay').classList.add('show');try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
 }
 function updateUI(){document.getElementById('scoreVal').textContent=score;document.getElementById('bestVal').textContent=best;coinsEl.textContent=coins+' V'}

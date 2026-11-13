@@ -150,10 +150,68 @@ def english(text: str) -> str | None:
 STRING_LITERAL = re.compile(r"\s*'([^'\n\\]*[А-Яа-яЁё][^'\n\\]*)'")
 
 
+VGT_MARKER = "((window.VGT&&window.VGT("
+
+
+def _literal_at(text: str, start: int) -> int:
+    """Индекс сразу после строкового литерала, начинающегося в ``start``."""
+    i = start + 1
+    while i < len(text):
+        if text[i] == '\\':
+            i += 2
+            continue
+        if text[i] == "'":
+            return i + 1
+        i += 1
+    return -1
+
+
+def _unwrap_localized(chunk: str) -> str:
+    """Снимает прежние обёртки VGT, чтобы повторный запуск их не дублировал.
+
+    Форма обёртки: ``((window.VGT&&window.VGT('ru','en'))||'ru')`` — она может
+    быть вложенной, поэтому разбираем скобки, а не полагаемся на регулярку.
+    """
+    out: list[str] = []
+    i = 0
+    while True:
+        start = chunk.find(VGT_MARKER, i)
+        if start == -1:
+            out.append(chunk[i:])
+            break
+        out.append(chunk[i:start])
+        depth, k = 0, start
+        while k < len(chunk):
+            char = chunk[k]
+            if char == "'":
+                nxt = _literal_at(chunk, k)
+                if nxt != -1:
+                    k = nxt
+                    continue
+            elif char == '(':
+                depth += 1
+            elif char == ')':
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        expression = chunk[start:k + 1]
+        cut = expression.rfind('||')
+        fallback = expression[cut + 2:].rstrip() if cut != -1 else ''
+        fallback = fallback.rstrip(')').strip()
+        if fallback.startswith("'") and fallback.endswith("'") and len(fallback) > 1:
+            out.append(fallback)
+        else:
+            out.append(expression)
+        i = k + 1
+    return ''.join(out)
+
+
 def _localize_script(chunk: str, missing: list[str]) -> str:
     """Строковые литералы в JS оборачиваем в window.VGT(ru, en) — язык учтётся."""
     if 'game-i18n-runtime' in chunk or 'VG_GAME_STRINGS' in chunk:
         return chunk
+    chunk = _unwrap_localized(chunk)
 
     def fix(match: re.Match) -> str:
         value = match.group(1)
@@ -258,7 +316,9 @@ def localize_file(path: Path, check_only: bool = False) -> list[str]:
     head = result.lower().find('<head>')
     if head != -1:
         at = head + len('<head>')
-        result = result[:at] + '\n' + blocks + result[at:]
+        # Пустые строки после <head> не накапливаем между запусками.
+        rest = result[at:].lstrip('\n')
+        result = result[:at] + '\n' + blocks + rest
     else:
         idx = result.lower().rfind('</body>')
         if idx != -1:

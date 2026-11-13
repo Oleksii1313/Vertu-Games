@@ -104,13 +104,6 @@
   });
 })();
 </script>
-
-
-
-
-
-
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Snake — VertGames</title>
@@ -318,7 +311,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
 <div class="cheat-overlay" id="cheatOverlay"><div class="cheat-box"><div class="ic">🛡</div><h3><span data-ru="Окно слишком маленькое" data-en="The window is too small">Окно слишком маленькое</span></h3><p class="ch-why"><span data-ru="Игра приостановлена — размер окна ниже допустимого." data-en="The game is paused — the window is smaller than the minimum size.">Игра приостановлена — размер окна ниже допустимого.</span></p><p><span data-ru="Разверни окно или вернись на вкладку, чтобы продолжить." data-en="Maximise the window or return to the tab to continue.">Разверни окно или вернись на вкладку, чтобы продолжить.</span></p></div></div>
 
 <script>
-window.cheatPaused=false;(function(){var MIN_W=300,MIN_H=220;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT(((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'),'The window is minimised or hidden'))||((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто')):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
+window.cheatPaused=false;(function(){var MIN_W=300,MIN_H=220;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
 
 const c=document.getElementById('c'),ctx=c.getContext('2d');
 const grid=20;
@@ -346,9 +339,9 @@ function initBoard(){
 
 /* start / restart via overlay */
 function ready(){
-  document.getElementById('ovTitle').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?'),'READY?'))||((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?'));
-  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('Нажми стрелку, свайп или кнопку, чтобы начать','Press an arrow, swipe or tap a button to start'))||'Нажми стрелку, свайп или кнопку, чтобы начать'),'Press an arrow, swipe or tap a button to start'))||((window.VGT&&window.VGT('Нажми стрелку, свайп или кнопку, чтобы начать','Press an arrow, swipe or tap a button to start'))||'Нажми стрелку, свайп или кнопку, чтобы начать'));
-  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('▶ Старт','▶ Start'))||'▶ Старт'),'▶ Start'))||((window.VGT&&window.VGT('▶ Старт','▶ Start'))||'▶ Старт'));
+  document.getElementById('ovTitle').textContent=((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?');
+  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Нажми стрелку, свайп или кнопку, чтобы начать','Press an arrow, swipe or tap a button to start'))||'Нажми стрелку, свайп или кнопку, чтобы начать');
+  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('▶ Старт','▶ Start'))||'▶ Старт');
   document.getElementById('fEarn').textContent='';
   overlay.classList.add('show');started=false;paused=false;
   initBoard();loop();
@@ -359,10 +352,10 @@ function startRun(){
 }
 function gameOver(){over=true;started=false;if(tick)clearInterval(tick);
   document.getElementById('ovTitle').textContent='GAME OVER';
-  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('Змейка столкнулась сама с собой','The snake ran into itself'))||'Змейка столкнулась сама с собой'),'The snake ran into itself'))||((window.VGT&&window.VGT('Змейка столкнулась сама с собой','The snake ran into itself'))||'Змейка столкнулась сама с собой'));
+  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Змейка столкнулась сама с собой','The snake ran into itself'))||'Змейка столкнулась сама с собой');
   document.getElementById('fScore').textContent=score;document.getElementById('fLevel').textContent=level;document.getElementById('fLen').textContent=snake.length;
   document.getElementById('fEarn').textContent='+'+coins+' V';
-  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT(((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова'),'Play again'))||((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова'));
+  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова');
   overlay.classList.add('show');
   spawnParticles(snake[0].x*grid+10,snake[0].y*grid+10,'#4037b0',30,6);
   try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
@@ -416,7 +409,7 @@ function spawnParticles(x,y,c,n,spd){for(let i=0;i<n;i++)particles.push({x,y,vx:
 
 function setPaused(v){if(!started||over)return;paused=v;
   document.getElementById('ovTitle').textContent=v?((window.VGT&&window.VGT('ПАУЗА','PAUSE'))||'ПАУЗА'):'';
-  document.getElementById('ovSub').textContent=v?((window.VGT&&window.VGT(((window.VGT&&window.VGT('Нажми ▶ или Space, чтобы продолжить','Press ▶ or Space to continue'))||'Нажми ▶ или Space, чтобы продолжить'),'Press ▶ or Space to continue'))||((window.VGT&&window.VGT('Нажми ▶ или Space, чтобы продолжить','Press ▶ or Space to continue'))||'Нажми ▶ или Space, чтобы продолжить')):'';
+  document.getElementById('ovSub').textContent=v?((window.VGT&&window.VGT('Нажми ▶ или Space, чтобы продолжить','Press ▶ or Space to continue'))||'Нажми ▶ или Space, чтобы продолжить'):'';
   document.getElementById('ovBtn').textContent=v?((window.VGT&&window.VGT('▶ Продолжить','▶ Continue'))||'▶ Продолжить'):'';
   document.getElementById('fEarn').textContent='';
   if(v){if(tick)clearInterval(tick);overlay.classList.add('show')}
