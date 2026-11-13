@@ -1,35 +1,16 @@
-#!/usr/bin/env python3
-"""Графические улучшения Sky-Isle: мягкий свет, тени, параллакс и частицы.
-
-Скрипт один раз вставляет в ``games/sky-isle.html`` блок ``#sky-gfx-upgrade``
-сразу после основного модуля игры. Блок использует уже существующие объекты
-(``skyGame.scene``, ``drone``, ``update``), поэтому не дублирует логику и
-остаётся безопасным: если чего-то нет — улучшения просто не включаются.
-
-    python3 tools/sky_isle_gfx.py           # применить
-    python3 tools/sky_isle_gfx.py --check   # проверить наличие блока
-"""
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-TARGET = ROOT / 'games' / 'sky-isle.html'
-MARK = 'id="sky-gfx-upgrade"'
-
-BLOCK = r'''<script id="sky-gfx-upgrade">
+/*
+ * Sky-Isle graphics: parallax clouds, particles, soft light and environment props.
+ * Attaches lazily to window.skyGame so the main game module stays untouched.
+ */
+window.__skyGfx = (function () {
+  'use strict';
+  function attach(game, B) {
+    if (!game || !game.scene || !B || window.__skyGfxReady) return false;
 /*
  * Графика Sky-Isle: параллакс облаков, частицы, мягкие тени и свечение.
  * Работает поверх готовой сцены через публичный объект window.skyGame.
  */
-(function () {
-  'use strict';
-  function boot() {
-    var game = window.skyGame;
-    if (!game || !game.scene || !window.BABYLON) return false;
-    if (window.__skyGfxReady) return true;
-    var B = window.BABYLON, scene = game.scene, drone = game.drone, camera = game.camera;
+    var scene = game.scene, drone = game.drone, camera = game.camera;
     var now = 0;
 
     /* ------------------------------------------------ 1. Свет и мягкие тени */
@@ -217,7 +198,7 @@ BLOCK = r'''<script id="sky-gfx-upgrade">
       glowLayer = null;   // WebGL1 без post-process — играем без свечения
     }
 
-    /* ----------------- 5. События: подбор и доставка ловятся по состоянию игры */
+    /* ----------------- 6. События: подбор и доставка ловятся по состоянию игры */
     var state = game.state || {};
     var prevOrder = state.order, prevScore = state.score;
 
@@ -260,35 +241,5 @@ BLOCK = r'''<script id="sky-gfx-upgrade">
     window.__skyGfxReady = true;
     return true;
   }
-
-  // Игра загружает Babylon асинхронно, поэтому пробуем несколько раз.
-  var attempts = 0;
-  var timer = setInterval(function () {
-    attempts++;
-    if (boot() || attempts > 120) clearInterval(timer);
-  }, 250);
-  document.addEventListener('DOMContentLoaded', boot);
+  return { attach: attach };
 })();
-</script>
-'''
-
-
-def main(argv: list[str]) -> int:
-    source = TARGET.read_text(encoding='utf-8')
-    present = MARK in source
-    if '--check' in argv:
-        print('блок графики на месте' if present else 'блока графики нет')
-        return 0 if present else 1
-    if present:
-        print('блок уже вставлен')
-        return 0
-    # Вставляем в самый конец страницы: игра уже объявила window.skyGame.
-    anchor = source.rfind('</body>')
-    source = source[:anchor] + BLOCK + source[anchor:]
-    TARGET.write_text(source, encoding='utf-8')
-    print('блок графики добавлен')
-    return 0
-
-
-if __name__ == '__main__':
-    raise SystemExit(main(sys.argv))
