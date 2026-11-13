@@ -9,6 +9,12 @@
   var rotation = 0;
   var busy = false;
   var canvas, ctx;
+  /* Суточные лимиты: 1 бесплатное вращение + 5 платных. Состояние приходит с
+     сервера и дублируется в localStorage, чтобы кнопка оставалась заблокированной
+     и после перезагрузки страницы. */
+  var limits = null;
+  var countdownTimer = null;
+  var LIMIT_CACHE = 'vg.wheelLimits';
 
   function colors() { return ['#ff2d95', '#c6ff3d', '#8b5cf6', '#2ee6c8', '#3b82f6', '#e8b64c', '#5f6980']; }
 
@@ -64,6 +70,92 @@
     ctx.fillText('VERTU', cx, cy);
   }
 
+  function cacheLimits(data) {
+    try { localStorage.setItem(LIMIT_CACHE, JSON.stringify(data)); } catch (e) {}
+  }
+  function cachedLimits() {
+    try {
+      var raw = localStorage.getItem(LIMIT_CACHE);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      return data && data.resetAt > Date.now() / 1000 ? data : null;
+    } catch (e) { return null; }
+  }
+  function clearLimitCache() {
+    try { localStorage.removeItem(LIMIT_CACHE); } catch (e) {}
+  }
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  function formatLeft(ms) {
+    var total = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total % 3600) / 60);
+    var sec = total % 60;
+    return two(h) + ':' + two(m) + ':' + two(sec);
+  }
+
+  /* Кнопка, баннер и чип лимитов: блокировка до полуночи UTC с обратным отсчётом. */
+  function renderLimits(data) {
+    var button = $('#spinWheel');
+    var banner = $('#wheelResult');
+    var chip = $('#wheelLimits');
+    var freeBox = $('#useFree');
+    if (!data) return;
+    limits = data;
+    var left = Math.max(0, (data.resetAt - (data.serverNow || Date.now() / 1000)) * 1000);
+    var blocked = data.freeLeft <= 0 && data.paidLeft <= 0;
+    if (!blocked) clearLimitCache(); else cacheLimits(data);
+    if (chip) {
+      chip.classList.toggle('blocked', blocked);
+      chip.textContent = T('Бесплатно: ' + data.freeLeft + '/' + data.freeLimit +
+        ' · Платных: ' + data.paidLeft + '/' + data.paidLimit,
+        'Free: ' + data.freeLeft + '/' + data.freeLimit +
+        ' · Paid: ' + data.paidLeft + '/' + data.paidLimit);
+    }
+    if (freeBox) {
+      freeBox.disabled = data.freeLeft <= 0;
+      if (data.freeLeft <= 0) freeBox.checked = false; else freeBox.checked = true;
+    }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    if (!button) return;
+    if (!blocked) {
+      button.disabled = busy;
+      button.removeAttribute('data-blocked');
+      button.innerHTML = VG.icon('wheel', 16) + ' ' + T('Крутить', 'Spin');
+      if (banner && !busy) {
+        banner.className = 'result-banner';
+        banner.textContent = data.freeLeft > 0
+          ? T('Доступен бесплатный спин. Ставка ' + stake + ' V.', 'A free spin is available. Stake ' + stake + ' V.')
+          : T('Осталось платных вращений: ' + data.paidLeft + '. Ставка ' + stake + ' V.',
+              'Paid spins left: ' + data.paidLeft + '. Stake ' + stake + ' V.');
+      }
+      return;
+    }
+    // Лимит исчерпан: блокируем кнопку и показываем обратный отсчёт до сброса.
+    button.disabled = true;
+    button.setAttribute('data-blocked', '1');
+    var tick = function () {
+      var now = Date.now();
+      var remaining = Math.max(0, (data.resetAt * 1000) - now);
+      button.innerHTML = VG.icon('clock', 16) + ' ' +
+        T('Следующее вращение через ' + formatLeft(remaining), 'Next spin in ' + formatLeft(remaining));
+      if (banner && !busy) {
+        banner.className = 'result-banner lose';
+        banner.textContent = T(
+          'Лимит на сегодня исчерпан (1 бесплатное + 5 платных). Новые вращения — через ' +
+          formatLeft(remaining) + ' (00:00 UTC).',
+          'Daily limit reached (1 free + 5 paid). New spins in ' + formatLeft(remaining) + ' (00:00 UTC).');
+      }
+      if (remaining <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        clearLimitCache();
+        loadFreeState();
+      }
+    };
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+
   function loadFreeState() {
     if (!VG.user()) {
       var note = $('#useFree');
@@ -72,13 +164,12 @@
     }
     VG.api('/api/casino/rules').then(function (data) {
       var box = $('#useFree');
-      if (!box) return;
-      box.disabled = !data.freeSpin;
-      box.checked = !!data.freeSpin;
-      var label = box.parentElement.querySelector('span');
-      if (label) label.textContent = data.freeSpin
+      var label = box && box.parentElement.querySelector('span');
+      if (label) label.textContent = (data.freeSpin)
         ? T('Использовать бесплатный спин (доступен сегодня)', 'Use the free spin (available today)')
         : T('Бесплатный спин уже использован — спинов за V', 'Free spin used — spins cost V');
+      if (data.wheelLimits) renderLimits(data.wheelLimits);
+      else if (box) box.disabled = !data.freeSpin;
     }).catch(function () {});
   }
 
@@ -90,6 +181,11 @@
       return;
     }
     var free = $('#useFree') && $('#useFree').checked && !$('#useFree').disabled;
+    if (limits && limits.freeLeft <= 0 && limits.paidLeft <= 0) {
+      VG.toast(T('Лимит вращений на сегодня исчерпан. Подождите до 00:00 UTC.',
+        'Daily spin limit reached. Please wait until 00:00 UTC.'), 'bad');
+      return;
+    }
     if (!free && VG.coins() < stake) {
       VG.toast(T('Недостаточно V-монет для этой ставки.', 'Not enough V-coins for this stake.'), 'bad');
       return;
@@ -113,9 +209,9 @@
         draw(from + (target - from) * eased);
         if (elapsed < 1) return requestAnimationFrame(animate);
         rotation = target % (Math.PI * 2);
-        button.disabled = false;
         busy = false;
         VG.updateCoins(data.balance);
+        if (data.limits) renderLimits(data.limits); else button.disabled = false;
         if (data.payout > 0) {
           banner.className = 'result-banner win';
           banner.textContent = (data.free ? T('Бесплатный спин! ', 'Free spin! ') : '') +
@@ -130,10 +226,16 @@
         loadStats();
       })(start);
     }).catch(function (error) {
+      busy = false;
+      if (error.limits) {
+        // Сервер вернул состояние лимитов вместе с ошибкой — включаем отсчёт.
+        renderLimits(error.limits);
+        VG.toast(error.message, 'bad');
+        return;
+      }
       banner.className = 'result-banner lose';
       banner.textContent = error.message;
       button.disabled = false;
-      busy = false;
     });
   }
 
@@ -199,6 +301,10 @@
     }
     var button = $('#spinWheel');
     if (button) button.addEventListener('click', spin);
+    if (VG.user()) {
+      var cached = cachedLimits();
+      if (cached) renderLimits(cached);
+    }
     loadFreeState();
     loadHistory();
     VG.onChange(function () {

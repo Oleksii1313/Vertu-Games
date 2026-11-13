@@ -152,11 +152,14 @@
   VG.colorHex = function (id) { return COLOR_HEX[id] || '#2ee6c8'; };
 
   /* -------------------------------------------------------------------- api */
-  function ApiError(message, code, status) {
+  function ApiError(message, code, status, data) {
     this.name = 'ApiError';
     this.message = message;
     this.code = code || 'ERROR';
     this.status = status || 0;
+    // Дополнительные поля ответа (например, лимиты колеса для обратного отсчёта).
+    this.data = data || null;
+    if (data && data.limits) this.limits = data.limits;
   }
   ApiError.prototype = Object.create(Error.prototype);
 
@@ -182,7 +185,7 @@
       return response.json().then(function (data) {
         if (!response.ok || data.ok === false) {
           throw new ApiError(data.msg || T('Не удалось выполнить запрос.', 'Request failed.'),
-            data.code, response.status);
+            data.code, response.status, data);
         }
         return data;
       });

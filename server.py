@@ -660,7 +660,10 @@ def casino_rules():
     payload['ok'] = True
     if user:
         limits = get_store().casino_limits(user['id'])
-        payload['freeSpin'] = casino_logic.free_spin_available(user['id'])
+        wheel = casino_logic.wheel_limits(user['id'])
+        payload['freeSpin'] = wheel['freeLeft'] > 0
+        # Отдельный ключ: payload['wheel'] занят правилами колеса (секторы, RTP).
+        payload['wheelLimits'] = wheel
         payload['limits'] = {'daily': limits['daily_limit'],
                              'excludeUntil': limits['exclude_until']}
         payload['coins'] = get_store().balance(user['id'])
@@ -678,9 +681,14 @@ def casino_wheel():
         result = casino_logic.spin_wheel(user['id'], data.get('stake'),
                                          allow_free=bool(data.get('free')))
     except casino_logic.CasinoError as exc:
-        return api_error(exc.status, exc.code, exc.message)
+        payload = {'ok': False, 'code': exc.code, 'msg': exc.message}
+        if exc.extra:
+            # Таймер разблокировки нужен клиенту и при ошибке лимита.
+            payload['limits'] = casino_logic.wheel_limits(user['id'])
+        return jsonify(payload), exc.status
     except LimitExceeded as exc:
-        return api_error(400, 'LIMIT', str(exc))
+        return jsonify({'ok': False, 'code': 'LIMIT', 'msg': str(exc),
+                        'limits': casino_logic.wheel_limits(user['id'])}), 400
     except InsufficientFunds:
         return api_error(402, 'NO_FUNDS', 'Недостаточно V-монет для ставки.')
     result['ok'] = True

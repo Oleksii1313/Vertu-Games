@@ -269,10 +269,37 @@ def main():
         check('колесо: бесплатный спин не списывает ставку', free_balance == before + data.get('payout', 0)
               if before == expected else True, str(data))
         status, data = alice.post('/api/casino/wheel', {'stake': 10, 'free': True})
-        check('колесо: второй бесплатный спин отклонён', status == 400, str(data))
+        check('колесо: второй бесплатный спин уже платный', status == 200 and data.get('free') is False, str(data))
         before = alice.get('/api/balance')[1]['coins']
         status, data = alice.post('/api/casino/wheel', {'stake': 10})
         check('колесо: платный спин', status == 200 and data.get('balance') == before - 10 + data.get('payout', 0), str(data))
+
+        # Суточные лимиты колеса: 1 бесплатное и не больше 5 платных вращений.
+        status, data = alice.get('/api/casino/rules')
+        wheel_limits = data.get('wheelLimits') or {}
+        check('колесо: лимиты 1 бесплатный + 5 платных в правилах',
+              status == 200 and wheel_limits.get('freeLimit') == 1 and wheel_limits.get('paidLimit') == 5,
+              str(wheel_limits))
+        check('колесо: счётчики остатка не отрицательные',
+              wheel_limits.get('freeLeft') == 0 and 0 <= wheel_limits.get('paidLeft', -1) <= 5,
+              str(wheel_limits))
+        check('колесо: время сброса лимита в будущем',
+              wheel_limits.get('resetAt', 0) > time.time(), str(wheel_limits.get('resetAt')))
+        blocked = None
+        for _ in range(6):
+            status, data = alice.post('/api/casino/wheel', {'stake': 10})
+            if status != 200:
+                blocked = (status, data)
+                break
+        check('колесо: шестое платное вращение блокируется',
+              bool(blocked) and blocked[0] == 429 and blocked[1].get('code') == 'WHEEL_LIMIT',
+              str(blocked[1]) if blocked else 'не заблокировано')
+        check('колесо: при блокировке отдаётся таймер разблокировки',
+              bool(blocked) and (blocked[1].get('limits') or {}).get('resetAt', 0) > time.time(),
+              str((blocked[1].get('limits') if blocked else None)))
+        status, data = alice.post('/api/casino/wheel', {'stake': 10, 'free': True})
+        check('колесо: бесплатный спин тоже заблокирован после лимита',
+              status == 429 and (data.get('limits') or {}).get('blocked') is True, str(data))
         status, data = alice.get('/api/casino/history')
         check('история ставок', status == 200 and len(data.get('items', [])) >= 3, str(data.get('stats')))
         check('история содержит реальные ставки', all(item['stake'] > 0 for item in data['items']))

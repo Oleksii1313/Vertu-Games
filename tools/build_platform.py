@@ -379,6 +379,7 @@ def build_casino() -> str:
           <div class="stake-row" id="wheelStakes">{stakes}</div>
           <div class="machine-foot">
             <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> Крутить колесо</button>
+            <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
             <span class="potential">Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 · <b id="freeSpinNote"></b></span>
           </div>
           <div class="result-banner" id="wheelResult">Крутите колесо — результат придёт с сервера</div>
@@ -403,7 +404,7 @@ def build_casino() -> str:
           <h4 style="margin:16px 0 8px;font-size:15px">Колесо: секторы и вероятности</h4>
           <div class="table-wrap"><table><thead><tr><th>Множитель</th><th>Вес</th><th>Вероятность</th><th>Вклад в RTP</th></tr></thead>
             <tbody>{wheel_rows}</tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:8px">RTP колеса: {rules['wheel']['rtp'] * 100:.1f}%. Первый спин за сутки — бесплатный при любой ставке.</p>
+          <p class="muted" style="font-size:12px;margin-top:8px">RTP колеса: {rules['wheel']['rtp'] * 100:.1f}%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC.</p>
           <div class="divider"></div>
           <h4 style="margin:0 0 8px;font-size:15px">Ограничения</h4>
           <p class="muted" style="font-size:13px">Ставки: от {CASINO_STAKES[0]} до {CASINO_STAKES[-1]} V. Доступен дневной лимит ставок и добровольное
@@ -473,7 +474,7 @@ def build_roulette() -> str:
     <div class="section-head">
       <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны</span>
         <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vertu</h1>
-        <p>Один бесплатный спин в сутки. Дальше — ставка V-монетами. Результат считает сервер.</p></div>
+        <p>Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер.</p></div>
       <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
     </div>
     <div class="casino-layout">
@@ -486,6 +487,7 @@ def build_roulette() -> str:
           <label class="checkbox" style="flex:1"><input type="checkbox" id="useFree" checked>
             <span>Использовать бесплатный спин, если доступен</span></label>
         </div>
+        <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
         <div class="result-banner" id="wheelResult">Готово к вращению</div>
       </div>
       <aside class="stack" style="gap:16px">

@@ -22,7 +22,7 @@
     <div class="section-head">
       <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны</span>
         <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vertu</h1>
-        <p>Один бесплатный спин в сутки. Дальше — ставка V-монетами. Результат считает сервер.</p></div>
+        <p>Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер.</p></div>
       <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
     </div>
     <div class="casino-layout">
@@ -35,6 +35,7 @@
           <label class="checkbox" style="flex:1"><input type="checkbox" id="useFree" checked>
             <span>Использовать бесплатный спин, если доступен</span></label>
         </div>
+        <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
         <div class="result-banner" id="wheelResult">Готово к вращению</div>
       </div>
       <aside class="stack" style="gap:16px">
