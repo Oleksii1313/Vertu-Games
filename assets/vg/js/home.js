@@ -39,7 +39,7 @@
     $$('[data-stat="coins"]').forEach(function (node) { node.textContent = fmt(data.totals.coins); });
     $$('[data-stat="plays"]').forEach(function (node) { node.textContent = fmt(data.totals.plays); });
     if (!data.users.length) {
-      box.innerHTML = '<div class="empty">Пока нет игроков — станьте первым.</div>';
+      box.innerHTML = '<div class="empty">' + T('Пока нет игроков — станьте первым.', 'No players yet — be the first.') + '</div>';
       return;
     }
     box.innerHTML = data.users.slice(0, 6).map(function (user, index) {
@@ -56,7 +56,7 @@
     var box = $('#achievements');
     if (!box) return;
     if (!list.length) {
-      box.innerHTML = '<div class="empty">Достижения появятся, когда игроки начнут играть.</div>';
+      box.innerHTML = '<div class="empty">' + T('Достижения появятся, когда игроки начнут играть.', 'Achievements will appear once players start playing.') + '</div>';
       return;
     }
     box.innerHTML = list.slice(0, 6).map(function (item) {
@@ -73,7 +73,7 @@
       renderAchievements(data.achievements || []);
     }).catch(function () {
       var box = $('#leaderboard');
-      if (box) box.innerHTML = '<div class="empty">Не удалось загрузить рейтинг.</div>';
+      if (box) box.innerHTML = '<div class="empty">' + T('Не удалось загрузить рейтинг.', 'Could not load the leaderboard.') + '</div>';
     });
   }
 
@@ -92,7 +92,7 @@
       });
     });
     if (chips) {
-      chips.innerHTML = '<button class="chip on" data-cat="">Все</button>' + cats.map(function (cat) {
+      chips.innerHTML = '<button class="chip on" data-cat="">' + T('Все', 'All') + '</button>' + cats.map(function (cat) {
         return '<button class="chip" data-cat="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</button>';
       }).join('');
     }

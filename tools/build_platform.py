@@ -21,6 +21,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'tools' / 'i18n'))
+
+from markup import localize as localize_markup  # noqa: E402
 
 from game_catalog import (ACHIEVEMENTS, CASINO_STAKES, GAMES, SHOP_ITEMS,  # noqa: E402
                           visible_games,
@@ -1032,7 +1035,9 @@ def main(argv):
     problems = []
     for name, builder in BUILDERS.items():
         target = ROOT / name
-        expected = builder()
+        # Каждая страница получает пары data-ru/data-en для мгновенного
+        # переключения языка без перезагрузки.
+        expected = localize_markup(builder())
         if check_only:
             if not target.exists():
                 problems.append(f'нет файла: {name}')

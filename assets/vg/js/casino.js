@@ -135,7 +135,7 @@
     if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
     if (data.payout > 0) {
       banner.className = 'result-banner win';
-      banner.textContent = T('Выигрыш ' + fmt(data.payout) + ' V (ставка ' + fmt(data.stake) + ' V)',
+      banner.textContent = T('Выигрыш ' + fmt(data.payout) + ' V (' + T('ставка ', 'stake ') + fmt(data.stake) + ' V)',
         'You won ' + fmt(data.payout) + ' V (stake ' + fmt(data.stake) + ' V)');
       VG.toast('+' + fmt(data.payout) + ' V');
     } else {
@@ -295,13 +295,13 @@
     var panel = $('#panel-history');
     if (panel && panel.classList.contains('hidden')) return;   // грузим только когда вкладка видима
     if (!VG.user()) {
-      box.innerHTML = '<div class="empty">Войдите, чтобы увидеть историю ставок.</div>';
+      box.innerHTML = '<div class="empty">' + T('Войдите, чтобы увидеть историю ставок.', 'Sign in to see your bet history.') + '</div>';
       return;
     }
     var query = '/api/casino/history?limit=30' + (game ? '&game=' + encodeURIComponent(game) : '');
     VG.api(query).then(function (data) {
       if (!data.items.length) {
-        box.innerHTML = '<div class="empty">История пуста — сделайте первую ставку.</div>';
+        box.innerHTML = '<div class="empty">' + T('История пуста — сделайте первую ставку.', 'History is empty — place your first bet.') + '</div>';
         return;
       }
       box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Игра</th><th>Ставка</th><th>Выигрыш</th>'

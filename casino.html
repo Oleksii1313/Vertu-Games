@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="Социальное казино Vertu Games: слоты и колесо фортуны на виртуальные V-монеты. Вся логика и выплаты — на сервере.">
-<title>Казино — Vertu Games</title>
+<title><span data-ru="Казино — Vertu Games" data-en="Casino — Vertu Games">Казино — Vertu Games</span></title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,21 +21,21 @@
   <section class="section" style="margin-top:22px">
     <div class="section-head">
       <div><span class="eyebrow"><span data-ico="wheel"></span> Vertu Casino</span>
-        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Социальное казино</h1>
-        <p>Только виртуальные V-монеты. Результаты, ставки и выплаты рассчитывает сервер.</p></div>
+        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px"><span data-ru="Социальное казино" data-en="Social casino">Социальное казино</span></h1>
+        <p><span data-ru="Только виртуальные V-монеты. Результаты, ставки и выплаты рассчитывает сервер." data-en="Virtual V-coins only. Results, stakes and payouts are calculated by the server.">Только виртуальные V-монеты. Результаты, ставки и выплаты рассчитывает сервер.</span></p></div>
       <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
     </div>
     <div class="casino-tabs" id="casinoTabs" role="tablist">
-      <button class="on" data-tab="slots" role="tab" aria-selected="true"><span data-ico="dice"></span> Слоты</button>
-      <button data-tab="wheel" role="tab" aria-selected="false"><span data-ico="wheel"></span> Колесо</button>
-      <button data-tab="history" role="tab" aria-selected="false"><span data-ico="clock"></span> История</button>
-      <button data-tab="rules" role="tab" aria-selected="false"><span data-ico="info"></span> Правила</button>
+      <button class="on" data-tab="slots" role="tab" aria-selected="true"><span data-ico="dice"></span> <span data-ru="Слоты" data-en="Slots">Слоты</span></button>
+      <button data-tab="wheel" role="tab" aria-selected="false"><span data-ico="wheel"></span> <span data-ru="Колесо" data-en="Wheel">Колесо</span></button>
+      <button data-tab="history" role="tab" aria-selected="false"><span data-ico="clock"></span> <span data-ru="История" data-en="History">История</span></button>
+      <button data-tab="rules" role="tab" aria-selected="false"><span data-ico="info"></span> <span data-ru="Правила" data-en="Rules">Правила</span></button>
     </div>
 
     <div class="casino-layout" style="margin-top:18px">
       <div class="card machine">
         <div id="panel-slots">
-          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">3 барабана</span><h2 style="font-size:20px">Vert Slots · Neon</h2></div>
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow"><span data-ru="3 барабана" data-en="3 reels">3 барабана</span></span><h2 style="font-size:20px">Vert Slots · Neon</h2></div>
             <span class="badge badge-line">RTP 92.4%</span></div>
           <div class="slot-window">
             <div class="slot-grid">
@@ -46,80 +46,78 @@
           </div>
           <div class="stake-row" id="stakeRow"><button class="stake" data-stake="5">5 V</button><button class="stake" data-stake="10">10 V</button><button class="stake" data-stake="20">20 V</button><button class="stake on" data-stake="25">25 V</button><button class="stake" data-stake="50">50 V</button><button class="stake" data-stake="100">100 V</button></div>
           <div class="machine-foot">
-            <button class="btn btn-primary spin-btn" id="spinSlots"><span data-ico="spark"></span> Крутить слоты</button>
-            <span class="potential">Возможный выигрыш: до <b id="slotMax">1 750 V</b> (x70)</span>
+            <button class="btn btn-primary spin-btn" id="spinSlots"><span data-ico="spark"></span> <span data-ru="Крутить слоты" data-en="Spin the reels">Крутить слоты</span></button>
+            <span class="potential"><span data-ru="Возможный выигрыш: до" data-en="Potential win: up to">Возможный выигрыш: до</span> <b id="slotMax">1 750 V</b> (x70)</span>
           </div>
-          <div class="result-banner" id="slotResult">Выберите ставку и запустите барабаны</div>
+          <div class="result-banner" id="slotResult"><span data-ru="Выберите ставку и запустите барабаны" data-en="Pick a stake and start the reels">Выберите ставку и запустите барабаны</span></div>
         </div>
 
         <div id="panel-wheel" class="hidden">
-          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Колесо фортуны</span><h2 style="font-size:20px">Roulette Wheel</h2></div>
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow"><span data-ru="Колесо фортуны" data-en="Wheel of fortune">Колесо фортуны</span></span><h2 style="font-size:20px">Roulette Wheel</h2></div>
             <span class="badge badge-line">RTP 93.5%</span></div>
           <div class="wheel-stage">
             <div class="wheel-pointer"></div>
-            <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны"></canvas>
+            <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны" data-aria-label-en="Wheel of fortune"></canvas>
           </div>
           <div class="stake-row" id="wheelStakes"><button class="stake" data-stake="5">5 V</button><button class="stake" data-stake="10">10 V</button><button class="stake" data-stake="20">20 V</button><button class="stake on" data-stake="25">25 V</button><button class="stake" data-stake="50">50 V</button><button class="stake" data-stake="100">100 V</button></div>
           <div class="machine-foot">
-            <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> Крутить колесо</button>
-            <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
-            <span class="potential">Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 · <b id="freeSpinNote"></b></span>
+            <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> <span data-ru="Крутить колесо" data-en="Spin the wheel">Крутить колесо</span></button>
+            <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite"><span data-ru="Бесплатно: 1/1 · Платных: 5/5" data-en="Free: 1/1 · Paid: 5/5">Бесплатно: 1/1 · Платных: 5/5</span></div>
+            <span class="potential"><span data-ru="Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 ·" data-en="Segments: x5, x3, x2, x1, x0.5, x0.25, x0 ·">Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 ·</span> <b id="freeSpinNote"></b></span>
           </div>
-          <div class="result-banner" id="wheelResult">Крутите колесо — результат придёт с сервера</div>
+          <div class="result-banner" id="wheelResult"><span data-ru="Крутите колесо — результат придёт с сервера" data-en="Spin the wheel — the result comes from the server">Крутите колесо — результат придёт с сервера</span></div>
         </div>
 
         <div id="panel-history" class="hidden">
-          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Прозрачность</span><h2 style="font-size:20px">История ставок</h2></div></div>
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow"><span data-ru="Прозрачность" data-en="Transparency">Прозрачность</span></span><h2 style="font-size:20px"><span data-ru="История ставок" data-en="Bet history">История ставок</span></h2></div></div>
           <div class="history-tabs" id="historyFilter">
-            <button class="on" data-game="">Все</button><button data-game="slots">Слоты</button><button data-game="wheel">Колесо</button>
+            <button class="on" data-game=""><span data-ru="Все" data-en="All">Все</span></button><button data-game="slots"><span data-ru="Слоты" data-en="Slots">Слоты</span></button><button data-game="wheel"><span data-ru="Колесо" data-en="Wheel">Колесо</span></button>
           </div>
-          <div id="historyBody"><div class="loading-row"><span class="spinner"></span> Загружаем историю…</div></div>
+          <div id="historyBody"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загружаем историю…" data-en="Loading history…">Загружаем историю…</span></div></div>
         </div>
 
         <div id="panel-rules" class="hidden">
-          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">Честность</span><h2 style="font-size:20px">Правила и вероятности</h2></div></div>
-          <p class="muted" style="font-size:13px">Все результаты генерируются на сервере криптографическим генератором случайных чисел.
-            Ставка списывается до розыгрыша, выигрыш начисляется в той же транзакции. Клиент не может повлиять на результат.</p>
-          <h4 style="margin:16px 0 8px;font-size:15px">Слоты: выплаты за три в ряд</h4>
-          <div class="table-wrap"><table><thead><tr><th>Символ</th><th>Множитель</th><th>Вероятность</th></tr></thead>
-            <tbody><tr><td>V</td><td>x12</td><td>3.25%</td></tr><tr><td>Spark</td><td>x23</td><td>0.49%</td></tr><tr><td>Dice</td><td>x29</td><td>0.33%</td></tr><tr><td>Star</td><td>x35</td><td>0.21%</td></tr><tr><td>Gem</td><td>x47</td><td>0.06%</td></tr><tr><td>Wheel</td><td>x53</td><td>0.06%</td></tr><tr><td>Crown</td><td>x70</td><td>0.03%</td></tr><tr><td>Пара</td><td>x0.4</td><td>—</td></tr></tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:8px">Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован.</p>
-          <h4 style="margin:16px 0 8px;font-size:15px">Колесо: секторы и вероятности</h4>
-          <div class="table-wrap"><table><thead><tr><th>Множитель</th><th>Вес</th><th>Вероятность</th><th>Вклад в RTP</th></tr></thead>
+          <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow"><span data-ru="Честность" data-en="Fairness">Честность</span></span><h2 style="font-size:20px"><span data-ru="Правила и вероятности" data-en="Rules and probabilities">Правила и вероятности</span></h2></div></div>
+          <p class="muted" style="font-size:13px"><span data-ru="Все результаты генерируются на сервере криптографическим генератором случайных чисел. Ставка списывается до розыгрыша, выигрыш начисляется в той же транзакции. Клиент не может повлиять на результат." data-en="Every result is generated on the server by a cryptographic random number generator. The stake is charged before the draw and the win is credited in the same transaction. The client cannot influence the outcome.">Все результаты генерируются на сервере криптографическим генератором случайных чисел. Ставка списывается до розыгрыша, выигрыш начисляется в той же транзакции. Клиент не может повлиять на результат.</span></p>
+          <h4 style="margin:16px 0 8px;font-size:15px"><span data-ru="Слоты: выплаты за три в ряд" data-en="Slots: payouts for three of a kind">Слоты: выплаты за три в ряд</span></h4>
+          <div class="table-wrap"><table><thead><tr><th><span data-ru="Символ" data-en="Symbol">Символ</span></th><th><span data-ru="Множитель" data-en="Multiplier">Множитель</span></th><th><span data-ru="Вероятность" data-en="Probability">Вероятность</span></th></tr></thead>
+            <tbody><tr><td>V</td><td>x12</td><td>3.25%</td></tr><tr><td>Spark</td><td>x23</td><td>0.49%</td></tr><tr><td>Dice</td><td>x29</td><td>0.33%</td></tr><tr><td>Star</td><td>x35</td><td>0.21%</td></tr><tr><td>Gem</td><td>x47</td><td>0.06%</td></tr><tr><td>Wheel</td><td>x53</td><td>0.06%</td></tr><tr><td>Crown</td><td>x70</td><td>0.03%</td></tr><tr><td><span data-ru="Пара" data-en="Pair">Пара</span></td><td>x0.4</td><td>—</td></tr></tbody></table></div>
+          <p class="muted" style="font-size:12px;margin-top:8px"><span data-ru="Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован." data-en="Slots return to player (RTP): 92.4%. Variance is high: wins are not guaranteed.">Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован.</span></p>
+          <h4 style="margin:16px 0 8px;font-size:15px"><span data-ru="Колесо: секторы и вероятности" data-en="Wheel: segments and probabilities">Колесо: секторы и вероятности</span></h4>
+          <div class="table-wrap"><table><thead><tr><th><span data-ru="Множитель" data-en="Multiplier">Множитель</span></th><th><span data-ru="Вес" data-en="Weight">Вес</span></th><th><span data-ru="Вероятность" data-en="Probability">Вероятность</span></th><th><span data-ru="Вклад в RTP" data-en="Contribution to RTP">Вклад в RTP</span></th></tr></thead>
             <tbody><tr><td>x5</td><td>4</td><td>4.0%</td><td>20.0%</td></tr><tr><td>x3</td><td>7</td><td>7.0%</td><td>21.0%</td></tr><tr><td>x2</td><td>8</td><td>8.0%</td><td>16.0%</td></tr><tr><td>x1</td><td>17</td><td>17.0%</td><td>17.0%</td></tr><tr><td>x0.5</td><td>26</td><td>26.0%</td><td>13.0%</td></tr><tr><td>x0.25</td><td>26</td><td>26.0%</td><td>6.5%</td></tr><tr><td>x0</td><td>12</td><td>12.0%</td><td>0.0%</td></tr></tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:8px">RTP колеса: 93.5%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC.</p>
+          <p class="muted" style="font-size:12px;margin-top:8px"><span data-ru="RTP колеса: 93.5%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC." data-en="Wheel RTP: 93.5%. Every day brings one free spin and up to five paid spins; the limit resets at 00:00 UTC.">RTP колеса: 93.5%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC.</span></p>
           <div class="divider"></div>
-          <h4 style="margin:0 0 8px;font-size:15px">Ограничения</h4>
-          <p class="muted" style="font-size:13px">Ставки: от 5 до 100 V. Доступен дневной лимит ставок и добровольное
-            самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги.</p>
+          <h4 style="margin:0 0 8px;font-size:15px"><span data-ru="Ограничения" data-en="Limits">Ограничения</span></h4>
+          <p class="muted" style="font-size:13px"><span data-ru="Ставки: от 5 до 100 V. Доступен дневной лимит ставок и добровольное самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги." data-en="Stakes: 5 to 100 V. A daily stake limit and voluntary self-exclusion are available. V-coins are never bought for cash-out and never exchanged for money.">Ставки: от 5 до 100 V. Доступен дневной лимит ставок и добровольное самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги.</span></p>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-            <button class="btn btn-ghost btn-sm" data-limits="open">Настроить ограничения</button>
-            <a class="btn btn-ghost btn-sm" href="roulette.html">Классическая рулетка</a>
+            <button class="btn btn-ghost btn-sm" data-limits="open"><span data-ru="Настроить ограничения" data-en="Set limits">Настроить ограничения</span></button>
+            <a class="btn btn-ghost btn-sm" href="roulette.html"><span data-ru="Классическая рулетка" data-en="Classic roulette">Классическая рулетка</span></a>
           </div>
         </div>
       </div>
 
       <aside class="stack" style="gap:16px">
         <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:12px">Ваш прогресс</h3>
+          <h3 style="font-size:16px;margin-bottom:12px"><span data-ru="Ваш прогресс" data-en="Your progress">Ваш прогресс</span></h3>
           <div class="stat-grid" style="grid-template-columns:1fr 1fr">
-            <div class="stat-card coins"><span>Баланс</span><b data-stat="balance">—</b></div>
-            <div class="stat-card"><span>Ставок</span><b data-stat="bets">—</b></div>
-            <div class="stat-card"><span>Всего ставок на</span><b data-stat="staked">—</b></div>
-            <div class="stat-card"><span>Лучший выигрыш</span><b data-stat="best">—</b></div>
+            <div class="stat-card coins"><span><span data-ru="Баланс" data-en="Balance">Баланс</span></span><b data-stat="balance">—</b></div>
+            <div class="stat-card"><span><span data-ru="Ставок" data-en="Bets">Ставок</span></span><b data-stat="bets">—</b></div>
+            <div class="stat-card"><span><span data-ru="Всего ставок на" data-en="Total staked">Всего ставок на</span></span><b data-stat="staked">—</b></div>
+            <div class="stat-card"><span><span data-ru="Лучший выигрыш" data-en="Best win">Лучший выигрыш</span></span><b data-stat="best">—</b></div>
           </div>
           <div class="divider"></div>
           <div class="list" id="limitsInfo">
-            <div class="list-row"><span class="ico" data-ico="shield"></span><span class="meta"><b>Добровольные ограничения</b><small id="limitText">Не заданы</small></span></div>
+            <div class="list-row"><span class="ico" data-ico="shield"></span><span class="meta"><b><span data-ru="Добровольные ограничения" data-en="Voluntary limits">Добровольные ограничения</span></b><small id="limitText"><span data-ru="Не заданы" data-en="Not set">Не заданы</span></small></span></div>
           </div>
-          <button class="btn btn-ghost btn-sm btn-block" style="margin-top:12px" data-limits="open">Ограничить игру</button>
+          <button class="btn btn-ghost btn-sm btn-block" style="margin-top:12px" data-limits="open"><span data-ru="Ограничить игру" data-en="Limit play">Ограничить игру</span></button>
         </div>
         <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px">Честная игра</h3>
+          <h3 style="font-size:16px;margin-bottom:10px"><span data-ru="Честная игра" data-en="Fair play">Честная игра</span></h3>
           <div class="list">
-            <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b>Серверный RNG</b><small>результат генерирует сервер, не браузер</small></span></div>
-            <div class="list-row"><span class="ico" data-ico="lock"></span><span class="meta"><b>Атомарные ставки</b><small>списание и выигрыш в одной транзакции</small></span></div>
-            <div class="list-row"><span class="ico" data-ico="info"></span><span class="meta"><b>Опубликованные шансы</b><small>вероятности и RTP открыты</small></span></div>
+            <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b><span data-ru="Серверный RNG" data-en="Server-side RNG">Серверный RNG</span></b><small><span data-ru="результат генерирует сервер, не браузер" data-en="the result is generated by the server, not the browser">результат генерирует сервер, не браузер</span></small></span></div>
+            <div class="list-row"><span class="ico" data-ico="lock"></span><span class="meta"><b><span data-ru="Атомарные ставки" data-en="Atomic bets">Атомарные ставки</span></b><small><span data-ru="списание и выигрыш в одной транзакции" data-en="debit and payout in a single transaction">списание и выигрыш в одной транзакции</span></small></span></div>
+            <div class="list-row"><span class="ico" data-ico="info"></span><span class="meta"><b><span data-ru="Опубликованные шансы" data-en="Published odds">Опубликованные шансы</span></b><small><span data-ru="вероятности и RTP открыты" data-en="probabilities and RTP are public">вероятности и RTP открыты</span></small></span></div>
           </div>
         </div>
       </aside>
@@ -131,54 +129,54 @@
     <div class="footer-inner">
       <div style="max-width:320px">
         <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
-        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px"><span data-ru="Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей." data-en="Social casino and arcades. Virtual V-coins only: no real bets, no cash-out coin purchases and no money wins.">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</span></p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only">Только для развлечения</span></span></div>
       </div>
       <div class="footer-col">
-        <h5>Платформа</h5>
-        <a href="index.html">Главная</a>
-        <a href="top.html">Каталог игр</a>
-        <a href="casino.html">Казино</a>
-        <a href="roulette.html">Рулетка</a>
-        <a href="shop.html">Магазин</a>
+        <h5><span data-ru="Платформа" data-en="Platform">Платформа</span></h5>
+        <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
+        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
+        <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
+        <a href="roulette.html"><span data-ru="Рулетка" data-en="Roulette">Рулетка</span></a>
+        <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">
-        <h5>Аккаунт</h5>
-        <a href="profile.html">Профиль</a>
-        <a href="login.html?tab=login">Вход</a>
-        <a href="login.html?tab=register">Регистрация</a>
-        <a href="profile.html#security">Смена пароля</a>
+        <h5><span data-ru="Аккаунт" data-en="Account">Аккаунт</span></h5>
+        <a href="profile.html"><span data-ru="Профиль" data-en="Profile">Профиль</span></a>
+        <a href="login.html?tab=login"><span data-ru="Вход" data-en="Sign in">Вход</span></a>
+        <a href="login.html?tab=register"><span data-ru="Регистрация" data-en="Sign up">Регистрация</span></a>
+        <a href="profile.html#security"><span data-ru="Смена пароля" data-en="Change password">Смена пароля</span></a>
       </div>
       <div class="footer-col">
-        <h5>Помощь</h5>
-        <a href="about.html">О проекте</a>
-        <a href="support.html">Поддержка</a>
+        <h5><span data-ru="Помощь" data-en="Help">Помощь</span></h5>
+        <a href="about.html"><span data-ru="О проекте" data-en="About">О проекте</span></a>
+        <a href="support.html"><span data-ru="Поддержка" data-en="Support">Поддержка</span></a>
         <a href="api.html">API</a>
-        <a href="privacy.html">Конфиденциальность</a>
+        <a href="privacy.html"><span data-ru="Конфиденциальность" data-en="Privacy">Конфиденциальность</span></a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Vertu Games · Все права защищены</span>
-      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
+      <span><span data-ru="© 2026 Vertu Games · Все права защищены" data-en="© 2026 Vertu Games · All rights reserved">© 2026 Vertu Games · Все права защищены</span></span>
+      <span><span data-ru="V-монеты не имеют денежной стоимости и не подлежат обмену" data-en="V-coins have no monetary value and cannot be exchanged">V-монеты не имеют денежной стоимости и не подлежат обмену</span></span>
     </div>
   </div>
 </footer>
 <div class="modal" id="limitsModal"><div class="panel card">
-  <button class="close" data-close-limits aria-label="Закрыть">×</button>
-  <h2 style="font-size:20px;margin-bottom:6px">Ограничения игры</h2>
-  <p class="muted" style="font-size:13px">Дневной лимит ставок и самоисключение применяются на сервере и не могут быть обойдены из браузера.</p>
-  <label class="field"><span>Дневной лимит ставок, V (0 — без лимита)</span>
+  <button class="close" data-close-limits aria-label="Закрыть" data-aria-label-en="Close">×</button>
+  <h2 style="font-size:20px;margin-bottom:6px"><span data-ru="Ограничения игры" data-en="Play limits">Ограничения игры</span></h2>
+  <p class="muted" style="font-size:13px"><span data-ru="Дневной лимит ставок и самоисключение применяются на сервере и не могут быть обойдены из браузера." data-en="The daily stake limit and self-exclusion are enforced on the server and cannot be bypassed from the browser.">Дневной лимит ставок и самоисключение применяются на сервере и не могут быть обойдены из браузера.</span></p>
+  <label class="field"><span><span data-ru="Дневной лимит ставок, V (0 — без лимита)" data-en="Daily stake limit, V (0 — no limit)">Дневной лимит ставок, V (0 — без лимита)</span></span>
     <input type="number" id="dailyLimit" min="0" max="100000" step="50" value="0"></label>
-  <label class="field"><span>Самоисключение</span>
+  <label class="field"><span><span data-ru="Самоисключение" data-en="Self-exclusion">Самоисключение</span></span>
     <select id="excludeSelect">
-      <option value="0">Не ограничивать</option>
-      <option value="60">1 час</option>
-      <option value="1440">1 день</option>
-      <option value="10080">7 дней</option>
-      <option value="43200">30 дней</option>
+      <option value="0"><span data-ru="Не ограничивать" data-en="No limit">Не ограничивать</span></option>
+      <option value="60"><span data-ru="1 час" data-en="1 hour">1 час</span></option>
+      <option value="1440"><span data-ru="1 день" data-en="1 day">1 день</span></option>
+      <option value="10080"><span data-ru="7 дней" data-en="7 days">7 дней</span></option>
+      <option value="43200"><span data-ru="30 дней" data-en="30 days">30 дней</span></option>
     </select></label>
-  <div class="row"><button class="btn btn-primary" id="saveLimits">Сохранить</button>
-    <button class="btn btn-ghost" data-close-limits>Отмена</button></div>
+  <div class="row"><button class="btn btn-primary" id="saveLimits"><span data-ru="Сохранить" data-en="Save">Сохранить</span></button>
+    <button class="btn btn-ghost" data-close-limits><span data-ru="Отмена" data-en="Cancel">Отмена</span></button></div>
   <p class="msg" id="limitsMsg" role="status"></p>
 </div></div>
 <script src="assets/vg/js/catalog-data.js"></script>

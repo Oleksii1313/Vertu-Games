@@ -107,10 +107,10 @@
     if (!blocked) clearLimitCache(); else cacheLimits(data);
     if (chip) {
       chip.classList.toggle('blocked', blocked);
-      chip.textContent = T('Бесплатно: ' + data.freeLeft + '/' + data.freeLimit +
-        ' · Платных: ' + data.paidLeft + '/' + data.paidLimit,
-        'Free: ' + data.freeLeft + '/' + data.freeLimit +
-        ' · Paid: ' + data.paidLeft + '/' + data.paidLimit);
+      chip.textContent = T('Бесплатно: ' + data.freeLeft + '/' + data.freeLimit,
+        'Free: ' + data.freeLeft + '/' + data.freeLimit) +
+        T(' · Платных: ' + data.paidLeft + '/' + data.paidLimit,
+          ' · Paid: ' + data.paidLeft + '/' + data.paidLimit);
     }
     if (freeBox) {
       freeBox.disabled = data.freeLeft <= 0;
@@ -254,18 +254,18 @@
     var box = $('#wheelHistory');
     if (!box) return;
     if (!VG.user()) {
-      box.innerHTML = '<div class="empty">Войдите, чтобы увидеть историю.</div>';
+      box.innerHTML = '<div class="empty">' + T('Войдите, чтобы увидеть историю.', 'Sign in to see your history.') + '</div>';
       return;
     }
     VG.api('/api/casino/history?limit=8&game=wheel').then(function (data) {
       if (!data.items.length) {
-        box.innerHTML = '<div class="empty">Пока нет вращений.</div>';
+        box.innerHTML = '<div class="empty">' + T('Пока нет вращений.', 'No spins yet.') + '</div>';
         return;
       }
       box.innerHTML = data.items.map(function (row) {
         return '<div class="list-row"><span class="ico">' + VG.icon(row.payout > 0 ? 'trophy' : 'dice', 16) + '</span>' +
           '<span class="meta"><b>' + escapeHtml(row.outcome) + '</b><small>' + VG.timeAgo(row.created) +
-          ' · ставка ' + fmt(row.stake) + ' V</small></span>' +
+          ' · ' + T('ставка ', 'stake ') + fmt(row.stake) + ' V</small></span>' +
           '<span style="font-weight:800;color:' + (row.payout > 0 ? '#dcff8a' : 'var(--muted)') + '">' +
           (row.payout > 0 ? '+' : '') + fmt(row.payout) + ' V</span></div>';
       }).join('');

@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="Поддержка Vertu Games: ответы на вопросы об аккаунте, балансе, играх и казино.">
-<title>Поддержка — Vertu Games</title>
+<title><span data-ru="Поддержка — Vertu Games" data-en="Support — Vertu Games">Поддержка — Vertu Games</span></title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,32 +20,31 @@
 <main class="wrap">
   <section class="section" style="margin-top:22px">
     <div class="card panel">
-      <span class="eyebrow"><span data-ico="info"></span> Поддержка</span>
-      <h1 style="font-size:clamp(26px,3.4vw,40px);margin:12px 0 10px">Чем помочь?</h1>
-      <p class="muted" style="max-width:76ch">Ответы на частые вопросы. Если нужного ответа нет — подготовьте отчёт об ошибке
-        и передайте его владельцу платформы. Пароли и коды подтверждения никуда отправлять не нужно.</p>
+      <span class="eyebrow"><span data-ico="info"></span> <span data-ru="Поддержка" data-en="Support">Поддержка</span></span>
+      <h1 style="font-size:clamp(26px,3.4vw,40px);margin:12px 0 10px"><span data-ru="Чем помочь?" data-en="How can we help?">Чем помочь?</span></h1>
+      <p class="muted" style="max-width:76ch"><span data-ru="Ответы на частые вопросы. Если нужного ответа нет — подготовьте отчёт об ошибке и передайте его владельцу платформы. Пароли и коды подтверждения никуда отправлять не нужно." data-en="Answers to common questions. If yours is missing, prepare a bug report and pass it to the platform owner. Never send your password or verification codes anywhere.">Ответы на частые вопросы. Если нужного ответа нет — подготовьте отчёт об ошибке и передайте его владельцу платформы. Пароли и коды подтверждения никуда отправлять не нужно.</span></p>
       <div class="toolbar" style="margin-top:18px">
         <label class="search"><span data-ico="search"></span>
-          <input type="search" id="faqSearch" placeholder="Поиск по вопросам" aria-label="Поиск по вопросам"></label>
+          <input type="search" id="faqSearch" placeholder="Поиск по вопросам" data-placeholder-en="Search the questions" aria-label="Поиск по вопросам" data-aria-label-en="Search the questions"></label>
       </div>
       <div id="faqList">
-        <details><summary>Как зарегистрироваться?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Нужны только ник и пароль (8–128 символов). E-mail не запрашивается, подтверждение почты не требуется. После регистрации вы сразу попадаете в аккаунт с приветственным бонусом 100 V.</div></details><details><summary>Почему не проходит капча?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Cloudflare Turnstile проверяется на сервере. Если виджет не загрузился, обновите страницу. При повторном использовании токена сервер отклонит запрос — просто обновите форму.</div></details><details><summary>Где хранится баланс?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">В PostgreSQL на сервере. Браузер не хранит баланс: любые операции проходят через серверные API, каждая записывается в историю операций.</div></details><details><summary>Как заработать V-монеты?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">За игровые события (у каждой игры свой размер награды и суточный лимит), за достижения, а также в казино. Все суммы определяет сервер.</div></details><details><summary>Почему казино не даёт стабильно выигрывать?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">RTP слотов около 90.5%, колеса — около 84%. Математическое ожидание игры отрицательное, это развлекательный режим без реальных денег.</div></details><details><summary>Можно ли вывести V-монеты в деньги?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Нет. V-монеты не имеют денежной стоимости, их нельзя купить «на вывод» или обменять на деньги.</div></details><details><summary>Забыл пароль — что делать?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Восстановления по e-mail нет, потому что e-mail не используется. Обратитесь к владельцу платформы: он может сменить пароль через админ-панель или CLI.</div></details><details><summary>Как сменить пароль?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Профиль → «Смена пароля». После смены все другие сессии закрываются автоматически.</div></details><details><summary>Почему достижение не начислилось?</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Достижения выдаются сервером на определённых событиях. Обновите профиль через несколько секунд после действия.</div></details><details><summary>Игра не запускается</summary><div class="muted" style="padding:0 16px 14px;font-size:13px">Для 3D-игр нужен современный браузер с WebGL. Попробуйте отдельную вкладку, отключите блокировщики для этого домена и обновите страницу.</div></details>
+        <details><summary><span data-ru="Как зарегистрироваться?" data-en="How do I sign up?">Как зарегистрироваться?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Нужны только ник и пароль (8–128 символов). E-mail не запрашивается, подтверждение почты не требуется. После регистрации вы сразу попадаете в аккаунт с приветственным бонусом 100 V." data-en="You only need a nickname and a password (8–128 characters). No e-mail is requested and no address confirmation is needed. Right after signing up you land in your account with a 100 V welcome bonus.">Нужны только ник и пароль (8–128 символов). E-mail не запрашивается, подтверждение почты не требуется. После регистрации вы сразу попадаете в аккаунт с приветственным бонусом 100 V.</span></div></details><details><summary><span data-ru="Почему не проходит капча?" data-en="Why does the captcha fail?">Почему не проходит капча?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Cloudflare Turnstile проверяется на сервере. Если виджет не загрузился, обновите страницу. При повторном использовании токена сервер отклонит запрос — просто обновите форму." data-en="Cloudflare Turnstile is verified on the server. If the widget does not load, refresh the page. Reusing a token makes the server reject the request — just refresh the form.">Cloudflare Turnstile проверяется на сервере. Если виджет не загрузился, обновите страницу. При повторном использовании токена сервер отклонит запрос — просто обновите форму.</span></div></details><details><summary><span data-ru="Где хранится баланс?" data-en="Where is the balance stored?">Где хранится баланс?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="В PostgreSQL на сервере. Браузер не хранит баланс: любые операции проходят через серверные API, каждая записывается в историю операций." data-en="In PostgreSQL on the server. The browser never stores the balance: every operation goes through server APIs and is written to the transaction history.">В PostgreSQL на сервере. Браузер не хранит баланс: любые операции проходят через серверные API, каждая записывается в историю операций.</span></div></details><details><summary><span data-ru="Как заработать V-монеты?" data-en="How do I earn V-coins?">Как заработать V-монеты?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="За игровые события (у каждой игры свой размер награды и суточный лимит), за достижения, а также в казино. Все суммы определяет сервер." data-en="For game events (each game has its own reward size and daily cap), for achievements and in the casino. The server decides every amount.">За игровые события (у каждой игры свой размер награды и суточный лимит), за достижения, а также в казино. Все суммы определяет сервер.</span></div></details><details><summary><span data-ru="Почему казино не даёт стабильно выигрывать?" data-en="Why can't I win consistently at the casino?">Почему казино не даёт стабильно выигрывать?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="RTP слотов около 90.5%, колеса — около 84%. Математическое ожидание игры отрицательное, это развлекательный режим без реальных денег." data-en="Slots RTP is around 90.5% and the wheel around 84%. The expected value is negative: this is entertainment without real money.">RTP слотов около 90.5%, колеса — около 84%. Математическое ожидание игры отрицательное, это развлекательный режим без реальных денег.</span></div></details><details><summary><span data-ru="Можно ли вывести V-монеты в деньги?" data-en="Can V-coins be cashed out?">Можно ли вывести V-монеты в деньги?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Нет. V-монеты не имеют денежной стоимости, их нельзя купить «на вывод» или обменять на деньги." data-en="No. V-coins have no monetary value; they cannot be bought for cash-out or exchanged for money.">Нет. V-монеты не имеют денежной стоимости, их нельзя купить «на вывод» или обменять на деньги.</span></div></details><details><summary><span data-ru="Забыл пароль — что делать?" data-en="I forgot my password — what now?">Забыл пароль — что делать?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Восстановления по e-mail нет, потому что e-mail не используется. Обратитесь к владельцу платформы: он может сменить пароль через админ-панель или CLI." data-en="There is no e-mail recovery because no e-mail is used. Contact the platform owner: they can reset the password through the admin panel or the CLI.">Восстановления по e-mail нет, потому что e-mail не используется. Обратитесь к владельцу платформы: он может сменить пароль через админ-панель или CLI.</span></div></details><details><summary><span data-ru="Как сменить пароль?" data-en="How do I change my password?">Как сменить пароль?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Профиль → «Смена пароля». После смены все другие сессии закрываются автоматически." data-en="Profile → Change password. After the change every other session is closed automatically.">Профиль → «Смена пароля». После смены все другие сессии закрываются автоматически.</span></div></details><details><summary><span data-ru="Почему достижение не начислилось?" data-en="Why wasn't my achievement credited?">Почему достижение не начислилось?</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Достижения выдаются сервером на определённых событиях. Обновите профиль через несколько секунд после действия." data-en="Achievements are granted by the server on specific events. Refresh the profile a few seconds after the action.">Достижения выдаются сервером на определённых событиях. Обновите профиль через несколько секунд после действия.</span></div></details><details><summary><span data-ru="Игра не запускается" data-en="A game won't start">Игра не запускается</span></summary><div class="muted" style="padding:0 16px 14px;font-size:13px"><span data-ru="Для 3D-игр нужен современный браузер с WebGL. Попробуйте отдельную вкладку, отключите блокировщики для этого домена и обновите страницу." data-en="3D games need a modern browser with WebGL. Try a separate tab, disable blockers for this domain and refresh the page.">Для 3D-игр нужен современный браузер с WebGL. Попробуйте отдельную вкладку, отключите блокировщики для этого домена и обновите страницу.</span></div></details>
       </div>
-      <p class="empty hidden" id="faqEmpty">Ничего не найдено. Попробуйте другой запрос.</p>
+      <p class="empty hidden" id="faqEmpty"><span data-ru="Ничего не найдено. Попробуйте другой запрос." data-en="Nothing found. Try a different query.">Ничего не найдено. Попробуйте другой запрос.</span></p>
     </div>
     <div class="grid grid-2" style="margin-top:16px">
       <div class="card panel">
-        <h2 style="font-size:18px;margin-bottom:10px">Проверка сервера</h2>
-        <p class="muted" style="font-size:13px">Запрос только читает состояние API: аккаунт не создаётся, письма не отправляются.</p>
-        <button class="btn btn-ghost" id="probeBtn">Проверить соединение</button>
+        <h2 style="font-size:18px;margin-bottom:10px"><span data-ru="Проверка сервера" data-en="Server check">Проверка сервера</span></h2>
+        <p class="muted" style="font-size:13px"><span data-ru="Запрос только читает состояние API: аккаунт не создаётся, письма не отправляются." data-en="The request only reads the API state: no account is created and no emails are sent.">Запрос только читает состояние API: аккаунт не создаётся, письма не отправляются.</span></p>
+        <button class="btn btn-ghost" id="probeBtn"><span data-ru="Проверить соединение" data-en="Check the connection">Проверить соединение</span></button>
         <p class="msg" id="probeMsg" role="status"></p>
       </div>
       <div class="card panel">
-        <h2 style="font-size:18px;margin-bottom:10px">Что указать в обращении</h2>
+        <h2 style="font-size:18px;margin-bottom:10px"><span data-ru="Что указать в обращении" data-en="What to include in a report">Что указать в обращении</span></h2>
         <div class="list">
-          <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b>Ник и время</b><small>когда произошла проблема</small></span></div>
-          <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b>Игра или раздел</b><small>например, казино → слоты</small></span></div>
-          <div class="list-row"><span class="ico" data-ico="x"></span><span class="meta"><b>Без пароля</b><small>никогда не присылайте пароль или код</small></span></div>
+          <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b><span data-ru="Ник и время" data-en="Nickname and time">Ник и время</span></b><small><span data-ru="когда произошла проблема" data-en="when the problem happened">когда произошла проблема</span></small></span></div>
+          <div class="list-row"><span class="ico" data-ico="check"></span><span class="meta"><b><span data-ru="Игра или раздел" data-en="Game or section">Игра или раздел</span></b><small><span data-ru="например, казино → слоты" data-en="for example, casino → slots">например, казино → слоты</span></small></span></div>
+          <div class="list-row"><span class="ico" data-ico="x"></span><span class="meta"><b><span data-ru="Без пароля" data-en="No password">Без пароля</span></b><small><span data-ru="никогда не присылайте пароль или код" data-en="never send a password or a code">никогда не присылайте пароль или код</span></small></span></div>
         </div>
       </div>
     </div>
@@ -56,35 +55,35 @@
     <div class="footer-inner">
       <div style="max-width:320px">
         <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
-        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px"><span data-ru="Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей." data-en="Social casino and arcades. Virtual V-coins only: no real bets, no cash-out coin purchases and no money wins.">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</span></p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only">Только для развлечения</span></span></div>
       </div>
       <div class="footer-col">
-        <h5>Платформа</h5>
-        <a href="index.html">Главная</a>
-        <a href="top.html">Каталог игр</a>
-        <a href="casino.html">Казино</a>
-        <a href="roulette.html">Рулетка</a>
-        <a href="shop.html">Магазин</a>
+        <h5><span data-ru="Платформа" data-en="Platform">Платформа</span></h5>
+        <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
+        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
+        <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
+        <a href="roulette.html"><span data-ru="Рулетка" data-en="Roulette">Рулетка</span></a>
+        <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">
-        <h5>Аккаунт</h5>
-        <a href="profile.html">Профиль</a>
-        <a href="login.html?tab=login">Вход</a>
-        <a href="login.html?tab=register">Регистрация</a>
-        <a href="profile.html#security">Смена пароля</a>
+        <h5><span data-ru="Аккаунт" data-en="Account">Аккаунт</span></h5>
+        <a href="profile.html"><span data-ru="Профиль" data-en="Profile">Профиль</span></a>
+        <a href="login.html?tab=login"><span data-ru="Вход" data-en="Sign in">Вход</span></a>
+        <a href="login.html?tab=register"><span data-ru="Регистрация" data-en="Sign up">Регистрация</span></a>
+        <a href="profile.html#security"><span data-ru="Смена пароля" data-en="Change password">Смена пароля</span></a>
       </div>
       <div class="footer-col">
-        <h5>Помощь</h5>
-        <a href="about.html">О проекте</a>
-        <a href="support.html">Поддержка</a>
+        <h5><span data-ru="Помощь" data-en="Help">Помощь</span></h5>
+        <a href="about.html"><span data-ru="О проекте" data-en="About">О проекте</span></a>
+        <a href="support.html"><span data-ru="Поддержка" data-en="Support">Поддержка</span></a>
         <a href="api.html">API</a>
-        <a href="privacy.html">Конфиденциальность</a>
+        <a href="privacy.html"><span data-ru="Конфиденциальность" data-en="Privacy">Конфиденциальность</span></a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Vertu Games · Все права защищены</span>
-      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
+      <span><span data-ru="© 2026 Vertu Games · Все права защищены" data-en="© 2026 Vertu Games · All rights reserved">© 2026 Vertu Games · Все права защищены</span></span>
+      <span><span data-ru="V-монеты не имеют денежной стоимости и не подлежат обмену" data-en="V-coins have no monetary value and cannot be exchanged">V-монеты не имеют денежной стоимости и не подлежат обмену</span></span>
     </div>
   </div>
 </footer>

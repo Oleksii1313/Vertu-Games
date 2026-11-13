@@ -227,6 +227,13 @@
     state.listeners.push(fn);
     if (state.sessionReady) fn(state.user, 'coins');
   }
+  var langListeners = [];
+  /* Подписка на смену языка: страницы перерисовывают свои динамические блоки. */
+  function onLangChange(fn) {
+    if (typeof fn === 'function' && langListeners.indexOf(fn) === -1) langListeners.push(fn);
+    return fn;
+  }
+
   function onSessionChange(fn) {
     state.sessionListeners.push(fn);
     if (state.sessionReady) fn(state.user, 'identity');
@@ -417,17 +424,60 @@
     }, 0);
   }
 
-  function setLang(value) {
-    var next = value === 'en' ? 'en' : 'ru';
+  /*
+   * Переключение языка. Разметка приходит из сборщика с парами data-ru/data-en,
+   * поэтому здесь достаточно подменить текст, подписи полей и атрибуты
+   * доступности (aria-label, title, placeholder), а затем перерисовать
+   * динамические блоки — шапку, счётчики, списки, страницы казино и профиля.
+   */
+  var TRANSLATABLE_ATTRS = ['aria-label', 'title', 'placeholder', 'alt'];
+  var BASE_TITLE = '';
+
+  function applyLangToDom(next) {
     document.documentElement.setAttribute('lang', next);
     document.body.setAttribute('data-lang', next);
-    storage('vg_lang', next);
+
+    // Текстовые узлы: сборщик положил рядом русский и английский варианты.
     $$('[data-ru]').forEach(function (node) {
       var text = next === 'en' ? node.getAttribute('data-en') : node.getAttribute('data-ru');
       if (text != null) node.innerHTML = text;
+      if (next === 'en') node.setAttribute('lang', 'en');
+      else node.removeAttribute('lang');
     });
+
+    // Подписи полей и подсказки доступности: data-placeholder-en, data-title-en и т. п.
+    $$('[data-ru]').forEach(function (node) {
+      TRANSLATABLE_ATTRS.forEach(function (name) {
+        var english = node.getAttribute('data-' + name + '-en');
+        if (english == null) return;
+        var store = 'data-' + name + '-ru';
+        if (next === 'en') {
+          if (!node.hasAttribute(store)) node.setAttribute(store, node.getAttribute(name) || '');
+          node.setAttribute(name, english);
+        } else if (node.hasAttribute(store)) {
+          node.setAttribute(name, node.getAttribute(store));
+        }
+      });
+    });
+
+    // Заголовок вкладки переводится, если сборщик приложил английский вариант.
+    if (!BASE_TITLE) BASE_TITLE = document.title;
+    var enTitle = document.documentElement.getAttribute('data-title-en');
+    if (enTitle) document.title = next === 'en' ? enTitle : BASE_TITLE;
+    else if (next === 'ru' && BASE_TITLE) document.title = BASE_TITLE;
+  }
+
+  function setLang(value) {
+    var next = value === 'en' ? 'en' : 'ru';
+    storage('vg_lang', next);
+    applyLangToDom(next);
     paintHeader();
     emit();
+    // Динамические списки (история, лидеры, каталог) перерисовываются на новом языке.
+    var hooks = langListeners.slice();
+    hooks.forEach(function (fn) {
+      try { fn(next); } catch (e) {}
+    });
     if (typeof VG.onLangChange === 'function') VG.onLangChange(next);
   }
   function currentLang() { return lang(); }
@@ -824,7 +874,7 @@
   VG.escapeHtml = escapeHtml; VG.debounce = debounce; VG.storage = storage;
   VG.user = user; VG.coins = coins; VG.setUser = setUser; VG.refreshSession = refreshSession;
   VG.updateCoins = updateCoins; VG.refreshCoins = refreshCoins; VG.onChange = onChange;
-  VG.onSessionChange = onSessionChange;
+  VG.onSessionChange = onSessionChange; VG.onLangChange = onLangChange;
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;
   VG.purchase = purchase; VG.equip = equip; VG.openGame = openGame; VG.closeGame = closeGame;
@@ -860,8 +910,8 @@
   function boot() {
     var saved = storage('vg_lang');
     if (saved === 'en' || saved === 'ru') {
-      document.documentElement.setAttribute('lang', saved);
-      document.body.setAttribute('data-lang', saved);
+      // Разметка уже двуязычная: применяем сохранённый язык до первой отрисовки.
+      applyLangToDom(saved);
     }
     paintHeader();
     hydrateIcons();
