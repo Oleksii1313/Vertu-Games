@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
-<meta name="description" content="Vertu Games — премиальная игровая платформа: 11 игр, социальное казино, магазин и серверный баланс V-монет.">
+<meta name="description" content="Vertu Games — премиальная игровая платформа: {games_count_ru()}, социальное казино, магазин и серверный баланс V-монет.">
 <title>Главная — Vertu Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -169,20 +169,8 @@
     <div class="foot"><span>Аркады</span><span>до 400 V/сутки</span></div>
   </div>
 </article>
-<article class="game-card" data-game="redline" data-cats="Гонки|Популярное" tabindex="0" role="button" aria-label="Redline: Розыск">
-  <div class="game-cover cover-0">
-    <div class="tags"><span class="badge badge-new">NEW</span></div>
-    <span class="reward"><span data-ico="coin"></span>+10 V</span>
-    <span class="art" data-ico="racecar" data-size="64"></span>
-  </div>
-  <div class="game-body">
-    <h3>Redline: Розыск</h3>
-    <p>Городские гонки и погони</p>
-    <div class="foot"><span>Гонки</span><span>до 300 V/сутки</span></div>
-  </div>
-</article>
 <article class="game-card" data-game="skyisle" data-cats="Полёты|Популярное" tabindex="0" role="button" aria-label="Sky-Isle Logistics">
-  <div class="game-cover cover-1">
+  <div class="game-cover cover-0">
     <div class="tags"><span class="badge badge-new">NEW</span></div>
     <span class="reward"><span data-ico="coin"></span>+5 V</span>
     <span class="art" data-ico="drone" data-size="64"></span>
@@ -194,7 +182,7 @@
   </div>
 </article>
 <article class="game-card" data-game="rover" data-cats="Приключения|Популярное" tabindex="0" role="button" aria-label="Космокухня">
-  <div class="game-cover cover-2">
+  <div class="game-cover cover-1">
     <div class="tags"><span class="badge badge-new">NEW</span></div>
     <span class="reward"><span data-ico="coin"></span>+6 V</span>
     <span class="art" data-ico="rover" data-size="64"></span>
@@ -233,11 +221,12 @@
     </div>
   </section>
 
-  <section class="section">
+  <!-- Показывается только гостям: авторизованному игроку дублировать регистрацию незачем. -->
+  <section class="section hidden" id="guestCta" data-guest-only="1">
     <div class="card panel" style="display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div><h2 style="font-size:22px">Готовы забрать первый бонус?</h2>
         <p class="muted" style="margin:6px 0 0;font-size:13.5px">Регистрация по нику и паролю — без e-mail. Приветственный бонус начисляется на серверный баланс.</p></div>
-      <div class="row" style="flex:0 0 auto"><a class="btn btn-primary" href="login.html?tab=register" data-require-auth="1">Создать аккаунт</a>
+      <div class="row" style="flex:0 0 auto"><a class="btn btn-primary" href="login.html?tab=register">Создать аккаунт</a>
         <a class="btn btn-ghost" href="casino.html">Правила казино</a></div>
     </div>
   </section>

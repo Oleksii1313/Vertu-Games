@@ -152,8 +152,10 @@ GAMES = [
         'controls_en': 'Arrows / A, D — move, Space — shoot',
     },
     {
+        # Скрыта с витрины по просьбе владельца. Файл игры и весь код на месте:
+        # достаточно убрать 'hidden': True (или поставить False), чтобы вернуть.
         'id': 'redline', 'name': 'Redline: Розыск', 'name_en': 'Redline: Wanted',
-        'file': 'games/redline.html', 'icon': 'racecar', 'tag': 'NEW',
+        'file': 'games/redline.html', 'icon': 'racecar', 'tag': 'NEW', 'hidden': True,
         'cat': ['Гонки', 'Популярное'], 'cat_en': ['Racing', 'Popular'],
         'desc': 'Городские гонки и погони', 'desc_en': 'City racing and police pursuits',
         'reward': 10, 'daily': 300, 'event': 'exchange',
@@ -214,10 +216,19 @@ GAME_IDS = {g['id'] for g in GAMES}
 GAMES_BY_ID = {g['id']: g for g in GAMES}
 
 
+def visible_games() -> list[dict]:
+    """Игры, доступные на витрине: скрытые (``hidden``) не показываем и не запускаем."""
+    return [g for g in GAMES if not g.get('hidden')]
+
+
+def game_available(game_id: str) -> bool:
+    return any(g['id'] == game_id for g in visible_games())
+
+
 def public_games():
-    """Каталог без серверных лимитов (то, что видит браузер)."""
+    """Каталог без серверных лимитов (то, что видит браузер). Скрытые игры не отдаём."""
     out = []
-    for g in GAMES:
+    for g in visible_games():
         out.append({
             'id': g['id'], 'name': g['name'], 'name_en': g['name_en'], 'file': g['file'],
             'icon': g['icon'], 'tag': g['tag'], 'cat': g['cat'], 'cat_en': g['cat_en'],

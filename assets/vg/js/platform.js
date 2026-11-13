@@ -239,8 +239,18 @@
     paintHeader();
     if (user && previous && user.coins !== previous.coins) bumpBalance();
     var identityChanged = (previous && previous.id) !== (user && user.id);
+    applyGuestOnly();
     emit();
     if (identityChanged) emitSession();
+  }
+
+  /* Блоки с data-guest-only показываем только гостям: авторизованному игроку
+     регистрационный баннер на главной не нужен и мешает. */
+  function applyGuestOnly() {
+    var signedIn = !!state.user;
+    $$('[data-guest-only]').forEach(function (node) {
+      node.classList.toggle('hidden', signedIn);
+    });
   }
   function user() { return state.user; }
   function coins() { return state.user ? Number(state.user.coins) || 0 : 0; }
@@ -698,7 +708,7 @@
       node.style.justifyContent = 'center';
     });
   }
-  VG.hydrateIcons = hydrateIcons;
+  VG.hydrateIcons = hydrateIcons; VG.applyGuestOnly = applyGuestOnly;
   VG.iconHtml = function (name, size) { return '<span class="ico-inline">' + icon(name, size) + '</span>'; };
 
   /* -------------------------------------------------------------- bootstrap */
@@ -710,6 +720,7 @@
     }
     paintHeader();
     hydrateIcons();
+    applyGuestOnly();
     refreshSession();
     document.addEventListener('click', function (event) {
       var link = event.target.closest && event.target.closest('[data-require-auth]');
