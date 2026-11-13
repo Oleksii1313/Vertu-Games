@@ -493,6 +493,11 @@
     hooks.forEach(function (fn) {
       try { fn(next); } catch (e) {}
     });
+    // Открытая игра тоже переключает язык: шлём ей сообщение в iframe.
+    var frame = $('#gameFrame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'player:lang', lang: next }, location.origin); } catch (e) {}
+    }
     if (typeof VG.onLangChange === 'function') VG.onLangChange(next);
   }
   function currentLang() { return lang(); }
