@@ -525,6 +525,108 @@
   }
 
   /* -------------------------------------------------------------- game play */
+  /*
+   * Клавиатура без клика. Игра живёт в iframe, и браузер отдаёт нажатия
+   * только документу в фокусе. Поэтому после входа в игру ставим фокус на
+   * iframe и повторяем попытку на pointermove/visibilitychange; если браузер
+   * фокус не отдал — показываем аккуратную подсказку «кликните по игре».
+   */
+  var KEY_FOCUS_CODES = {
+    ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Space: 1,
+    KeyW: 1, KeyA: 1, KeyS: 1, KeyD: 1, KeyE: 1, KeyR: 1
+  };
+  var focusHint = null;
+  var focusTimer = null;
+
+  function ensureGameFocus(frame) {
+    if (!frame || !VG.activeGame) return;
+    try { frame.focus({ preventScroll: true }); } catch (e) { try { frame.focus(); } catch (e2) {} }
+    VG.gameFocus = document.activeElement === frame;
+    if (!VG.gameFocus) showFocusHint();
+    else hideFocusHint();
+  }
+  function showFocusHint() {
+    showFocusHint.armed = true;
+    if (focusHint && focusHint.parentNode) { focusHint.classList.add('show'); return; }
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    focusHint = el('div', 'play-focus-hint');
+    focusHint.innerHTML = icon('gamepad', 16) + '<span></span>';
+    focusHint.firstChild && focusHint.firstChild.setAttribute('aria-hidden', 'true');
+    focusHint.querySelector('span').textContent =
+      T('Нажмите на игру, чтобы управлять с клавиатуры', 'Click the game to control it with the keyboard');
+    focusHint.setAttribute('role', 'status');
+    overlay.querySelector('.play-frame-wrap').appendChild(focusHint);
+    // Клик по подсказке переводит фокус в игру.
+    focusHint.addEventListener('pointerdown', function (event) {
+      event.preventDefault();
+      var frame = overlay.querySelector('.play-frame');
+      ensureGameFocus(frame);
+    });
+    setTimeout(function () { focusHint && focusHint.classList.add('show'); }, 10);
+  }
+  function hideFocusHint() {
+    if (focusHint) {
+      focusHint.classList.remove('show');
+      focusHint.style.pointerEvents = 'none';
+      setTimeout(function () { if (focusHint && !focusHint.classList.contains('show')) { focusHint.remove(); focusHint = null; } }, 220);
+    }
+  }
+  function releaseGameFocus() {
+    VG.gameFocus = false;
+    hideFocusHint();
+    if (focusTimer) { clearTimeout(focusTimer); focusTimer = null; }
+  }
+
+  /*
+   * Проброс клавиш. Игры лежат на том же origin, поэтому родитель может
+   * продублировать нажатие прямо в окно игры: первая же стрелка/WASD/Space
+   * работает без клика, а фокус переезжает в iframe на этом же событии.
+   */
+  function inEditableField(node) {
+    if (!node || !node.tagName) return false;
+    var tag = node.tagName.toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || node.isContentEditable;
+  }
+  function forwardKeyToGame(event) {
+    if (!VG.activeGame || inEditableField(event.target)) return false;
+    var overlay = $('#playOverlay');
+    var frame = overlay && overlay.querySelector('.play-frame');
+    if (!frame || !frame.contentWindow) return false;
+    var win = frame.contentWindow;
+    var doc = null;
+    try { doc = win.document; } catch (e) { doc = null; }
+    if (!doc) return false;
+    var init = {
+      key: event.key, code: event.code, keyCode: event.keyCode, which: event.which,
+      altKey: event.altKey, ctrlKey: event.ctrlKey, shiftKey: event.shiftKey,
+      metaKey: event.metaKey, repeat: event.repeat, bubbles: true, cancelable: true
+    };
+    // Одно событие на document: всплывая, оно доходит и до window-обработчиков игры.
+    var Ctor = (win.KeyboardEvent || KeyboardEvent);
+    try { doc.dispatchEvent(new Ctor(event.type, init)); } catch (e) {}
+    ensureGameFocus(frame);
+    if (event.cancelable) event.preventDefault();
+    return true;
+  }
+  function onGameKey(event) {
+    if (!VG.activeGame || !KEY_FOCUS_CODES[event.code]) return;
+    if (document.activeElement === $('#gameFrame')) return; // игра уже получает клавиши сама
+    forwardKeyToGame(event);
+  }
+  function bindGameKeyBridge() {
+    if (bindGameKeyBridge.done) return;
+    bindGameKeyBridge.done = true;
+    document.addEventListener('keydown', onGameKey);
+    document.addEventListener('keyup', onGameKey);
+    // Любое движение мышью по игре тоже возвращает фокус, без лишних кликов.
+    document.addEventListener('pointerup', function () {
+      if (!VG.activeGame) return;
+      var frame = $('#gameFrame');
+      if (frame && document.activeElement !== frame) ensureGameFocus(frame);
+    });
+  }
+
   function openGame(game) {
     var overlay = $('#playOverlay');
     // На части страниц оверлей уже есть (пустой контейнер из разметки) —
@@ -559,10 +661,15 @@
     overlay.querySelector('[data-close]').innerHTML = icon('chev', 15) + '<span>' + T('Назад', 'Back') + '</span>';
     var frame = overlay.querySelector('.play-frame');
     var langParam = lang();
-    frame.src = game.file + '?lang=' + langParam;
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     VG.activeGame = game;
+    // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
+    frame.onload = function () { ensureGameFocus(frame); };
+    frame.src = game.file + '?lang=' + langParam;
+    if (focusTimer) clearTimeout(focusTimer);
+    focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
+    bindGameKeyBridge();
     if (state.user) api('/api/games/play', { body: { game: game.id } }).then(function (data) {
       if (data.coins != null) updateCoins(data.coins);
     }).catch(function () {});
@@ -668,6 +775,7 @@
     if (frame) frame.src = 'about:blank';
     document.body.style.overflow = '';
     VG.activeGame = null;
+    releaseGameFocus();
   }
   function refreshCoins() {
     if (!state.user) return Promise.resolve();

@@ -270,4 +270,25 @@ try{
 }catch(err){console.error(err);$('error').hidden=false;$('errorText').textContent=tr('Не удалось подготовить 3D. Нужен современный браузер с WebGL. ','Could not prepare 3D. A modern browser with WebGL is required. ')+(err?.message||String(err));$('loading').textContent=tr('Не удалось запустить игру.','Could not start the game.')}
 })();
 </script>
+<script id="game-autofocus">
+/* Автофокус игрового полотна: клавиатура работает сразу, без предварительного клика. */
+(function () {
+  function grab() {
+    var target = document.querySelector('canvas[tabindex],#view,#c,#world,canvas,.board,.board-wrap');
+    if (target && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    try { if (target) target.focus({ preventScroll: true }); } catch (e) {}
+    if (!target || document.activeElement !== target) {
+      try { document.body.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
+  // Один клик по полю — тоже фокус (на случай, если браузер забрал его себе).
+  document.addEventListener('pointerdown', function (e) {
+    var target = e.target.closest && e.target.closest('canvas,#view,#c,#world');
+    if (target) { try { target.focus({ preventScroll: true }); } catch (err) {} }
+  }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(grab, 60); });
+  else setTimeout(grab, 60);
+  addEventListener('load', grab);
+})();
+</script>
 </body></html>

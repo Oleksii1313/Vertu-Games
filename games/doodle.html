@@ -114,4 +114,25 @@ $('sound').onclick=()=>{soundOn=!soundOn;$('sound').setAttribute('aria-pressed',
 if(en){$('heightLabel').textContent='HEIGHT';$('bestLabel').textContent='BEST';$('shootLabel').textContent='Shoot';$('moveTip').textContent='Move';$('moveDesc').textContent='arrows / A D';$('jumpTip').textContent='Jump';$('jumpDesc').textContent='automatically';$('fireTip').textContent='Shoot';$('fireDesc').textContent='space / button';$('description').innerHTML='From your notebook to the clouds.<br>Narrow platforms. Higher means harder!';$('rewardNote').innerHTML='+1 coin per 50 m and for every coin you find.<br>Platforms get narrower and faster. Brown ones break!';$('start').textContent='Let’s jump';$('controlHint').innerHTML='<strong>Jumping is automatic.</strong> You choose the route.<br>Arrows / A D to move · Space to shoot';$('resultHeightLabel').textContent='HEIGHT';$('resultCoinsLabel').textContent='COINS THIS RUN';$('restart').textContent='Start again';$('left').ariaLabel='Move left';$('right').ariaLabel='Move right';$('pause').ariaLabel='Pause';$('home').ariaLabel=$('overlayHome').ariaLabel='Back to games';document.querySelectorAll('.stat em').forEach(e=>e.textContent='m')}
 if(matchMedia('(pointer:coarse)').matches){$('moveDesc').textContent=tr('кнопками внизу','bottom buttons');$('fireDesc').textContent=tr('кнопкой справа','right button')}
 resize();reset();draw();requestAnimationFrame(frame);
-</script></body></html>
+</script><script id="game-autofocus">
+/* Автофокус игрового полотна: клавиатура работает сразу, без предварительного клика. */
+(function () {
+  function grab() {
+    var target = document.querySelector('canvas[tabindex],#view,#c,#world,canvas,.board,.board-wrap');
+    if (target && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    try { if (target) target.focus({ preventScroll: true }); } catch (e) {}
+    if (!target || document.activeElement !== target) {
+      try { document.body.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
+  // Один клик по полю — тоже фокус (на случай, если браузер забрал его себе).
+  document.addEventListener('pointerdown', function (e) {
+    var target = e.target.closest && e.target.closest('canvas,#view,#c,#world');
+    if (target) { try { target.focus({ preventScroll: true }); } catch (err) {} }
+  }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(grab, 60); });
+  else setTimeout(grab, 60);
+  addEventListener('load', grab);
+})();
+</script>
+</body></html>
