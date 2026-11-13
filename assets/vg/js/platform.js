@@ -111,6 +111,8 @@
     refresh: '<path d="M4 12a8 8 0 0 1 13.7-5.7L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.7L4 16"/><path d="M4 20v-4h4"/>',
     trash: '<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>',
     edit: '<path d="M4 20h4L20 8l-4-4L4 16v4Z"/><path d="m14 6 4 4"/>',
+    expand: '<path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"/>',
+    compress: '<path d="M9 4v5H4M15 20v-5h5M20 9h-5V4M4 15h5v5"/>',
     eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.6"/>'
   };
   function icon(name, size) {
@@ -644,15 +646,23 @@
         '<div class="play-bar"><button type="button" class="btn btn-ghost btn-sm" data-close>' +
         icon('chev', 15) + T('Назад', 'Back') + '</button><h3></h3>' +
         '<span class="balance-pill" style="cursor:default">' + icon('coin', 15) + '<span data-coins>' + fmt(coins()) + '</span> V</span>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-label="' + T('На весь экран', 'Fullscreen') + '">⛶</button></div>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-pressed="false" title="' + T('На весь экран', 'Fullscreen') + '">' +
+        icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
         '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', function () {
         var wrap = overlay.querySelector('.play-frame-wrap');
-        if (document.fullscreenElement) document.exitFullscreen();
-        else if (wrap.requestFullscreen) wrap.requestFullscreen();
+        if (document.fullscreenElement) {
+          if (document.exitFullscreen) document.exitFullscreen();
+          return;
+        }
+        // Полноэкранный режим: рамка плеера, а с ней и игра, занимает весь экран.
+        var request = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.msRequestFullscreen;
+        if (!request) { toast(T('Браузер не поддерживает полноэкранный режим.', 'This browser does not support fullscreen.'), 'bad'); return; }
+        try { request.call(wrap, { navigationUI: 'hide' }); } catch (e) { try { request.call(wrap); } catch (e2) {} }
       });
     }
+    syncFullscreenButton();
     if (!overlay.querySelector('.reward-chip')) {
       var chip = el('span', 'badge badge-new reward-chip');
       chip.style.marginLeft = 'auto';
@@ -770,6 +780,30 @@
   function currentGameReward() {
     return VG.activeGame ? VG.activeGame.reward : 0;
   }
+  function syncFullscreenButton() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var button = overlay.querySelector('[data-fullscreen]');
+    if (!button) return;
+    var active = !!document.fullscreenElement;
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    var label = button.querySelector('span');
+    if (label) label.textContent = active ? T('Выйти', 'Exit') : T('Экран', 'Screen');
+    // Иконка меняется между «развернуть» и «свернуть» вместе с состоянием.
+    var glyph = button.querySelector('svg') && button.querySelector('svg').parentNode;
+    if (glyph && glyph !== button) glyph.innerHTML = icon(active ? 'compress' : 'expand', 15);
+    if (active) {
+      var frame = overlay.querySelector('.play-frame');
+      if (frame) setTimeout(function () { ensureGameFocus(frame); }, 120);
+    }
+  }
+  if (!syncFullscreenButton.bound) {
+    syncFullscreenButton.bound = true;
+    ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (name) {
+      document.addEventListener(name, syncFullscreenButton);
+    });
+  }
+
   function closeGame() {
     var overlay = $('#playOverlay');
     if (!overlay) return;

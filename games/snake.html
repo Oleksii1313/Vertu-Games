@@ -90,6 +90,52 @@ body[data-game="pong"] .controls button{width:min(38vw,180px)}
  .controls .dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px)}.controls .dpad button{width:50px;height:50px}
 }
 
+
+/* === gaming dock: anchored translucent controls === */
+/* Контролы прижаты к нижним краям и полупрозрачны, чтобы не закрывать центр
+   игрового поля. Работает и в портрете, и в ландшафте, и в полноэкранном режиме. */
+.controls{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  padding:10px calc(12px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));
+  background:linear-gradient(to top,rgba(8,12,20,.55),rgba(8,12,20,0));
+  border:0;pointer-events:none;
+}
+.controls>*{pointer-events:auto}
+.controls .control-group,.controls .arrows,.controls .dpad{background:rgba(12,18,28,.42);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:6px;backdrop-filter:blur(6px)}
+.controls button{opacity:.92;background:rgba(28,38,52,.66);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.controls button:active,.controls button.pressed{opacity:1;background:rgba(70,120,140,.85)}
+.controls .primary-action{opacity:.95;background:var(--grad);border-color:transparent}
+/* Крайние группы к краям, одиночные кнопки — по центру, как в мобильных играх. */
+.controls{justify-content:space-between}
+.controls>.control-group:only-child,
+.controls>button:only-child,
+.controls>.primary-action{margin-left:auto}
+.controls>button:first-child:not(.primary-action){margin-right:auto}
+.controls>.dpad{margin-left:0}
+/* Ландшафт: сетка «полотно + док» больше не режется флексом — док лежит поверх
+   низа экрана, а полотно масштабируется по короткой стороне без искажений. */
+@media(orientation:landscape) and (max-height:600px){
+  .controls{grid-area:auto;position:fixed;left:0;right:0;bottom:0;height:auto;border-left:0;border-top:0}
+  .controls .dpad{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}
+  .controls .dpad button{width:44px;height:44px}
+  .board,.board-wrap{padding-bottom:76px}
+}
+@media(orientation:landscape) and (max-height:600px) and (min-width:760px){
+  .controls .dpad{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px)}
+  .controls .dpad button{width:48px;height:48px}
+}
+
+
+/* Центр полотна свободен: полотно занимает всё, док просто лежит поверх низа. */
+body>canvas,body>.board,body>.board-wrap{margin-bottom:0}
+body[data-game="flappy"] .controls{justify-content:center}
+body[data-game="flappy"] #btnJump{width:min(62%,320px)}
+body[data-game="pong"] .controls{justify-content:space-between}
+@media(max-height:460px){
+  .controls{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px));gap:8px}
+  .controls button{height:44px;min-height:44px;min-width:44px;padding:6px 10px;font-size:12px}
+}
 </style>
 <script id="game-controls-runtime">
 /* Shared pointer controls for the six 2D games. No synthetic keyboard events. */
