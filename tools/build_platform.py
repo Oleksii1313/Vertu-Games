@@ -109,6 +109,7 @@ def footer() -> str:
 def scripts(extra: str = '') -> str:
     return ('<script src="assets/vg/js/catalog-data.js"></script>\n'
             '<script src="assets/vg/js/platform.js"></script>\n'
+            '<script src="assets/vg/js/sfx.js"></script>\n'
             f'{extra}\n</body>\n</html>')
 
 

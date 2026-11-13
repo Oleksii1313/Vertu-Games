@@ -12,6 +12,8 @@
   var symbols = {};
   var wheelRotation = 0;
   var canvas, ctx;
+  /* Звук: тики барабанов/колеса замедляются к остановке, выигрыш — трель. */
+  var sfx = VG.sfx;
 
   /* ------------------------------------------------------------------ helpers */
   function symbolById(id) {
@@ -70,6 +72,7 @@
       return;
     }
     busy = true;
+    if (sfx) { sfx.unlock(); sfx.press(); }
     var button = $('#spinSlots');
     button.disabled = true;
     var banner = $('#slotResult');
@@ -77,7 +80,11 @@
     banner.textContent = T('Барабаны вращаются…', 'Reels are spinning…');
     var cells = $$('.slot-cell');
     cells.forEach(function (cell) { cell.classList.add('spinning'); cell.classList.remove('hot'); });
+    var rollStep = 0;
+    if (sfx) sfx.unlock();
     var rollTimer = setInterval(function () {
+      rollStep++;
+      if (sfx) sfx.reelTick(rollStep);
       cells.forEach(function (cell) {
         var sym = $('.sym', cell);
         var list = (rules.slots.symbols || []);
@@ -96,6 +103,7 @@
         (function next() {
           var cell = cells[reveal];
           if (cell) cell.classList.remove('spinning');
+          if (sfx) sfx.reelStop(reveal);
           renderSymbols(ids.slice(0, reveal + 1).concat(new Array(2 - reveal).fill(ids[0])));
           reveal++;
           if (reveal < 3) return setTimeout(next, 220);
@@ -124,6 +132,7 @@
       cell.classList.toggle('hot', !!hot);
     });
     var banner = $('#slotResult');
+    if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
     if (data.payout > 0) {
       banner.className = 'result-banner win';
       banner.textContent = T('Выигрыш ' + fmt(data.payout) + ' V (ставка ' + fmt(data.stake) + ' V)',
@@ -211,6 +220,7 @@
       return;
     }
     busy = true;
+    if (sfx) { sfx.unlock(); sfx.press(); }
     var button = $('#spinWheel');
     button.disabled = true;
     var banner = $('#wheelResult');
@@ -224,11 +234,21 @@
       var start = performance.now();
       var duration = 3600;
       var from = wheelRotation;
+      var lastTick = 0;
+      var tickCount = 0;
       (function animate(now) {
         var elapsed = Math.min((now - start) / duration, 1);
         var eased = 1 - Math.pow(1 - elapsed, 3.2);
         var current = from + (target - from) * eased;
         drawWheel(current);
+        /* Тик на каждый сектор: поворот на сектор за N кадров — интервал растёт
+         * квадратично, поэтому звук естественно замедляется к остановке. */
+        var segmentSpan = (Math.PI * 2) / (segments.length || 1);
+        if (sfx && Math.abs(current - lastTick) >= segmentSpan) {
+          lastTick = current;
+          sfx.tick(elapsed, 'wheel');
+          tickCount++;
+        }
         if (elapsed < 1) return requestAnimationFrame(animate);
         wheelRotation = target % (Math.PI * 2);
         finishWheel(data);
@@ -248,6 +268,7 @@
     VG.updateCoins(data.balance);
     var banner = $('#wheelResult');
     var prefix = data.free ? T('Бесплатный спин: ', 'Free spin: ') : '';
+    if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
     if (data.payout > 0) {
       banner.className = 'result-banner win';
       banner.textContent = prefix + T('сектор x' + data.multiplier + ' — выигрыш ' + fmt(data.payout) + ' V',

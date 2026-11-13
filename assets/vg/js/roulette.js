@@ -15,6 +15,7 @@
   var limits = null;
   var countdownTimer = null;
   var LIMIT_CACHE = 'vg.wheelLimits';
+  var sfx = VG.sfx;
 
   function colors() { return ['#ff2d95', '#c6ff3d', '#8b5cf6', '#2ee6c8', '#3b82f6', '#e8b64c', '#5f6980']; }
 
@@ -191,6 +192,7 @@
       return;
     }
     busy = true;
+    if (sfx) { sfx.unlock(); sfx.press(); }
     var button = $('#spinWheel');
     button.disabled = true;
     var banner = $('#wheelResult');
@@ -203,14 +205,23 @@
       var target = rotation + Math.PI * 2 * 6 - (data.segment * arc + arc / 2) + Math.PI * 2;
       var from = rotation;
       var start = performance.now();
+      var lastTick = 0;
+      var segmentSpan = (Math.PI * 2) / (segments.length || 1);
       (function animate(now) {
         var elapsed = Math.min((now - start) / 3400, 1);
         var eased = 1 - Math.pow(1 - elapsed, 3.2);
-        draw(from + (target - from) * eased);
+        var current = from + (target - from) * eased;
+        draw(current);
+        // Тик на каждый пройденный сектор: к остановке они звучат всё реже.
+        if (sfx && Math.abs(current - lastTick) >= segmentSpan) {
+          lastTick = current;
+          sfx.tick(elapsed, 'wheel');
+        }
         if (elapsed < 1) return requestAnimationFrame(animate);
         rotation = target % (Math.PI * 2);
         busy = false;
         VG.updateCoins(data.balance);
+        if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
         if (data.limits) renderLimits(data.limits); else button.disabled = false;
         if (data.payout > 0) {
           banner.className = 'result-banner win';
