@@ -21,7 +21,7 @@ from ui_en import UI_EN  # noqa: E402
 CYRILLIC = re.compile(r'[А-Яа-яЁё]')
 TEXT_ATTRS = ('placeholder', 'aria-label', 'title', 'alt', 'content')
 # Теги, внутри которых текст не переводим (код, стили, скрипты).
-SKIP_TAGS = {'script', 'style', 'code', 'pre', 'svg'}
+SKIP_TAGS = {'script', 'style', 'code', 'pre', 'svg', 'title'}
 
 _MISSING: set[str] = set()
 
@@ -52,7 +52,9 @@ class Localizer(HTMLParser):
         self.source = source
         self.out: list[str] = []
         self.skip_depth = 0
-        self.pending_attr: list[tuple[int, str, str]] = []
+        self.stack: list[str] = []
+        # Для <option> нельзя оборачивать текст в span — атрибуты ставим на сам тег.
+        self.option_at: int | None = None
 
     # --- позиции в исходнике, чтобы правки шли по смещениям ---
     def _offset(self) -> int:
@@ -60,6 +62,11 @@ class Localizer(HTMLParser):
         return self.line_starts[line - 1] + col
 
     def localize(self) -> str:
+        # Заголовок вкладки нельзя оборачивать в span: английский вариант
+        # кладём атрибутом data-title-en на <html>.
+        found = re.search(r'<title>(.*?)</title>', self.source, re.S)
+        self.title_ru = ' '.join(found.group(1).split()) if found else ''
+        self.title_en = translate(self.title_ru) if self.title_ru else ''
         self.line_starts = [0]
         for line in self.source.splitlines(keepends=True):
             self.line_starts.append(self.line_starts[-1] + len(line))
@@ -76,8 +83,16 @@ class Localizer(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         raw = self.get_starttag_text()
+        self.stack.append(tag)
+        if tag == 'option':
+            self.option_at = len(self.out)
         if tag in SKIP_TAGS:
             self.skip_depth += 1
+        if tag == 'html' and self.title_en:
+            escaped_title = self.title_en.replace('&', '&amp;').replace('"', '&quot;')
+            new_raw = raw.replace('>', f' data-title-en="{escaped_title}">', 1)
+            self.out.append(new_raw)
+            return
         if tag in ('meta', 'link'):
             self.out.append(raw)
             return
@@ -101,6 +116,10 @@ class Localizer(HTMLParser):
     def handle_endtag(self, tag):
         if tag in SKIP_TAGS and self.skip_depth:
             self.skip_depth -= 1
+        if tag == 'option':
+            self.option_at = None
+        if self.stack and self.stack[-1] == tag:
+            self.stack.pop()
         self.out.append(f'</{tag}>')
 
     def handle_data(self, data):
@@ -115,6 +134,15 @@ class Localizer(HTMLParser):
         english = translate(core)
         if not english:
             _MISSING.add(core)
+            self.out.append(data)
+            return
+        if self.stack and self.stack[-1] == 'option':
+            # В <option> разметка невозможна: пару языков вешаем на сам тег.
+            if self.option_at is not None:
+                raw = self.out[self.option_at]
+                if raw.rstrip().endswith('>'):
+                    head = raw.rstrip()[:-1]
+                    self.out[self.option_at] = f'{head} data-ru="{core}" data-en="{english}">'
             self.out.append(data)
             return
         escaped = english.replace('&', '&amp;').replace('"', '&quot;')

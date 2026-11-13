@@ -460,6 +460,21 @@
       });
     });
 
+    // Атрибуты на элементах без собственного текста (иконки, поля, канвасы).
+    $$('[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]').forEach(function (node) {
+      TRANSLATABLE_ATTRS.forEach(function (name) {
+        var english = node.getAttribute('data-' + name + '-en');
+        if (english == null) return;
+        var store = 'data-' + name + '-ru';
+        if (next === 'en') {
+          if (!node.hasAttribute(store)) node.setAttribute(store, node.getAttribute(name) || '');
+          node.setAttribute(name, english);
+        } else if (node.hasAttribute(store)) {
+          node.setAttribute(name, node.getAttribute(store));
+        }
+      });
+    });
+
     // Заголовок вкладки переводится, если сборщик приложил английский вариант.
     if (!BASE_TITLE) BASE_TITLE = document.title;
     var enTitle = document.documentElement.getAttribute('data-title-en');

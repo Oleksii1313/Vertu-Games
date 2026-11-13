@@ -496,4 +496,5 @@ UI_EN.update({
     'с HTTP-статусом 4xx/5xx. Коды:': 'with an HTTP status of 4xx/5xx. Codes:',
     'серверные достижения с наградами и рейтинг игроков': 'server-side achievements with rewards and a player leaderboard',
     'слоты «Vert Slots», колесо фортуны, история ставок и добровольные лимиты': 'Vert Slots reels, the wheel of fortune, bet history and voluntary limits',
+    'API — Vertu Games': 'API — Vertu Games',
 })
