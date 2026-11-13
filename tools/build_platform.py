@@ -21,9 +21,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'tools' / 'i18n'))
+
+from markup import localize as localize_markup  # noqa: E402
 
 from game_catalog import (ACHIEVEMENTS, CASINO_STAKES, GAMES, SHOP_ITEMS,  # noqa: E402
+                          visible_games,
                           casino_rules)
+
+def games_count_ru() -> str:
+    # 10 игр / 11 игр / 12 игр - простая русская плюрализация
+    n = len(visible_games())
+    if n % 10 == 1 and n % 100 != 11:
+        return f'{n} игра'
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f'{n} игры'
+    return f'{n} игр'
+
+
 
 E = lambda value: html.escape(str(value), quote=True)  # noqa: E731
 
@@ -97,6 +112,7 @@ def footer() -> str:
 def scripts(extra: str = '') -> str:
     return ('<script src="assets/vg/js/catalog-data.js"></script>\n'
             '<script src="assets/vg/js/platform.js"></script>\n'
+            '<script src="assets/vg/js/sfx.js"></script>\n'
             f'{extra}\n</body>\n</html>')
 
 
@@ -120,15 +136,15 @@ def game_card(game: dict, index: int, compact: bool = False) -> str:
 
 # --------------------------------------------------------------------------- #  index
 def build_index() -> str:
-    cards = '\n'.join(game_card(g, i) for i, g in enumerate(GAMES))
-    featured = GAMES[:2]
+    cards = '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
+    featured = visible_games()[:2]
     featured_html = ''.join(
         f'''<a class="feature" href="#" data-game="{E(g['id'])}">
   <div class="feature-art cover-{i % 8}"><span data-ico="{E(g['icon'])}" data-size="72"></span></div>
   <div class="feature-body"><span class="badge badge-new">NEW</span><h3>{E(g['name'])}</h3><p>{E(g['desc'])}</p>
   <span class="btn btn-sm btn-ghost">Играть {VG_ARROW}</span></div>
 </a>''' for i, g in enumerate(featured))
-    return f'''{head('Главная', 'Vertu Games — премиальная игровая платформа: 11 игр, социальное казино, магазин и серверный баланс V-монет.', 'home')}
+    return f'''{head('Главная', 'Vertu Games — премиальная игровая платформа: {games_count_ru()}, социальное казино, магазин и серверный баланс V-монет.', 'home')}
 {header('home')}
 <main class="wrap">
   <section class="hero">
@@ -207,11 +223,12 @@ def build_index() -> str:
     </div>
   </section>
 
-  <section class="section">
+  <!-- Показывается только гостям: авторизованному игроку дублировать регистрацию незачем. -->
+  <section class="section hidden" id="guestCta" data-guest-only="1">
     <div class="card panel" style="display:flex;gap:20px;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div><h2 style="font-size:22px">Готовы забрать первый бонус?</h2>
         <p class="muted" style="margin:6px 0 0;font-size:13.5px">Регистрация по нику и паролю — без e-mail. Приветственный бонус начисляется на серверный баланс.</p></div>
-      <div class="row" style="flex:0 0 auto"><a class="btn btn-primary" href="login.html?tab=register" data-require-auth="1">Создать аккаунт</a>
+      <div class="row" style="flex:0 0 auto"><a class="btn btn-primary" href="login.html?tab=register">Создать аккаунт</a>
         <a class="btn btn-ghost" href="casino.html">Правила казино</a></div>
     </div>
   </section>
@@ -222,14 +239,14 @@ def build_index() -> str:
 
 # --------------------------------------------------------------------------- #  top (catalog)
 def build_catalog() -> str:
-    cards = '\n'.join(game_card(g, i) for i, g in enumerate(GAMES))
+    cards = '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
     return f'''{head('Каталог игр', 'Все игры Vertu Games: аркады, головоломки, гонки и 3D-приключения с серверными наградами V-монет.', 'catalog')}
 {header('catalog')}
 <main class="wrap">
   <section class="cat-hero">
     <span class="eyebrow"><span data-ico="grid"></span> Каталог</span>
     <h1 style="font-size:clamp(26px,3.6vw,42px);margin:10px 0 10px">Все игры платформы</h1>
-    <p class="muted" style="max-width:70ch;margin:0">11 игр: аркады, головоломки, шутеры, песочницы, гонки и полёты.
+    <p class="muted" style="max-width:70ch;margin:0">{games_count_ru()}: аркады, головоломки, шутеры, песочницы, гонки и полёты.
       Запуск из каталога сохраняет прогресс в аккаунте, а V-монеты начисляет сервер по опубликованным правилам.</p>
     <div class="toolbar" style="margin:22px 0 0">
       <label class="search"><span data-ico="search"></span>
@@ -366,6 +383,7 @@ def build_casino() -> str:
           <div class="stake-row" id="wheelStakes">{stakes}</div>
           <div class="machine-foot">
             <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> Крутить колесо</button>
+            <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
             <span class="potential">Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 · <b id="freeSpinNote"></b></span>
           </div>
           <div class="result-banner" id="wheelResult">Крутите колесо — результат придёт с сервера</div>
@@ -390,7 +408,7 @@ def build_casino() -> str:
           <h4 style="margin:16px 0 8px;font-size:15px">Колесо: секторы и вероятности</h4>
           <div class="table-wrap"><table><thead><tr><th>Множитель</th><th>Вес</th><th>Вероятность</th><th>Вклад в RTP</th></tr></thead>
             <tbody>{wheel_rows}</tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:8px">RTP колеса: {rules['wheel']['rtp'] * 100:.1f}%. Первый спин за сутки — бесплатный при любой ставке.</p>
+          <p class="muted" style="font-size:12px;margin-top:8px">RTP колеса: {rules['wheel']['rtp'] * 100:.1f}%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC.</p>
           <div class="divider"></div>
           <h4 style="margin:0 0 8px;font-size:15px">Ограничения</h4>
           <p class="muted" style="font-size:13px">Ставки: от {CASINO_STAKES[0]} до {CASINO_STAKES[-1]} V. Доступен дневной лимит ставок и добровольное
@@ -460,7 +478,7 @@ def build_roulette() -> str:
     <div class="section-head">
       <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны</span>
         <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vertu</h1>
-        <p>Один бесплатный спин в сутки. Дальше — ставка V-монетами. Результат считает сервер.</p></div>
+        <p>Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер.</p></div>
       <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
     </div>
     <div class="casino-layout">
@@ -473,6 +491,7 @@ def build_roulette() -> str:
           <label class="checkbox" style="flex:1"><input type="checkbox" id="useFree" checked>
             <span>Использовать бесплатный спин, если доступен</span></label>
         </div>
+        <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
         <div class="result-banner" id="wheelResult">Готово к вращению</div>
       </div>
       <aside class="stack" style="gap:16px">
@@ -760,7 +779,7 @@ def build_admin() -> str:
 
 # --------------------------------------------------------------------------- #  info pages
 def build_about() -> str:
-    return f'''{head('О проекте', 'Vertu Games — браузерная игровая платформа: 11 игр, социальное казино и серверная экономика V-монет.', 'about')}
+    return f'''{head('О проекте', 'Vertu Games — браузерная игровая платформа: {games_count_ru()}, социальное казино и серверная экономика V-монет.', 'about')}
 {header('about')}
 <main class="wrap">
   <section class="section" style="margin-top:22px">
@@ -788,8 +807,8 @@ def build_about() -> str:
     <div class="card panel" style="margin-top:16px">
       <h2 style="font-size:18px;margin-bottom:10px">Состав платформы</h2>
       <div class="list">
-        <div class="list-row"><span class="ico" data-ico="gamepad"></span><span class="meta"><b>11 игр</b>
-          <small>Flappy Bird, 2048, Platformer, Pong, Shooter, Snake, MiniCraft 3D, Doodle Jump, Redline, Sky-Isle, Космокухня</small></span></div>
+        <div class="list-row"><span class="ico" data-ico="gamepad"></span><span class="meta"><b>{games_count_ru()}</b>
+          <small>{', '.join(g['name'] for g in visible_games())}</small></span></div>
         <div class="list-row"><span class="ico" data-ico="wheel"></span><span class="meta"><b>Социальное казино</b>
           <small>слоты «Vert Slots», колесо фортуны, история ставок и добровольные лимиты</small></span></div>
         <div class="list-row"><span class="ico" data-ico="bag"></span><span class="meta"><b>Магазин</b>
@@ -981,7 +1000,7 @@ def build_catalog_data() -> str:
     payload = {
         'games': [{k: g[k] for k in ('id', 'name', 'name_en', 'file', 'icon', 'tag', 'cat', 'cat_en',
                                      'desc', 'desc_en', 'reward', 'daily', 'event', 'how_ru', 'how_en',
-                                     'long_ru', 'long_en', 'controls_ru', 'controls_en')} for g in GAMES],
+                                     'long_ru', 'long_en', 'controls_ru', 'controls_en')} for g in visible_games()],
         'shop': [{k: i[k] for k in ('id', 'kind', 'name_ru', 'name_en', 'price', 'icon', 'payload', 'order')} for i in SHOP_ITEMS],
         'achievements': ACHIEVEMENTS,
         'casino': {k: v for k, v in casino_rules().items()},
@@ -1016,7 +1035,9 @@ def main(argv):
     problems = []
     for name, builder in BUILDERS.items():
         target = ROOT / name
-        expected = builder()
+        # Каждая страница получает пары data-ru/data-en для мгновенного
+        # переключения языка без перезагрузки.
+        expected = localize_markup(builder())
         if check_only:
             if not target.exists():
                 problems.append(f'нет файла: {name}')

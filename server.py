@@ -32,7 +32,7 @@ import db as store
 import shop
 from db import (AccountBanned, DuplicateUser, InsufficientFunds, InvalidCredentials,
                 LimitExceeded, NotFound, StoreError, get_store)
-from game_catalog import GAMES_BY_ID, public_games
+from game_catalog import GAMES, GAMES_BY_ID, game_available, public_games
 
 ROOT = Path(__file__).resolve().parent
 COOKIE = 'vg_session'
@@ -520,6 +520,8 @@ def game_play():
     game = str(data.get('game', ''))
     if game not in GAMES_BY_ID:
         return api_error(404, 'GAME', 'Неизвестная игра')
+    if not game_available(game):
+        return api_error(404, 'GAME', 'Игра временно недоступна')
     db = get_store()
     db.record_play(user['id'], game)
     db.unlock_achievement(user['id'], 'first_game')
@@ -543,6 +545,8 @@ def game_reward():
     spec = GAMES_BY_ID.get(game)
     if not spec:
         return api_error(404, 'GAME', 'Неизвестная игра')
+    if not game_available(game):
+        return api_error(404, 'GAME', 'Игра временно недоступна')
     if not rate('reward', 60, 60):
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
     receipt = data.get('receipt') or data.get('ref')
@@ -656,7 +660,10 @@ def casino_rules():
     payload['ok'] = True
     if user:
         limits = get_store().casino_limits(user['id'])
-        payload['freeSpin'] = casino_logic.free_spin_available(user['id'])
+        wheel = casino_logic.wheel_limits(user['id'])
+        payload['freeSpin'] = wheel['freeLeft'] > 0
+        # Отдельный ключ: payload['wheel'] занят правилами колеса (секторы, RTP).
+        payload['wheelLimits'] = wheel
         payload['limits'] = {'daily': limits['daily_limit'],
                              'excludeUntil': limits['exclude_until']}
         payload['coins'] = get_store().balance(user['id'])
@@ -674,9 +681,14 @@ def casino_wheel():
         result = casino_logic.spin_wheel(user['id'], data.get('stake'),
                                          allow_free=bool(data.get('free')))
     except casino_logic.CasinoError as exc:
-        return api_error(exc.status, exc.code, exc.message)
+        payload = {'ok': False, 'code': exc.code, 'msg': exc.message}
+        if exc.extra:
+            # Таймер разблокировки нужен клиенту и при ошибке лимита.
+            payload['limits'] = casino_logic.wheel_limits(user['id'])
+        return jsonify(payload), exc.status
     except LimitExceeded as exc:
-        return api_error(400, 'LIMIT', str(exc))
+        return jsonify({'ok': False, 'code': 'LIMIT', 'msg': str(exc),
+                        'limits': casino_logic.wheel_limits(user['id'])}), 400
     except InsufficientFunds:
         return api_error(402, 'NO_FUNDS', 'Недостаточно V-монет для ставки.')
     result['ok'] = True
@@ -786,7 +798,7 @@ def leaderboard():
                           'coins': int(a['coins']), 'username': a['username'],
                           'unlocked': int(a['unlocked'])} for a in achievements],
         'totals': {'players': int(players['n']), 'coins': int(coins['n']),
-                   'plays': int(plays['n']), 'games': len(GAMES_BY_ID)},
+                   'plays': int(plays['n']), 'games': len(public_games())},
     })
 
 
@@ -975,11 +987,12 @@ def admin_games():
     stats = {r['game']: {'players': int(r['players']), 'plays': int(r['plays'] or 0),
                          'earned': int(r['earned'] or 0)} for r in rows}
     games_out = []
-    for game in public_games():
+    # Админка показывает все игры, включая временно скрытые (флаг hidden в game_catalog)
+    for game in GAMES:
         info = stats.get(game['id'], {'players': 0, 'plays': 0, 'earned': 0})
         enabled = db.get_setting(f'game_{game["id"]}_enabled', '1') == '1'
         games_out.append({**{k: game[k] for k in ('id', 'name', 'name_en', 'file', 'reward', 'icon')},
-                          **info, 'enabled': enabled})
+                          **info, 'enabled': enabled, 'hidden': bool(game.get('hidden'))})
     return jsonify({'ok': True, 'games': games_out})
 
 

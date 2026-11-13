@@ -25,7 +25,7 @@
   }
 
   function ledgerRows(items) {
-    if (!items || !items.length) return '<div class="empty">Операций пока нет.</div>';
+    if (!items || !items.length) return '<div class="empty">' + T('Операций пока нет.', 'No transactions yet.') + '</div>';
     return '<div class="table-wrap"><table><thead><tr><th>Операция</th><th>Сумма</th><th>Баланс</th><th>Когда</th></tr></thead><tbody>' +
       items.map(function (row) {
         return '<tr><td>' + escapeHtml(row.reason || row.kind) + '</td>' +
@@ -35,7 +35,7 @@
   }
 
   function achievementRows(items) {
-    if (!items || !items.length) return '<div class="empty">Достижений пока нет.</div>';
+    if (!items || !items.length) return '<div class="empty">' + T('Достижений пока нет.', 'No achievements yet.') + '</div>';
     return '<div class="list">' + items.map(function (item) {
       return '<div class="list-row"><span class="ico">' + VG.icon(item.icon || 'trophy', 17) + '</span>' +
         '<span class="meta"><b>' + escapeHtml(VG.lang() === 'en' ? item.name_en : item.name_ru) + '</b>' +
@@ -45,7 +45,7 @@
   }
 
   function casinoRows(items) {
-    if (!items) return '<div class="empty">Войдите, чтобы увидеть историю казино.</div>';
+    if (!items) return '<div class="empty">' + T('Войдите, чтобы увидеть историю казино.', 'Sign in to see your casino history.') + '</div>';
     if (!items.length) return '<div class="empty">Ставок пока не было. <a href="casino.html" style="color:var(--lime)">В казино</a></div>';
     return '<div class="list">' + items.slice(0, 10).map(function (row) {
       return '<div class="list-row"><span class="ico">' + VG.icon(row.payout > 0 ? 'trophy' : 'dice', 16) + '</span>' +
@@ -79,7 +79,7 @@
     $('#profPlays').textContent = fmt((data.stats || {}).games || 0);
     $('#accName').textContent = user.username;
     $('#profStats').innerHTML = kindBadges(data, areMine);
-    $('#ledgerBody').innerHTML = areMine ? ledgerRows(data.ledger) : '<div class="empty">История операций видна только владельцу профиля.</div>';
+    $('#ledgerBody').innerHTML = areMine ? ledgerRows(data.ledger) : '<div class="empty">' + T('История операций видна только владельцу профиля.', 'The transaction history is visible only to the profile owner.') + '</div>';
     $('#achBody').innerHTML = achievementRows(data.achievements);
     $('#casinoBody').innerHTML = casinoRows(data.casino);
     $('#itemsBody').innerHTML = purchaseRows(data.purchases);

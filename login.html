@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-title-en="Sign in and sign up — Vertu Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -22,54 +22,52 @@
     <div class="glow"></div>
     <div style="position:relative;z-index:2;max-width:520px">
       <span class="eyebrow"><span data-ico="spark"></span> Vertu Games</span>
-      <h2 class="grad" style="margin:14px 0 0">Один аккаунт — вся платформа</h2>
+      <h2 class="grad" style="margin:14px 0 0"><span data-ru="Один аккаунт — вся платформа" data-en="One account — the whole platform">Один аккаунт — вся платформа</span></h2>
       <ul>
-        <li><span data-ico="check"></span><span>Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется.</span></li>
-        <li><span data-ico="check"></span><span>Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов).</span></li>
-        <li><span data-ico="check"></span><span>Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа.</span></li>
-        <li><span data-ico="check"></span><span>Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве.</span></li>
+        <li><span data-ico="check"></span><span><span data-ru="Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется." data-en="Sign up with a nickname and a password. No e-mail, no address confirmation.">Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется.</span></span></li>
+        <li><span data-ico="check"></span><span><span data-ru="Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов)." data-en="The password is stored only as a salted PBKDF2 hash (310 000 rounds).">Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов).</span></span></li>
+        <li><span data-ico="check"></span><span><span data-ru="Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа." data-en="Cloudflare Turnstile is verified on the server, plus rate limits on sign-in attempts.">Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа.</span></span></li>
+        <li><span data-ico="check"></span><span><span data-ru="Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве." data-en="Balance, purchases and achievements live in PostgreSQL and are available on any device.">Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве.</span></span></li>
       </ul>
     </div>
   </section>
   <section class="auth-form-wrap">
     <div class="card auth-card">
       <div class="tabs" role="tablist">
-        <button id="tabLogin" class="on" data-tab="login" role="tab" aria-selected="true">Вход</button>
-        <button id="tabRegister" data-tab="register" role="tab" aria-selected="false">Регистрация</button>
+        <button id="tabLogin" class="on" data-tab="login" role="tab" aria-selected="true"><span data-ru="Вход" data-en="Sign in">Вход</span></button>
+        <button id="tabRegister" data-tab="register" role="tab" aria-selected="false"><span data-ru="Регистрация" data-en="Sign up">Регистрация</span></button>
       </div>
       <form id="formLogin" novalidate>
-        <h2 style="font-size:22px;margin-bottom:4px">С возвращением</h2>
-        <p class="muted" style="font-size:13px;margin-bottom:16px">Введите ник и пароль своего аккаунта.</p>
-        <label class="field"><span>Ник</span>
-          <input type="text" name="username" autocomplete="username" required maxlength="24" placeholder="Ваш ник"></label>
-        <label class="field"><span>Пароль</span>
+        <h2 style="font-size:22px;margin-bottom:4px"><span data-ru="С возвращением" data-en="Welcome back">С возвращением</span></h2>
+        <p class="muted" style="font-size:13px;margin-bottom:16px"><span data-ru="Введите ник и пароль своего аккаунта." data-en="Enter your nickname and password.">Введите ник и пароль своего аккаунта.</span></p>
+        <label class="field"><span><span data-ru="Ник" data-en="Nickname">Ник</span></span>
+          <input type="text" name="username" autocomplete="username" required maxlength="24" placeholder="Ваш ник" data-placeholder-en="Your nickname"></label>
+        <label class="field"><span><span data-ru="Пароль" data-en="Password">Пароль</span></span>
           <input type="password" name="password" autocomplete="current-password" required maxlength="128" placeholder="••••••••"></label>
         <div class="captcha-slot" id="captchaLogin"></div>
-        <button class="btn btn-primary btn-block btn-lg" type="submit" id="loginSubmit">Войти</button>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="loginSubmit"><span data-ru="Войти" data-en="Sign in">Войти</span></button>
         <p class="msg" id="loginMsg" role="status"></p>
         <p class="turnstile-note" id="captchaNote"></p>
       </form>
       <form id="formRegister" class="hidden" novalidate>
-        <h2 style="font-size:22px;margin-bottom:4px">Создать аккаунт</h2>
-        <p class="muted" style="font-size:13px;margin-bottom:16px">Ник и пароль. Приветственный бонус — 100 V на серверный баланс.</p>
-        <label class="field"><span>Ник (3–24 символа)</span>
-          <input type="text" name="username" autocomplete="username" required minlength="3" maxlength="24" placeholder="Например, NeoPlayer">
+        <h2 style="font-size:22px;margin-bottom:4px"><span data-ru="Создать аккаунт" data-en="Create an account">Создать аккаунт</span></h2>
+        <p class="muted" style="font-size:13px;margin-bottom:16px"><span data-ru="Ник и пароль. Приветственный бонус — 100 V на серверный баланс." data-en="Nickname and password. Welcome bonus: 100 V on your server balance.">Ник и пароль. Приветственный бонус — 100 V на серверный баланс.</span></p>
+        <label class="field"><span><span data-ru="Ник (3–24 символа)" data-en="Nickname (3–24 characters)">Ник (3–24 символа)</span></span>
+          <input type="text" name="username" autocomplete="username" required minlength="3" maxlength="24" placeholder="Например, NeoPlayer" data-placeholder-en="For example, NeoPlayer">
           <span class="hint" id="regHint"></span></label>
-        <label class="field"><span>Пароль (8–128 символов)</span>
+        <label class="field"><span><span data-ru="Пароль (8–128 символов)" data-en="Password (8–128 characters)">Пароль (8–128 символов)</span></span>
           <input type="password" name="password" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="••••••••"></label>
-        <label class="field"><span>Повторите пароль</span>
+        <label class="field"><span><span data-ru="Повторите пароль" data-en="Repeat the password">Повторите пароль</span></span>
           <input type="password" name="confirm" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="••••••••"></label>
         <label class="field hidden" aria-hidden="true"><span>Website</span>
           <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
         <div class="captcha-slot" id="captchaRegister"></div>
-        <button class="btn btn-primary btn-block btn-lg" type="submit" id="registerSubmit">Зарегистрироваться</button>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="registerSubmit"><span data-ru="Зарегистрироваться" data-en="Create account">Зарегистрироваться</span></button>
         <p class="msg" id="registerMsg" role="status"></p>
-        <p class="turnstile-note">Нажимая кнопку, вы подтверждаете, что вам 18+ и вы принимаете правила платформы.
-          V-монеты не имеют денежной стоимости.</p>
+        <p class="turnstile-note"><span data-ru="Нажимая кнопку, вы подтверждаете, что вам 18+ и вы принимаете правила платформы. V-монеты не имеют денежной стоимости." data-en="By pressing the button you confirm you are 18+ and accept the platform rules. V-coins have no monetary value.">Нажимая кнопку, вы подтверждаете, что вам 18+ и вы принимаете правила платформы. V-монеты не имеют денежной стоимости.</span></p>
       </form>
       <div class="divider"></div>
-      <p class="muted" style="font-size:12px;margin:0">Забыли пароль? Восстановление по e-mail не используется.
-        Обратитесь в <a href="support.html" style="color:var(--lime)">поддержку</a>.</p>
+      <p class="muted" style="font-size:12px;margin:0"><span data-ru="Забыли пароль? Восстановление по e-mail не используется. Обратитесь в" data-en="Forgot your password? E-mail recovery is not used. Contact">Забыли пароль? Восстановление по e-mail не используется. Обратитесь в</span> <a href="support.html" style="color:var(--lime)"><span data-ru="поддержку" data-en="support">поддержку</span></a>.</p>
     </div>
   </section>
 </main>
@@ -78,40 +76,41 @@
     <div class="footer-inner">
       <div style="max-width:320px">
         <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
-        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px"><span data-ru="Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей." data-en="Social casino and arcades. Virtual V-coins only: no real bets, no cash-out coin purchases and no money wins.">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</span></p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only">Только для развлечения</span></span></div>
       </div>
       <div class="footer-col">
-        <h5>Платформа</h5>
-        <a href="index.html">Главная</a>
-        <a href="top.html">Каталог игр</a>
-        <a href="casino.html">Казино</a>
-        <a href="roulette.html">Рулетка</a>
-        <a href="shop.html">Магазин</a>
+        <h5><span data-ru="Платформа" data-en="Platform">Платформа</span></h5>
+        <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
+        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
+        <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
+        <a href="roulette.html"><span data-ru="Рулетка" data-en="Roulette">Рулетка</span></a>
+        <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">
-        <h5>Аккаунт</h5>
-        <a href="profile.html">Профиль</a>
-        <a href="login.html?tab=login">Вход</a>
-        <a href="login.html?tab=register">Регистрация</a>
-        <a href="profile.html#security">Смена пароля</a>
+        <h5><span data-ru="Аккаунт" data-en="Account">Аккаунт</span></h5>
+        <a href="profile.html"><span data-ru="Профиль" data-en="Profile">Профиль</span></a>
+        <a href="login.html?tab=login"><span data-ru="Вход" data-en="Sign in">Вход</span></a>
+        <a href="login.html?tab=register"><span data-ru="Регистрация" data-en="Sign up">Регистрация</span></a>
+        <a href="profile.html#security"><span data-ru="Смена пароля" data-en="Change password">Смена пароля</span></a>
       </div>
       <div class="footer-col">
-        <h5>Помощь</h5>
-        <a href="about.html">О проекте</a>
-        <a href="support.html">Поддержка</a>
+        <h5><span data-ru="Помощь" data-en="Help">Помощь</span></h5>
+        <a href="about.html"><span data-ru="О проекте" data-en="About">О проекте</span></a>
+        <a href="support.html"><span data-ru="Поддержка" data-en="Support">Поддержка</span></a>
         <a href="api.html">API</a>
-        <a href="privacy.html">Конфиденциальность</a>
+        <a href="privacy.html"><span data-ru="Конфиденциальность" data-en="Privacy">Конфиденциальность</span></a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Vertu Games · Все права защищены</span>
-      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
+      <span><span data-ru="© 2026 Vertu Games · Все права защищены" data-en="© 2026 Vertu Games · All rights reserved">© 2026 Vertu Games · Все права защищены</span></span>
+      <span><span data-ru="V-монеты не имеют денежной стоимости и не подлежат обмену" data-en="V-coins have no monetary value and cannot be exchanged">V-монеты не имеют денежной стоимости и не подлежат обмену</span></span>
     </div>
   </div>
 </footer>
 <script src="assets/vg/js/catalog-data.js"></script>
 <script src="assets/vg/js/platform.js"></script>
+<script src="assets/vg/js/sfx.js"></script>
 <script src="assets/vg/js/login.js"></script>
 </body>
 </html>

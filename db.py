@@ -537,6 +537,17 @@ def today() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%d')
 
 
+def day_start(ts: int | None = None) -> int:
+    """Начало текущих суток UTC (00:00) — общая точка суточного сброса лимитов."""
+    moment = datetime.fromtimestamp(now() if ts is None else int(ts), timezone.utc)
+    return int(moment.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+
+
+def next_reset(ts: int | None = None) -> int:
+    """Момент, когда обнулятся дневные лимиты казино (следующая полночь UTC)."""
+    return day_start(ts) + 86400
+
+
 def hash_password(password: str) -> str:
     """pbkdf2_sha256$<rounds>$<salt>$<hash> — формат совместим с прежней базой."""
     salt = secrets.token_hex(16)
@@ -1098,6 +1109,13 @@ class DataStore:
                 raise LimitExceeded('Казино временно отключено')
             if cfg.get(f'{game}_enabled', '1') != '1':
                 raise LimitExceeded('Этот автомат временно отключён')
+            if game == 'wheel':
+                # 5 платных вращений в сутки — проверяем до списания денег.
+                paid = c.execute("SELECT COUNT(*) AS n FROM casino_bets"
+                                 " WHERE user_id=? AND game='wheel' AND created>=?",
+                                 (int(user_id), day_start())).fetchone()
+                if int(paid['n'] if paid else 0) >= 5:
+                    raise LimitExceeded('Лимит 5 платных вращений в сутки исчерпан')
             min_stake = int(cfg.get('min_stake', '5') or 5)
             max_stake = int(cfg.get('max_stake', '100') or 100)
             if stake < min_stake or stake > max_stake:
@@ -1142,14 +1160,40 @@ class DataStore:
 
     def casino_stats(self, user_id: int):
         with self.driver.transaction() as c:
-            row = c.execute('SELECT COUNT(*) AS bets, COALESCE(SUM(stake),0) AS staked,'
+            # Бесплатное вращение не списывает ставку, поэтому в оборот не входит.
+            row = c.execute("SELECT COUNT(*) AS bets,"
+                            " COALESCE(SUM(CASE WHEN game='wheel_free' THEN 0 ELSE stake END),0) AS staked,"
                             ' COALESCE(SUM(payout),0) AS won, COALESCE(MAX(payout),0) AS best'
                             ' FROM casino_bets WHERE user_id=?', (int(user_id),)).fetchone()
-            today_row = c.execute('SELECT COALESCE(SUM(stake),0) AS s FROM casino_bets'
-                                  ' WHERE user_id=? AND created>=?', (int(user_id), now() - 86400)).fetchone()
+            today_row = c.execute("SELECT COALESCE(SUM(CASE WHEN game='wheel_free' THEN 0 ELSE stake END),0) AS s"
+                                  ' FROM casino_bets WHERE user_id=? AND created>=?',
+                                  (int(user_id), now() - 86400)).fetchone()
         stats = dict(row or {})
         stats['today_staked'] = int(today_row['s']) if today_row else 0
         return stats
+
+    def casino_wheel_limits(self, user_id: int, free_limit: int = 1, paid_limit: int = 5) -> dict:
+        """Сколько вращений колеса осталось на сегодня.
+
+        Бесплатное вращение — одно в сутки, платных — не больше пяти; всё
+        считается по casino_bets за текущие сутки UTC и сбрасывается в 00:00.
+        """
+        start = day_start()
+        uid = int(user_id)
+        with self.driver.transaction() as c:
+            free_used = c.execute("SELECT COUNT(*) AS n FROM casino_bets"
+                                  " WHERE user_id=? AND game=? AND created>=?",
+                                  (uid, 'wheel_free', start)).fetchone()
+            paid_used = c.execute("SELECT COUNT(*) AS n FROM casino_bets"
+                                  " WHERE user_id=? AND game IN ('wheel') AND created>=?",
+                                  (uid, start)).fetchone()
+        used_free = int(free_used['n'] if free_used else 0)
+        used_paid = int(paid_used['n'] if paid_used else 0)
+        return {'free_limit': int(free_limit), 'free_used': used_free,
+                'free_left': max(0, int(free_limit) - used_free),
+                'paid_limit': int(paid_limit), 'paid_used': used_paid,
+                'paid_left': max(0, int(paid_limit) - used_paid),
+                'reset_at': next_reset(), 'server_now': now()}
 
     def casino_limits(self, user_id: int):
         with self.driver.transaction() as c:

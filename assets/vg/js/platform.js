@@ -111,6 +111,8 @@
     refresh: '<path d="M4 12a8 8 0 0 1 13.7-5.7L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.7L4 16"/><path d="M4 20v-4h4"/>',
     trash: '<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>',
     edit: '<path d="M4 20h4L20 8l-4-4L4 16v4Z"/><path d="m14 6 4 4"/>',
+    expand: '<path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"/>',
+    compress: '<path d="M9 4v5H4M15 20v-5h5M20 9h-5V4M4 15h5v5"/>',
     eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.6"/>'
   };
   function icon(name, size) {
@@ -152,11 +154,14 @@
   VG.colorHex = function (id) { return COLOR_HEX[id] || '#2ee6c8'; };
 
   /* -------------------------------------------------------------------- api */
-  function ApiError(message, code, status) {
+  function ApiError(message, code, status, data) {
     this.name = 'ApiError';
     this.message = message;
     this.code = code || 'ERROR';
     this.status = status || 0;
+    // Дополнительные поля ответа (например, лимиты колеса для обратного отсчёта).
+    this.data = data || null;
+    if (data && data.limits) this.limits = data.limits;
   }
   ApiError.prototype = Object.create(Error.prototype);
 
@@ -182,7 +187,7 @@
       return response.json().then(function (data) {
         if (!response.ok || data.ok === false) {
           throw new ApiError(data.msg || T('Не удалось выполнить запрос.', 'Request failed.'),
-            data.code, response.status);
+            data.code, response.status, data);
         }
         return data;
       });
@@ -222,6 +227,13 @@
     state.listeners.push(fn);
     if (state.sessionReady) fn(state.user, 'coins');
   }
+  var langListeners = [];
+  /* Подписка на смену языка: страницы перерисовывают свои динамические блоки. */
+  function onLangChange(fn) {
+    if (typeof fn === 'function' && langListeners.indexOf(fn) === -1) langListeners.push(fn);
+    return fn;
+  }
+
   function onSessionChange(fn) {
     state.sessionListeners.push(fn);
     if (state.sessionReady) fn(state.user, 'identity');
@@ -239,8 +251,18 @@
     paintHeader();
     if (user && previous && user.coins !== previous.coins) bumpBalance();
     var identityChanged = (previous && previous.id) !== (user && user.id);
+    applyGuestOnly();
     emit();
     if (identityChanged) emitSession();
+  }
+
+  /* Блоки с data-guest-only показываем только гостям: авторизованному игроку
+     регистрационный баннер на главной не нужен и мешает. */
+  function applyGuestOnly() {
+    var signedIn = !!state.user;
+    $$('[data-guest-only]').forEach(function (node) {
+      node.classList.toggle('hidden', signedIn);
+    });
   }
   function user() { return state.user; }
   function coins() { return state.user ? Number(state.user.coins) || 0 : 0; }
@@ -402,17 +424,80 @@
     }, 0);
   }
 
-  function setLang(value) {
-    var next = value === 'en' ? 'en' : 'ru';
+  /*
+   * Переключение языка. Разметка приходит из сборщика с парами data-ru/data-en,
+   * поэтому здесь достаточно подменить текст, подписи полей и атрибуты
+   * доступности (aria-label, title, placeholder), а затем перерисовать
+   * динамические блоки — шапку, счётчики, списки, страницы казино и профиля.
+   */
+  var TRANSLATABLE_ATTRS = ['aria-label', 'title', 'placeholder', 'alt'];
+  var BASE_TITLE = '';
+
+  function applyLangToDom(next) {
     document.documentElement.setAttribute('lang', next);
     document.body.setAttribute('data-lang', next);
-    storage('vg_lang', next);
+
+    // Текстовые узлы: сборщик положил рядом русский и английский варианты.
     $$('[data-ru]').forEach(function (node) {
       var text = next === 'en' ? node.getAttribute('data-en') : node.getAttribute('data-ru');
       if (text != null) node.innerHTML = text;
+      if (next === 'en') node.setAttribute('lang', 'en');
+      else node.removeAttribute('lang');
     });
+
+    // Подписи полей и подсказки доступности: data-placeholder-en, data-title-en и т. п.
+    $$('[data-ru]').forEach(function (node) {
+      TRANSLATABLE_ATTRS.forEach(function (name) {
+        var english = node.getAttribute('data-' + name + '-en');
+        if (english == null) return;
+        var store = 'data-' + name + '-ru';
+        if (next === 'en') {
+          if (!node.hasAttribute(store)) node.setAttribute(store, node.getAttribute(name) || '');
+          node.setAttribute(name, english);
+        } else if (node.hasAttribute(store)) {
+          node.setAttribute(name, node.getAttribute(store));
+        }
+      });
+    });
+
+    // Атрибуты на элементах без собственного текста (иконки, поля, канвасы).
+    $$('[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]').forEach(function (node) {
+      TRANSLATABLE_ATTRS.forEach(function (name) {
+        var english = node.getAttribute('data-' + name + '-en');
+        if (english == null) return;
+        var store = 'data-' + name + '-ru';
+        if (next === 'en') {
+          if (!node.hasAttribute(store)) node.setAttribute(store, node.getAttribute(name) || '');
+          node.setAttribute(name, english);
+        } else if (node.hasAttribute(store)) {
+          node.setAttribute(name, node.getAttribute(store));
+        }
+      });
+    });
+
+    // Заголовок вкладки переводится, если сборщик приложил английский вариант.
+    if (!BASE_TITLE) BASE_TITLE = document.title;
+    var enTitle = document.documentElement.getAttribute('data-title-en');
+    if (enTitle) document.title = next === 'en' ? enTitle : BASE_TITLE;
+    else if (next === 'ru' && BASE_TITLE) document.title = BASE_TITLE;
+  }
+
+  function setLang(value) {
+    var next = value === 'en' ? 'en' : 'ru';
+    storage('vg_lang', next);
+    applyLangToDom(next);
     paintHeader();
     emit();
+    // Динамические списки (история, лидеры, каталог) перерисовываются на новом языке.
+    var hooks = langListeners.slice();
+    hooks.forEach(function (fn) {
+      try { fn(next); } catch (e) {}
+    });
+    // Открытая игра тоже переключает язык: шлём ей сообщение в iframe.
+    var frame = $('#gameFrame');
+    if (frame && frame.contentWindow) {
+      try { frame.contentWindow.postMessage({ type: 'player:lang', lang: next }, location.origin); } catch (e) {}
+    }
     if (typeof VG.onLangChange === 'function') VG.onLangChange(next);
   }
   function currentLang() { return lang(); }
@@ -515,6 +600,108 @@
   }
 
   /* -------------------------------------------------------------- game play */
+  /*
+   * Клавиатура без клика. Игра живёт в iframe, и браузер отдаёт нажатия
+   * только документу в фокусе. Поэтому после входа в игру ставим фокус на
+   * iframe и повторяем попытку на pointermove/visibilitychange; если браузер
+   * фокус не отдал — показываем аккуратную подсказку «кликните по игре».
+   */
+  var KEY_FOCUS_CODES = {
+    ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1, Space: 1,
+    KeyW: 1, KeyA: 1, KeyS: 1, KeyD: 1, KeyE: 1, KeyR: 1
+  };
+  var focusHint = null;
+  var focusTimer = null;
+
+  function ensureGameFocus(frame) {
+    if (!frame || !VG.activeGame) return;
+    try { frame.focus({ preventScroll: true }); } catch (e) { try { frame.focus(); } catch (e2) {} }
+    VG.gameFocus = document.activeElement === frame;
+    if (!VG.gameFocus) showFocusHint();
+    else hideFocusHint();
+  }
+  function showFocusHint() {
+    showFocusHint.armed = true;
+    if (focusHint && focusHint.parentNode) { focusHint.classList.add('show'); return; }
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    focusHint = el('div', 'play-focus-hint');
+    focusHint.innerHTML = icon('gamepad', 16) + '<span></span>';
+    focusHint.firstChild && focusHint.firstChild.setAttribute('aria-hidden', 'true');
+    focusHint.querySelector('span').textContent =
+      T('Нажмите на игру, чтобы управлять с клавиатуры', 'Click the game to control it with the keyboard');
+    focusHint.setAttribute('role', 'status');
+    overlay.querySelector('.play-frame-wrap').appendChild(focusHint);
+    // Клик по подсказке переводит фокус в игру.
+    focusHint.addEventListener('pointerdown', function (event) {
+      event.preventDefault();
+      var frame = overlay.querySelector('.play-frame');
+      ensureGameFocus(frame);
+    });
+    setTimeout(function () { focusHint && focusHint.classList.add('show'); }, 10);
+  }
+  function hideFocusHint() {
+    if (focusHint) {
+      focusHint.classList.remove('show');
+      focusHint.style.pointerEvents = 'none';
+      setTimeout(function () { if (focusHint && !focusHint.classList.contains('show')) { focusHint.remove(); focusHint = null; } }, 220);
+    }
+  }
+  function releaseGameFocus() {
+    VG.gameFocus = false;
+    hideFocusHint();
+    if (focusTimer) { clearTimeout(focusTimer); focusTimer = null; }
+  }
+
+  /*
+   * Проброс клавиш. Игры лежат на том же origin, поэтому родитель может
+   * продублировать нажатие прямо в окно игры: первая же стрелка/WASD/Space
+   * работает без клика, а фокус переезжает в iframe на этом же событии.
+   */
+  function inEditableField(node) {
+    if (!node || !node.tagName) return false;
+    var tag = node.tagName.toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || node.isContentEditable;
+  }
+  function forwardKeyToGame(event) {
+    if (!VG.activeGame || inEditableField(event.target)) return false;
+    var overlay = $('#playOverlay');
+    var frame = overlay && overlay.querySelector('.play-frame');
+    if (!frame || !frame.contentWindow) return false;
+    var win = frame.contentWindow;
+    var doc = null;
+    try { doc = win.document; } catch (e) { doc = null; }
+    if (!doc) return false;
+    var init = {
+      key: event.key, code: event.code, keyCode: event.keyCode, which: event.which,
+      altKey: event.altKey, ctrlKey: event.ctrlKey, shiftKey: event.shiftKey,
+      metaKey: event.metaKey, repeat: event.repeat, bubbles: true, cancelable: true
+    };
+    // Одно событие на document: всплывая, оно доходит и до window-обработчиков игры.
+    var Ctor = (win.KeyboardEvent || KeyboardEvent);
+    try { doc.dispatchEvent(new Ctor(event.type, init)); } catch (e) {}
+    ensureGameFocus(frame);
+    if (event.cancelable) event.preventDefault();
+    return true;
+  }
+  function onGameKey(event) {
+    if (!VG.activeGame || !KEY_FOCUS_CODES[event.code]) return;
+    if (document.activeElement === $('#gameFrame')) return; // игра уже получает клавиши сама
+    forwardKeyToGame(event);
+  }
+  function bindGameKeyBridge() {
+    if (bindGameKeyBridge.done) return;
+    bindGameKeyBridge.done = true;
+    document.addEventListener('keydown', onGameKey);
+    document.addEventListener('keyup', onGameKey);
+    // Любое движение мышью по игре тоже возвращает фокус, без лишних кликов.
+    document.addEventListener('pointerup', function () {
+      if (!VG.activeGame) return;
+      var frame = $('#gameFrame');
+      if (frame && document.activeElement !== frame) ensureGameFocus(frame);
+    });
+  }
+
   function openGame(game) {
     var overlay = $('#playOverlay');
     // На части страниц оверлей уже есть (пустой контейнер из разметки) —
@@ -529,15 +716,23 @@
         '<div class="play-bar"><button type="button" class="btn btn-ghost btn-sm" data-close>' +
         icon('chev', 15) + T('Назад', 'Back') + '</button><h3></h3>' +
         '<span class="balance-pill" style="cursor:default">' + icon('coin', 15) + '<span data-coins>' + fmt(coins()) + '</span> V</span>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-label="' + T('На весь экран', 'Fullscreen') + '">⛶</button></div>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-pressed="false" title="' + T('На весь экран', 'Fullscreen') + '">' +
+        icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
         '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', function () {
         var wrap = overlay.querySelector('.play-frame-wrap');
-        if (document.fullscreenElement) document.exitFullscreen();
-        else if (wrap.requestFullscreen) wrap.requestFullscreen();
+        if (document.fullscreenElement) {
+          if (document.exitFullscreen) document.exitFullscreen();
+          return;
+        }
+        // Полноэкранный режим: рамка плеера, а с ней и игра, занимает весь экран.
+        var request = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.msRequestFullscreen;
+        if (!request) { toast(T('Браузер не поддерживает полноэкранный режим.', 'This browser does not support fullscreen.'), 'bad'); return; }
+        try { request.call(wrap, { navigationUI: 'hide' }); } catch (e) { try { request.call(wrap); } catch (e2) {} }
       });
     }
+    syncFullscreenButton();
     if (!overlay.querySelector('.reward-chip')) {
       var chip = el('span', 'badge badge-new reward-chip');
       chip.style.marginLeft = 'auto';
@@ -549,10 +744,15 @@
     overlay.querySelector('[data-close]').innerHTML = icon('chev', 15) + '<span>' + T('Назад', 'Back') + '</span>';
     var frame = overlay.querySelector('.play-frame');
     var langParam = lang();
-    frame.src = game.file + '?lang=' + langParam;
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     VG.activeGame = game;
+    // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
+    frame.onload = function () { ensureGameFocus(frame); };
+    frame.src = game.file + '?lang=' + langParam;
+    if (focusTimer) clearTimeout(focusTimer);
+    focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
+    bindGameKeyBridge();
     if (state.user) api('/api/games/play', { body: { game: game.id } }).then(function (data) {
       if (data.coins != null) updateCoins(data.coins);
     }).catch(function () {});
@@ -650,6 +850,30 @@
   function currentGameReward() {
     return VG.activeGame ? VG.activeGame.reward : 0;
   }
+  function syncFullscreenButton() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var button = overlay.querySelector('[data-fullscreen]');
+    if (!button) return;
+    var active = !!document.fullscreenElement;
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    var label = button.querySelector('span');
+    if (label) label.textContent = active ? T('Выйти', 'Exit') : T('Экран', 'Screen');
+    // Иконка меняется между «развернуть» и «свернуть» вместе с состоянием.
+    var glyph = button.querySelector('svg') && button.querySelector('svg').parentNode;
+    if (glyph && glyph !== button) glyph.innerHTML = icon(active ? 'compress' : 'expand', 15);
+    if (active) {
+      var frame = overlay.querySelector('.play-frame');
+      if (frame) setTimeout(function () { ensureGameFocus(frame); }, 120);
+    }
+  }
+  if (!syncFullscreenButton.bound) {
+    syncFullscreenButton.bound = true;
+    ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (name) {
+      document.addEventListener(name, syncFullscreenButton);
+    });
+  }
+
   function closeGame() {
     var overlay = $('#playOverlay');
     if (!overlay) return;
@@ -658,6 +882,7 @@
     if (frame) frame.src = 'about:blank';
     document.body.style.overflow = '';
     VG.activeGame = null;
+    releaseGameFocus();
   }
   function refreshCoins() {
     if (!state.user) return Promise.resolve();
@@ -669,7 +894,7 @@
   VG.escapeHtml = escapeHtml; VG.debounce = debounce; VG.storage = storage;
   VG.user = user; VG.coins = coins; VG.setUser = setUser; VG.refreshSession = refreshSession;
   VG.updateCoins = updateCoins; VG.refreshCoins = refreshCoins; VG.onChange = onChange;
-  VG.onSessionChange = onSessionChange;
+  VG.onSessionChange = onSessionChange; VG.onLangChange = onLangChange;
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;
   VG.purchase = purchase; VG.equip = equip; VG.openGame = openGame; VG.closeGame = closeGame;
@@ -698,18 +923,19 @@
       node.style.justifyContent = 'center';
     });
   }
-  VG.hydrateIcons = hydrateIcons;
+  VG.hydrateIcons = hydrateIcons; VG.applyGuestOnly = applyGuestOnly;
   VG.iconHtml = function (name, size) { return '<span class="ico-inline">' + icon(name, size) + '</span>'; };
 
   /* -------------------------------------------------------------- bootstrap */
   function boot() {
     var saved = storage('vg_lang');
     if (saved === 'en' || saved === 'ru') {
-      document.documentElement.setAttribute('lang', saved);
-      document.body.setAttribute('data-lang', saved);
+      // Разметка уже двуязычная: применяем сохранённый язык до первой отрисовки.
+      applyLangToDom(saved);
     }
     paintHeader();
     hydrateIcons();
+    applyGuestOnly();
     refreshSession();
     document.addEventListener('click', function (event) {
       var link = event.target.closest && event.target.closest('[data-require-auth]');

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-title-en="Admin panel — Vertu Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -23,14 +23,14 @@
       <div class="center" style="margin-bottom:18px">
         <div style="width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:rgba(139,92,246,.18);border:1px solid rgba(139,92,246,.35);margin:0 auto 14px">
           <span data-ico="shield" data-size="26"></span></div>
-        <h1 style="font-size:24px">Админ-панель</h1>
-        <p class="muted" style="font-size:13px;margin-top:6px">Права проверяются на сервере. Пароль администратора не хранится в браузере.</p>
+        <h1 style="font-size:24px"><span data-ru="Админ-панель" data-en="Admin panel">Админ-панель</span></h1>
+        <p class="muted" style="font-size:13px;margin-top:6px"><span data-ru="Права проверяются на сервере. Пароль администратора не хранится в браузере." data-en="Permissions are checked on the server. The admin password is never stored in the browser.">Права проверяются на сервере. Пароль администратора не хранится в браузере.</span></p>
       </div>
       <form id="adminForm">
-        <label class="field"><span>Пароль администратора</span>
+        <label class="field"><span><span data-ru="Пароль администратора" data-en="Admin password">Пароль администратора</span></span>
           <input type="password" name="password" autocomplete="current-password" required placeholder="••••••••"></label>
         <div class="captcha-slot" id="captchaAdmin"></div>
-        <button class="btn btn-primary btn-block" type="submit" id="adminSubmit">Войти</button>
+        <button class="btn btn-primary btn-block" type="submit" id="adminSubmit"><span data-ru="Войти" data-en="Sign in">Войти</span></button>
         <p class="msg" id="adminMsg" role="status"></p>
       </form>
     </div>
@@ -38,56 +38,56 @@
 
   <section class="section hidden" style="margin-top:22px" id="adminApp">
     <div class="section-head">
-      <div><span class="eyebrow"><span data-ico="shield"></span> Администрирование</span>
-        <h1 style="font-size:clamp(22px,3vw,32px);margin-top:6px">Панель управления</h1></div>
-      <button class="btn btn-ghost btn-sm" id="adminLogout">Выйти</button>
+      <div><span class="eyebrow"><span data-ico="shield"></span> <span data-ru="Администрирование" data-en="Administration">Администрирование</span></span>
+        <h1 style="font-size:clamp(22px,3vw,32px);margin-top:6px"><span data-ru="Панель управления" data-en="Control panel">Панель управления</span></h1></div>
+      <button class="btn btn-ghost btn-sm" id="adminLogout"><span data-ru="Выйти" data-en="Sign out">Выйти</span></button>
     </div>
     <div class="admin-grid">
       <nav class="card admin-side panel" style="padding:10px">
-        <button class="on" data-view="overview"><span data-ico="chart"></span> Обзор</button>
-        <button data-view="users"><span data-ico="user"></span> Пользователи</button>
-        <button data-view="games"><span data-ico="gamepad"></span> Игры</button>
-        <button data-view="casino"><span data-ico="wheel"></span> Казино</button>
-        <button data-view="log"><span data-ico="clock"></span> Журнал</button>
+        <button class="on" data-view="overview"><span data-ico="chart"></span> <span data-ru="Обзор" data-en="Overview">Обзор</span></button>
+        <button data-view="users"><span data-ico="user"></span> <span data-ru="Пользователи" data-en="Users">Пользователи</span></button>
+        <button data-view="games"><span data-ico="gamepad"></span> <span data-ru="Игры" data-en="Games">Игры</span></button>
+        <button data-view="casino"><span data-ico="wheel"></span> <span data-ru="Казино" data-en="Casino">Казино</span></button>
+        <button data-view="log"><span data-ico="clock"></span> <span data-ru="Журнал" data-en="Log">Журнал</span></button>
         <div class="divider"></div>
-        <a href="index.html" style="display:flex;align-items:center;gap:9px;padding:10px 13px;font-size:13px;color:var(--muted)"><span data-ico="chev"></span> На сайт</a>
+        <a href="index.html" style="display:flex;align-items:center;gap:9px;padding:10px 13px;font-size:13px;color:var(--muted)"><span data-ico="chev"></span> <span data-ru="На сайт" data-en="Back to site">На сайт</span></a>
       </nav>
       <div>
         <div id="view-overview">
           <div class="stat-grid" id="adminStats"></div>
           <div class="grid grid-2" style="margin-top:16px">
-            <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Топ по балансу</h2></div></div>
-              <div id="adminTop"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div></div>
-            <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Последние действия</h2></div></div>
-              <div id="adminRecent"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div></div>
+            <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Топ по балансу" data-en="Top by balance">Топ по балансу</span></h2></div></div>
+              <div id="adminTop"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div></div>
+            <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Последние действия" data-en="Recent actions">Последние действия</span></h2></div></div>
+              <div id="adminRecent"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div></div>
           </div>
         </div>
         <div id="view-users" class="hidden">
           <div class="card panel">
             <div class="toolbar" style="margin-bottom:14px">
               <label class="search"><span data-ico="search"></span>
-                <input type="search" id="userSearch" placeholder="Поиск по нику" aria-label="Поиск пользователей"></label>
-              <button class="btn btn-sm btn-ghost" id="userRefresh">Обновить</button>
+                <input type="search" id="userSearch" placeholder="Поиск по нику" data-placeholder-en="Search by nickname" aria-label="Поиск пользователей" data-aria-label-en="Search users"></label>
+              <button class="btn btn-sm btn-ghost" id="userRefresh"><span data-ru="Обновить" data-en="Refresh">Обновить</span></button>
               <span class="muted" style="font-size:12px" id="userTotal"></span>
             </div>
-            <div id="adminUsers"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+            <div id="adminUsers"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
           <div class="card panel hidden" id="userDetail" style="margin-top:16px"></div>
         </div>
         <div id="view-games" class="hidden">
-          <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Игры платформы</h2>
-            <p class="muted" style="font-size:12.5px;margin:4px 0 0">Отключение скрывает награды за игру; файлы игр не удаляются.</p></div></div>
-            <div id="adminGames"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div></div>
+          <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Игры платформы" data-en="Platform games">Игры платформы</span></h2>
+            <p class="muted" style="font-size:12.5px;margin:4px 0 0"><span data-ru="Отключение скрывает награды за игру; файлы игр не удаляются." data-en="Disabling hides the game's rewards; game files are not deleted.">Отключение скрывает награды за игру; файлы игр не удаляются.</span></p></div></div>
+            <div id="adminGames"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div></div>
         </div>
         <div id="view-casino" class="hidden">
           <div class="card panel">
-            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Настройки казино</h2></div></div>
-            <div id="adminCasino"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Настройки казино" data-en="Casino settings">Настройки казино</span></h2></div></div>
+            <div id="adminCasino"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
         </div>
         <div id="view-log" class="hidden">
-          <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Журнал действий администраторов</h2></div></div>
-            <div id="adminLog"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div></div>
+          <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Журнал действий администраторов" data-en="Admin action log">Журнал действий администраторов</span></h2></div></div>
+            <div id="adminLog"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div></div>
         </div>
       </div>
     </div>
@@ -98,40 +98,41 @@
     <div class="footer-inner">
       <div style="max-width:320px">
         <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
-        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px"><span data-ru="Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей." data-en="Social casino and arcades. Virtual V-coins only: no real bets, no cash-out coin purchases and no money wins.">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</span></p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only">Только для развлечения</span></span></div>
       </div>
       <div class="footer-col">
-        <h5>Платформа</h5>
-        <a href="index.html">Главная</a>
-        <a href="top.html">Каталог игр</a>
-        <a href="casino.html">Казино</a>
-        <a href="roulette.html">Рулетка</a>
-        <a href="shop.html">Магазин</a>
+        <h5><span data-ru="Платформа" data-en="Platform">Платформа</span></h5>
+        <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
+        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
+        <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
+        <a href="roulette.html"><span data-ru="Рулетка" data-en="Roulette">Рулетка</span></a>
+        <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">
-        <h5>Аккаунт</h5>
-        <a href="profile.html">Профиль</a>
-        <a href="login.html?tab=login">Вход</a>
-        <a href="login.html?tab=register">Регистрация</a>
-        <a href="profile.html#security">Смена пароля</a>
+        <h5><span data-ru="Аккаунт" data-en="Account">Аккаунт</span></h5>
+        <a href="profile.html"><span data-ru="Профиль" data-en="Profile">Профиль</span></a>
+        <a href="login.html?tab=login"><span data-ru="Вход" data-en="Sign in">Вход</span></a>
+        <a href="login.html?tab=register"><span data-ru="Регистрация" data-en="Sign up">Регистрация</span></a>
+        <a href="profile.html#security"><span data-ru="Смена пароля" data-en="Change password">Смена пароля</span></a>
       </div>
       <div class="footer-col">
-        <h5>Помощь</h5>
-        <a href="about.html">О проекте</a>
-        <a href="support.html">Поддержка</a>
+        <h5><span data-ru="Помощь" data-en="Help">Помощь</span></h5>
+        <a href="about.html"><span data-ru="О проекте" data-en="About">О проекте</span></a>
+        <a href="support.html"><span data-ru="Поддержка" data-en="Support">Поддержка</span></a>
         <a href="api.html">API</a>
-        <a href="privacy.html">Конфиденциальность</a>
+        <a href="privacy.html"><span data-ru="Конфиденциальность" data-en="Privacy">Конфиденциальность</span></a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Vertu Games · Все права защищены</span>
-      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
+      <span><span data-ru="© 2026 Vertu Games · Все права защищены" data-en="© 2026 Vertu Games · All rights reserved">© 2026 Vertu Games · Все права защищены</span></span>
+      <span><span data-ru="V-монеты не имеют денежной стоимости и не подлежат обмену" data-en="V-coins have no monetary value and cannot be exchanged">V-монеты не имеют денежной стоимости и не подлежат обмену</span></span>
     </div>
   </div>
 </footer>
 <script src="assets/vg/js/catalog-data.js"></script>
 <script src="assets/vg/js/platform.js"></script>
+<script src="assets/vg/js/sfx.js"></script>
 <script src="assets/vg/js/admin.js"></script>
 </body>
 </html>

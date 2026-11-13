@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-title-en="Profile — Vertu Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -20,17 +20,17 @@
 <main class="wrap">
   <section class="section" style="margin-top:22px" id="profileRoot">
     <div class="card">
-      <div class="loading-row" style="padding:28px"><span class="spinner"></span> Загружаем профиль…</div>
+      <div class="loading-row" style="padding:28px"><span class="spinner"></span> <span data-ru="Загружаем профиль…" data-en="Loading profile…">Загружаем профиль…</span></div>
     </div>
   </section>
 
   <section class="section hidden" id="guestBlock">
     <div class="card panel center">
-      <h2 style="font-size:24px;margin-bottom:8px">Войдите в аккаунт</h2>
-      <p class="muted">Профиль, баланс, достижения и история операций доступны после входа.</p>
+      <h2 style="font-size:24px;margin-bottom:8px"><span data-ru="Войдите в аккаунт" data-en="Sign in to your account">Войдите в аккаунт</span></h2>
+      <p class="muted"><span data-ru="Профиль, баланс, достижения и история операций доступны после входа." data-en="Your profile, balance, achievements and transaction history are available after signing in.">Профиль, баланс, достижения и история операций доступны после входа.</span></p>
       <div class="row" style="justify-content:center;margin-top:16px;flex:0 0 auto">
-        <a class="btn btn-primary" href="login.html?tab=login">Войти</a>
-        <a class="btn btn-ghost" href="login.html?tab=register">Создать аккаунт</a>
+        <a class="btn btn-primary" href="login.html?tab=login"><span data-ru="Войти" data-en="Sign in">Войти</span></a>
+        <a class="btn btn-ghost" href="login.html?tab=register"><span data-ru="Создать аккаунт" data-en="Create an account">Создать аккаунт</span></a>
       </div>
     </div>
   </section>
@@ -42,15 +42,15 @@
         <div class="profile-id" style="flex:1;min-width:220px">
           <h1 id="profName">—</h1>
           <div class="profile-meta">
-            <span>Уровень <b id="profLevel">1</b></span>
-            <span>Регистрация: <b id="profCreated">—</b></span>
-            <span>Игр сыграно: <b id="profPlays">0</b></span>
+            <span><span data-ru="Уровень" data-en="Level">Уровень</span> <b id="profLevel">1</b></span>
+            <span><span data-ru="Регистрация:" data-en="Joined:">Регистрация:</span> <b id="profCreated">—</b></span>
+            <span><span data-ru="Игр сыграно:" data-en="Games played:">Игр сыграно:</span> <b id="profPlays">0</b></span>
             <span id="profAdminBadge"></span>
           </div>
         </div>
         <div class="stack" style="flex:0 0 auto;min-width:200px">
           <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
-          <button class="btn btn-ghost btn-sm" id="editProfile">Изменить оформление</button>
+          <button class="btn btn-ghost btn-sm" id="editProfile"><span data-ru="Изменить оформление" data-en="Change appearance">Изменить оформление</span></button>
         </div>
       </div>
     </div>
@@ -59,50 +59,50 @@
 
     <div class="grid grid-2" style="margin-top:18px">
       <div class="card panel">
-        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">История</span><h2 style="font-size:19px">Операции с V</h2></div></div>
-        <div id="ledgerBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow"><span data-ru="История" data-en="History">История</span></span><h2 style="font-size:19px"><span data-ru="Операции с V" data-en="V transactions">Операции с V</span></h2></div></div>
+        <div id="ledgerBody"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
       </div>
       <div class="card panel">
-        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Достижения</span><h2 style="font-size:19px">Коллекция</h2></div></div>
-        <div id="achBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow"><span data-ru="Достижения" data-en="Achievements">Достижения</span></span><h2 style="font-size:19px"><span data-ru="Коллекция" data-en="Collection">Коллекция</span></h2></div></div>
+        <div id="achBody"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
       </div>
     </div>
 
     <div class="grid grid-2" style="margin-top:18px">
       <div class="card panel">
-        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Казино</span><h2 style="font-size:19px">Ставки и выигрыши</h2></div></div>
-        <div id="casinoBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow"><span data-ru="Казино" data-en="Casino">Казино</span></span><h2 style="font-size:19px"><span data-ru="Ставки и выигрыши" data-en="Bets and wins">Ставки и выигрыши</span></h2></div></div>
+        <div id="casinoBody"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
       </div>
       <div class="card panel">
-        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Инвентарь</span><h2 style="font-size:19px">Купленные предметы</h2></div></div>
-        <div id="itemsBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow"><span data-ru="Инвентарь" data-en="Inventory">Инвентарь</span></span><h2 style="font-size:19px"><span data-ru="Купленные предметы" data-en="Purchased items">Купленные предметы</span></h2></div></div>
+        <div id="itemsBody"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
       </div>
     </div>
 
     <div class="grid grid-2" style="margin-top:18px">
       <div class="card panel" id="security">
-        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Безопасность</span><h2 style="font-size:19px">Смена пароля</h2></div></div>
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow"><span data-ru="Безопасность" data-en="Security">Безопасность</span></span><h2 style="font-size:19px"><span data-ru="Смена пароля" data-en="Change password">Смена пароля</span></h2></div></div>
         <form id="passwordForm">
-          <label class="field"><span>Текущий пароль</span>
+          <label class="field"><span><span data-ru="Текущий пароль" data-en="Current password">Текущий пароль</span></span>
             <input type="password" name="current" autocomplete="current-password" required minlength="8"></label>
-          <label class="field"><span>Новый пароль (8–128 символов)</span>
+          <label class="field"><span><span data-ru="Новый пароль (8–128 символов)" data-en="New password (8–128 characters)">Новый пароль (8–128 символов)</span></span>
             <input type="password" name="password" autocomplete="new-password" required minlength="8"></label>
-          <label class="field"><span>Повторите новый пароль</span>
+          <label class="field"><span><span data-ru="Повторите новый пароль" data-en="Repeat the new password">Повторите новый пароль</span></span>
             <input type="password" name="confirm" autocomplete="new-password" required minlength="8"></label>
-          <button class="btn btn-primary" type="submit">Обновить пароль</button>
+          <button class="btn btn-primary" type="submit"><span data-ru="Обновить пароль" data-en="Update password">Обновить пароль</span></button>
           <p class="msg" id="passwordMsg" role="status"></p>
         </form>
       </div>
       <div class="card panel">
-        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Настройки</span><h2 style="font-size:19px">Аккаунт</h2></div></div>
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow"><span data-ru="Настройки" data-en="Settings">Настройки</span></span><h2 style="font-size:19px"><span data-ru="Аккаунт" data-en="Account">Аккаунт</span></h2></div></div>
         <div class="list">
-          <div class="list-row"><span class="ico" data-ico="user"></span><span class="meta"><b>Ник</b><small id="accName">—</small></span></div>
-          <div class="list-row"><span class="ico" data-ico="coin"></span><span class="meta"><b>Баланс</b><small>хранится на сервере, доступен на всех устройствах</small></span></div>
-          <div class="list-row"><span class="ico" data-ico="lock"></span><span class="meta"><b>Сессии</b><small>смена пароля закрывает все другие сессии</small></span></div>
+          <div class="list-row"><span class="ico" data-ico="user"></span><span class="meta"><b><span data-ru="Ник" data-en="Nickname">Ник</span></b><small id="accName">—</small></span></div>
+          <div class="list-row"><span class="ico" data-ico="coin"></span><span class="meta"><b><span data-ru="Баланс" data-en="Balance">Баланс</span></b><small><span data-ru="хранится на сервере, доступен на всех устройствах" data-en="stored on the server, available on every device">хранится на сервере, доступен на всех устройствах</span></small></span></div>
+          <div class="list-row"><span class="ico" data-ico="lock"></span><span class="meta"><b><span data-ru="Сессии" data-en="Sessions">Сессии</span></b><small><span data-ru="смена пароля закрывает все другие сессии" data-en="changing the password closes all other sessions">смена пароля закрывает все другие сессии</span></small></span></div>
         </div>
         <div class="row" style="margin-top:14px">
-          <button class="btn btn-ghost" id="logoutBtn">Выйти из аккаунта</button>
-          <a class="btn btn-ghost" href="shop.html">В магазин</a>
+          <button class="btn btn-ghost" id="logoutBtn"><span data-ru="Выйти из аккаунта" data-en="Sign out">Выйти из аккаунта</span></button>
+          <a class="btn btn-ghost" href="shop.html"><span data-ru="В магазин" data-en="Go to the shop">В магазин</span></a>
         </div>
       </div>
     </div>
@@ -113,46 +113,47 @@
     <div class="footer-inner">
       <div style="max-width:320px">
         <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
-        <p class="muted" style="font-size:13px;margin-top:10px">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</p>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px">Только для развлечения</span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px"><span data-ru="Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей." data-en="Social casino and arcades. Virtual V-coins only: no real bets, no cash-out coin purchases and no money wins.">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</span></p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only">Только для развлечения</span></span></div>
       </div>
       <div class="footer-col">
-        <h5>Платформа</h5>
-        <a href="index.html">Главная</a>
-        <a href="top.html">Каталог игр</a>
-        <a href="casino.html">Казино</a>
-        <a href="roulette.html">Рулетка</a>
-        <a href="shop.html">Магазин</a>
+        <h5><span data-ru="Платформа" data-en="Platform">Платформа</span></h5>
+        <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
+        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
+        <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
+        <a href="roulette.html"><span data-ru="Рулетка" data-en="Roulette">Рулетка</span></a>
+        <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">
-        <h5>Аккаунт</h5>
-        <a href="profile.html">Профиль</a>
-        <a href="login.html?tab=login">Вход</a>
-        <a href="login.html?tab=register">Регистрация</a>
-        <a href="profile.html#security">Смена пароля</a>
+        <h5><span data-ru="Аккаунт" data-en="Account">Аккаунт</span></h5>
+        <a href="profile.html"><span data-ru="Профиль" data-en="Profile">Профиль</span></a>
+        <a href="login.html?tab=login"><span data-ru="Вход" data-en="Sign in">Вход</span></a>
+        <a href="login.html?tab=register"><span data-ru="Регистрация" data-en="Sign up">Регистрация</span></a>
+        <a href="profile.html#security"><span data-ru="Смена пароля" data-en="Change password">Смена пароля</span></a>
       </div>
       <div class="footer-col">
-        <h5>Помощь</h5>
-        <a href="about.html">О проекте</a>
-        <a href="support.html">Поддержка</a>
+        <h5><span data-ru="Помощь" data-en="Help">Помощь</span></h5>
+        <a href="about.html"><span data-ru="О проекте" data-en="About">О проекте</span></a>
+        <a href="support.html"><span data-ru="Поддержка" data-en="Support">Поддержка</span></a>
         <a href="api.html">API</a>
-        <a href="privacy.html">Конфиденциальность</a>
+        <a href="privacy.html"><span data-ru="Конфиденциальность" data-en="Privacy">Конфиденциальность</span></a>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Vertu Games · Все права защищены</span>
-      <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
+      <span><span data-ru="© 2026 Vertu Games · Все права защищены" data-en="© 2026 Vertu Games · All rights reserved">© 2026 Vertu Games · Все права защищены</span></span>
+      <span><span data-ru="V-монеты не имеют денежной стоимости и не подлежат обмену" data-en="V-coins have no monetary value and cannot be exchanged">V-монеты не имеют денежной стоимости и не подлежат обмену</span></span>
     </div>
   </div>
 </footer>
 <div class="modal" id="styleModal"><div class="panel card">
-  <button class="close" data-close-style aria-label="Закрыть">×</button>
-  <h2 style="font-size:20px;margin-bottom:14px">Оформление профиля</h2>
-  <div id="stylePicker"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+  <button class="close" data-close-style aria-label="Закрыть" data-aria-label-en="Close">×</button>
+  <h2 style="font-size:20px;margin-bottom:14px"><span data-ru="Оформление профиля" data-en="Profile appearance">Оформление профиля</span></h2>
+  <div id="stylePicker"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
   <p class="msg" id="styleMsg" role="status"></p>
 </div></div>
 <script src="assets/vg/js/catalog-data.js"></script>
 <script src="assets/vg/js/platform.js"></script>
+<script src="assets/vg/js/sfx.js"></script>
 <script src="assets/vg/js/profile.js"></script>
 </body>
 </html>

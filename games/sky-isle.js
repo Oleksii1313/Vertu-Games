@@ -136,6 +136,10 @@ try{
  window.addEventListener('blur',()=>{clearInput();if(mode==='playing')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause()});window.addEventListener('resize',()=>{engine.resize();clearInput()});window.addEventListener('pagehide',save);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();message(tr('Восстанавливаем графику…','Restoring graphics…'))});
  refreshTarget();updateUI();$('start').disabled=false;$('loading').textContent=storageOK?tr('Дрон готов. Посылки никуда не спешат.','Drone ready. The parcels are in no hurry.'):tr('Хранилище недоступно: прогресс до закрытия вкладки.','Storage unavailable: progress lasts until this tab closes.');
  engine.runRenderLoop(()=>{if(!runLoop)return;update(engine.getDeltaTime()/1000);scene.render()});
+
+ // --- Графика: параллакс, частицы и свет. Модуль ниже подключается после старта сцены. ---
+ const gfx=window.__skyGfx;
+ if(gfx&&typeof gfx.attach==='function'){try{gfx.attach(window.skyGame,B)}catch(e){console.warn('graphics upgrade skipped',e)}}
  window.skyGame={arch,syncRewards,state:S,scene,engine,camera,drone,body,cargo,rotors,mills,destinations,depotPad,colliders,cam,get mode(){return mode},get dwell(){return dwell},get input(){return{stick:{...stick},cameraPointer:lookPointer?.id??null,altitudePointers:altOwners.size}},get libraryMode(){return loadingMode},start,pause,update,save,resetCamera,render(){scene.render()},manual(){runLoop=false},resumeLoop(){runLoop=true},stats:{houses:5,addresses:destinations.length,windmills:mills.length,trees:trees+arch.treeCount,islands:arch.islands.length},bounds:{minHeight:1.5,maxHeight:20,radius:arch.worldRadius}};
 }catch(err){console.error(err);$('error').hidden=false;$('errorText').textContent=tr('Не удалось подготовить 3D. Нужен современный браузер с WebGL. ','Could not prepare 3D. A modern browser with WebGL is required. ')+(err?.message||String(err));$('loading').textContent=tr('Не удалось запустить игру.','Could not start the game.')}
 })();

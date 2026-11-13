@@ -22,12 +22,28 @@ from game_catalog import (CASINO_STAKES, SLOT_SYMBOLS, SLOT_TWO_PAY, WHEEL_SEGME
 
 FREE_SPIN_KIND = 'wheel'
 FREE_SPIN_GAME = 'daily'
+# Суточные лимиты колеса: одно бесплатное вращение и не больше пяти платных.
+WHEEL_FREE_PER_DAY = 1
+WHEEL_PAID_PER_DAY = 5
 
 
 class CasinoError(Exception):
-    def __init__(self, code: str, message: str, status: int = 400):
+    def __init__(self, code: str, message: str, status: int = 400, extra: dict | None = None):
         super().__init__(message)
         self.code, self.message, self.status = code, message, status
+        self.extra = extra or {}
+
+
+def wheel_limits(user_id: int) -> dict:
+    """Публичное состояние суточных лимитов колеса (для UI и таймера)."""
+    data = store.get_store()
+    state = data.casino_wheel_limits(user_id, WHEEL_FREE_PER_DAY, WHEEL_PAID_PER_DAY)
+    return {
+        'freeLeft': state['free_left'], 'freeLimit': state['free_limit'],
+        'paidLeft': state['paid_left'], 'paidLimit': state['paid_limit'],
+        'resetAt': state['reset_at'], 'serverNow': state['server_now'],
+        'blocked': state['paid_left'] <= 0 and state['free_left'] <= 0,
+    }
 
 
 def _rng_choice_weighted(items, weights) -> int:
@@ -57,7 +73,17 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
     if limits['exclude_until'] > store.now():
         raise CasinoError('SELF_EXCLUDED', 'Вы добровольно ограничили игру в казино.', 403)
     min_stake, max_stake = _limits()
-    free_key = _daily_key(user_id) if allow_free else None
+    # Суточные лимиты: бесплатный спин возможен только если он не потрачен,
+    # платных вращений не больше пяти — иначе колесо блокируется до полуночи UTC.
+    limits_state = data.casino_wheel_limits(user_id, WHEEL_FREE_PER_DAY, WHEEL_PAID_PER_DAY)
+    limit_info = {'resetAt': limits_state['reset_at'], 'serverNow': limits_state['server_now']}
+    use_free = bool(allow_free) and limits_state['free_left'] > 0
+    if not use_free and limits_state['paid_left'] <= 0:
+        raise CasinoError(
+            'WHEEL_LIMIT',
+            'Лимит вращений на сегодня исчерпан: 1 бесплатное и 5 платных. Колесо откроется после полуночи UTC.',
+            429, limit_info)
+    free_key = _daily_key(user_id) if use_free else None
     if stake is None:
         stake = min_stake
     try:
@@ -71,12 +97,15 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
     multiplier = WHEEL_SEGMENTS[index]
     payout = int(round(stake * multiplier))
     ref = secrets.token_urlsafe(18)
-    result = data.casino_bet(user_id, FREE_SPIN_KIND, stake, f'x{multiplier:g}', ref,
-                             payout, ref, charge=stake, free_key=free_key)
+    # Отдельный вид записи для бесплатного вращения: по нему считается дневной лимит.
+    kind = 'wheel_free' if use_free else FREE_SPIN_KIND
+    result = data.casino_bet(user_id, kind, stake, f'x{multiplier:g}', ref,
+                             payout, ref, charge=0 if use_free else stake, free_key=free_key)
     return {
         'game': 'wheel', 'segment': index, 'multiplier': multiplier, 'stake': stake,
-        'payout': payout, 'win': payout > 0, 'free': bool(free_key and not result['repeated']),
+        'payout': payout, 'win': payout > 0, 'free': bool(use_free and not result['repeated']),
         'balance': result['balance'], 'ref': ref,
+        'limits': wheel_limits(user_id),
     }
 
 
