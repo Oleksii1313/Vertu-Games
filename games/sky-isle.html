@@ -111,7 +111,59 @@
 .wallet{padding:0 15px;border-left:1px solid var(--edge);display:flex;flex-direction:column;gap:4px;text-align:right}.wallet small{font-size:8px;letter-spacing:1px;color:#859087}.wallet strong{font-size:23px;font-weight:500;white-space:nowrap}.wallet b{font-weight:500}.wallet em{font-style:normal;font-size:12px;color:#ac8047}.bearing-distance{display:flex;align-items:center;gap:8px}#bearing{font-size:19px;font-style:normal;color:#b4854b;display:inline-block}#routeDetails{font-size:9px;line-height:1.5;margin:10px 0 7px}.route-progress{height:3px;border-radius:4px;background:#dfe5d8;overflow:hidden}.route-progress i{display:block;width:0;height:100%;background:#b39264}#rewardHint{display:block;font-size:9px;color:#877548;margin-top:8px}.score{margin:0 8px;padding-left:13px}.mission{width:330px}.telemetry{gap:9px}.telemetry>span+span{padding-left:9px}
 @media(max-width:700px){.wallet{padding:0 6px}.wallet small{font-size:6px;letter-spacing:0}.wallet strong{font-size:17px}.wallet em{font-size:9px}.score{padding-left:7px;margin:0 2px}.brand{font-size:11px;letter-spacing:.7px}.brand small{font-size:5px;letter-spacing:1px}.mission{width:calc(100% - 147px)}#routeDetails,#rewardHint{font-size:8px}.telemetry{font-size:7px;padding:9px;gap:5px}.telemetry b{font-size:10px}.telemetry>span+span{padding-left:5px}}
 @media(max-height:500px){.mission{width:260px}#routeDetails{margin:6px 0}.mission .route-progress{display:none}.mission .progress{margin-top:5px}.wallet strong{font-size:18px}}
-</style></head><body data-mode="intro" data-input="desktop">
+</style><style id="vg-landscape-fullscreen">
+/* ==========================================================================
+   Мобильный ландшафт: игра занимает весь экран, без чёрных полос и без
+   пересечения с шапкой платформы (в плеере шапка не показывается).
+   Блок добавляется ко всем играм, ничего не удаляя из существующего CSS.
+   ========================================================================== */
+@media (orientation:landscape) and (max-height:560px){
+  html,body{height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none;
+    width:100vw;max-width:100vw}
+  body{height:100vh;height:100dvh;padding:0;margin:0;display:flex;flex-direction:column;
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  /* Верхняя панель со счётом — тонкая строка, кнопки не перекрывают поле. */
+  body>.info{flex:0 0 auto;min-height:0;padding:2px max(8px,env(safe-area-inset-right,0px)) 2px
+    max(4px,env(safe-area-inset-left,0px));gap:10px;background:rgba(12,16,24,.82)}
+  body>.info .stat{display:flex;align-items:baseline;gap:5px}
+  body>.info .stat .l{font-size:8px;letter-spacing:.5px;display:inline}
+  body>.info .stat .v{font-size:13px;line-height:1.1}
+  /* Игровое поле растягивается на всё оставшееся место: ни полос, ни обрезки. */
+  body>.board,body>.board-wrap,body>.stage,body>.game,main.game,body>main{flex:1 1 auto;
+    min-height:0;min-width:0;padding:0;margin:0;overflow:hidden;display:flex;
+    align-items:center;justify-content:center}
+  body>canvas{flex:1 1 auto;min-height:0;width:100%;height:100%;object-fit:contain}
+  .board>canvas,.board-wrap>canvas,.stage>canvas,.game canvas{max-width:100%;max-height:100%;
+    width:auto;height:auto;object-fit:contain}
+  /* Управление — у самых краёв, под большими пальцами (thumb zone). */
+  body>.controls{flex:0 0 auto;position:relative;z-index:3;justify-content:space-between;
+    gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) max(6px,env(safe-area-inset-bottom,0px))
+    max(8px,env(safe-area-inset-left,0px));background:linear-gradient(0deg,rgba(8,11,17,.9),
+    rgba(8,11,17,.35));border-top:0}
+  body>.controls button{min-height:40px;height:40px;min-width:44px;padding:4px 12px;font-size:11px;
+    border-radius:11px;touch-action:manipulation}
+  body>.controls .dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:4px}
+  body>.controls .dpad button{width:40px;height:40px;min-width:0;min-height:0;padding:6px}
+  body>.controls .dpad button svg{width:18px;height:18px}
+  /* Всплывающие окна (game over, пауза) не должны обрезаться в ландшафте. */
+  .overlay,.cheat-overlay{padding:max(8px,env(safe-area-inset-top,0px)) 8px
+    max(8px,env(safe-area-inset-bottom,0px));align-items:center;overflow-y:auto}
+  .overlay .panel,.cheat-box{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);
+    overflow-y:auto;padding:14px 18px;width:min(74vw,420px)}
+  .overlay .panel h2{font-size:19px}
+  .overlay .panel .earn{font-size:18px;margin:8px 0 10px}
+  .overlay .row{padding:6px 10px;font-size:13px;margin-bottom:5px}
+  .overlay .btns .btn{min-height:38px;padding:8px 12px;font-size:12px}
+  .help,body>.hint{display:none}
+}
+/* Очень низкие экраны (телефон в ландшафте с адресной строкой). */
+@media (orientation:landscape) and (max-height:420px){
+  body>.info{display:none}
+  body>.controls button{min-height:36px;height:36px}
+}
+</style>
+<script src="/assets/vg/js/game-kit.js" defer></script>
+</head><body data-mode="intro" data-input="desktop">
 <canvas id="flight" aria-label="Трёхмерный полёт почтового дрона" data-aria-label-en="A 3D mail-drone flight"></canvas>
 <div class="hud"><header class="topbar"><button id="home" class="icon" aria-label="В каталог" data-aria-label-en="To the catalog" title="В каталог" data-title-en="To the catalog">←</button><div class="brand">SKY-ISLE<small>LOGISTICS / AÉRO-VILLE</small></div><div class="wallet"><small data-en="EARNED"><span data-ru="ЗАРАБОТАНО" data-en="EARNED">ЗАРАБОТАНО</span></small><strong><b id="earned">0</b> <em>V</em></strong></div><div class="score"><span data-en="Delivered"><span data-ru="Доставлено" data-en="Delivered">Доставлено</span></span><strong id="score">0</strong></div><button id="help" class="icon" aria-label="Управление" data-aria-label-en="Controls" title="Управление" data-title-en="Controls">?</button><button id="pause" class="icon" aria-label="Пауза" data-aria-label-en="Pause" title="Пауза" data-title-en="Pause">Ⅱ</button></header>
 <section class="mission"><div class="eyebrow"><i></i><span id="missionTag"><span data-ru="ПОЧТОВАЯ СЛУЖБА" data-en="POSTAL SERVICE">ПОЧТОВАЯ СЛУЖБА</span></span></div><h2 id="missionTitle"><span data-ru="Пора за посылкой" data-en="Time to collect the parcel">Пора за посылкой</span></h2><p id="missionHint"><span data-ru="Подлетите к зелёному кругу у Почтового Депо." data-en="Fly to the green circle by the Post Depot.">Подлетите к зелёному кругу у Почтового Депо.</span></p><div class="route-row"><span id="routeName"><span data-ru="Почтовое Депо" data-en="Post Depot">Почтовое Депо</span></span><span class="bearing-distance"><i id="bearing">↑</i><b id="distance"><span data-ru="12 м" data-en="12 m">12 м</span></b></span></div><p id="routeDetails"></p><div class="route-progress"><i id="routeFill"></i></div><small id="rewardHint"></small><div class="progress"><i id="handoffProgress"></i></div></section>
@@ -247,7 +299,17 @@ try{
  if(!window.BABYLON?.GUI)throw Error('Babylon.js / Babylon GUI did not initialize');
  const B=window.BABYLON,canvas=$('flight');
  const fine=matchMedia('(hover: hover) and (pointer: fine)');function inputMode(){document.body.dataset.input=fine.matches||!navigator.maxTouchPoints?'desktop':'touch'}inputMode();fine.addEventListener('change',inputMode);window.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')document.body.dataset.input='touch';else if(e.pointerType==='mouse'&&fine.matches)document.body.dataset.input='desktop'},{capture:true});
- const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true,antialias:true,powerPreference:'high-performance'});engine.setHardwareScalingLevel(Math.max(1,(devicePixelRatio||1)/1.4));
+ const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true,antialias:true,powerPreference:'high-performance'});
+ /* Резкость: рендерим в физических пикселях экрана (до 2×), а не в CSS-пикселях.
+    На retina/телефонах картинка перестаёт быть мыльной, на слабых устройствах
+    разрешение ограничено, чтобы не просели кадры. */
+ const vgDpr=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+ const vgLowEnd=(navigator.hardwareConcurrency||4)<=4||Math.min(screen.width,screen.height)<=420;
+ engine.setHardwareScalingLevel(1/(vgLowEnd?Math.min(1.35,vgDpr):vgDpr));
+ /* Качество рендера: анизотропная фильтрация и мягкие тени — заметнее всего на
+    текстурах островов и воде. */
+ try{scene.getEngine().setRenderingAutoClearDepthStencil(1,true);}catch(e){}
+ addEventListener('resize',()=>{try{engine.resize();}catch(e){}});
  const scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#b5d9e5ff');scene.fogMode=B.Scene.FOGMODE_LINEAR;scene.fogStart=450;scene.fogEnd=1900;scene.fogColor=B.Color3.FromHexString('#c7e2e9');scene.ambientColor=B.Color3.Black();
  const camera=new B.FreeCamera('Following camera',new B.Vector3(100,85,100),scene);camera.minZ=.12;camera.maxZ=3400;camera.fov=.82;camera.inputs.clear();scene.activeCamera=camera;
  const hemi=new B.HemisphericLight('Open sky',new B.Vector3(0,1,0),scene);hemi.intensity=.65;hemi.groundColor=B.Color3.FromHexString('#75896d');

@@ -96,27 +96,41 @@ export DATABASE_URL="postgres://..."
 (`/api/casino/rules`), есть дневной лимит потерь и добровольное самоисключение
 (`/api/casino/limits`). Все результаты и выплаты считает сервер.
 
-## Миграция старых аккаунтов
+## База данных: PostgreSQL
 
-Старая версия хранила пользователей в SQLite (`data/accounts.sqlite3`) с email.
-Перенос безопасный и не удаляет старую базу:
+Продакшн-база — PostgreSQL на Render (`DATABASE_URL`). SQLite остаётся только для
+локального запуска и тестов. Подробности — `DATABASE_SETUP.md`, настройка Render —
+`RENDER_DATABASE_SETUP.md`.
 
 ```bash
-.venv/bin/python tools/migrate_legacy.py                 # проверка, ничего не пишет
-.venv/bin/python tools/migrate_legacy.py --apply         # перенести
-.venv/bin/python tools/migrate_legacy.py --source /path/to/accounts.sqlite3 --apply
+export DATABASE_URL='postgresql://user:pass@host:5432/db'
+alembic upgrade head            # схема
+python server.py                # сервер сам создаёт недостающие таблицы
 ```
 
-Ник, хеш пароля и баланс переносятся как есть; email остаётся только в поле
-`legacy_email` и используется один раз — чтобы старый игрок мог войти по
-привычному email, после чего он входит по нику. Конфликты ников не
-перезаписываются, а пропускаются с предупреждением.
+### Миграция старых аккаунтов из SQLite
+
+Старые версии хранили аккаунты в SQLite (`data/*.sqlite3`). Перенос безопасный и
+не изменяет исходный файл:
+
+```bash
+python migrate_sqlite_to_postgres.py                     # проверка, ничего не пишет
+python migrate_sqlite_to_postgres.py --apply             # перенести
+python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
+```
+
+Ник, хеш пароля (pbkdf2/bcrypt/argon2) и баланс переносятся как есть; каждая
+сумма приходит одной записью `import:<id>` в `transactions`, поэтому повторный
+запуск не задваивает монеты. Конфликты ников не перезаписываются, а попадают в
+отчёт.
 
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, ~90 проверок
-DATABASE_URL=postgres://... .venv/bin/python tools/check_platform.py
+.venv/bin/python tools/check_platform.py                      # SQLite, 112 проверок
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же на PostgreSQL
+.venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
+DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```
 

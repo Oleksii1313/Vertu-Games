@@ -17,9 +17,11 @@
 from __future__ import annotations
 
 import gzip
+import hmac
 import json
 import os
 import re
+import secrets
 import time
 from functools import wraps
 from pathlib import Path
@@ -77,6 +79,47 @@ def clear_cookie(response, name: str):
     return response
 
 
+CSRF_COOKIE = 'vg_csrf'
+CSRF_HEADER = 'X-CSRF-Token'
+CSRF_SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
+
+
+def issue_csrf(response):
+    """Выдать CSRF-токен (double-submit cookie).
+
+    Кука читается только своим JS, сам токен прикладывается к каждому
+    небезопасному запросу заголовком ``X-CSRF-Token``. Чужой сайт не может ни
+    прочитать куку (SameSite=Lax + HttpOnly нет только у неё), ни подставить
+    заголовок, поэтому POST-запросы из чужого origin отклоняются.
+    """
+    token = request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(24)
+    response.set_cookie(CSRF_COOKIE, token, max_age=30 * 24 * 3600, httponly=False,
+                        samesite='Lax', secure=is_https(), path='/')
+    return token
+
+
+def csrf_token() -> str:
+    return request.cookies.get(CSRF_COOKIE, '')
+
+
+def csrf_ok() -> bool:
+    if request.method in CSRF_SAFE_METHODS:
+        return True
+    cookie = request.cookies.get(CSRF_COOKIE, '')
+    header = request.headers.get(CSRF_HEADER, '')
+    if cookie and header and hmac.compare_digest(cookie, header):
+        return True
+    # Вебхуки платёжных провайдеров подписаны собственным секретом.
+    if request.path.startswith('/api/shop/webhook/'):
+        return True
+    # Первый визит: клиент ещё не получил куку — разрешаем только вход/регистрацию,
+    # они и так защищены Turnstile и rate-limit'ом.
+    if not cookie and request.path in ('/api/auth/register', '/api/auth/login',
+                                       '/api/admin/login'):
+        return True
+    return False
+
+
 def json_body() -> dict:
     if not request.is_json:
         return {}
@@ -130,14 +173,31 @@ def login_required(fn):
     return wrapper
 
 
+def is_admin_request() -> bool:
+    """Админ — либо отдельная админ-сессия, либо вошедший пользователь с ролью admin.
+
+    Роль проверяется на сервере (``users.role``/``is_admin``), поэтому подделать
+    доступ из браузера нельзя.
+    """
+    token = request.cookies.get(ADMIN_COOKIE, '')
+    if get_store().admin_session_valid(token):
+        return True
+    user = current_user()
+    return bool(user and (user.get('is_admin') or user.get('role') == 'admin'))
+
+
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        token = request.cookies.get(ADMIN_COOKIE, '')
-        if not get_store().admin_session_valid(token):
+        if not is_admin_request():
             return api_error(401, 'ADMIN_AUTH_REQUIRED', 'Требуется вход администратора')
         return fn(*args, **kwargs)
     return wrapper
+
+
+def admin_name() -> str:
+    user = current_user()
+    return (user['username'] if user and user.get('is_admin') else 'admin')
 
 
 def level_info(user) -> dict:
@@ -220,7 +280,20 @@ def security_headers(response):
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'same-origin')
     response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    if is_https():
+        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000')
+    # CSRF-токен выдаём на любом ответе, если куки ещё нет: клиент читает её и
+    # возвращает заголовком X-CSRF-Token. Double-submit cookie, без состояния.
+    if response.status_code < 400 and not request.cookies.get(CSRF_COOKIE):
+        issue_csrf(response)
     return response
+
+
+@app.before_request
+def csrf_protect():
+    """Блокировать изменяющие запросы без CSRF-токена."""
+    if not csrf_ok():
+        return api_error(403, 'CSRF', 'Обновите страницу и повторите действие.')
 
 
 # --------------------------------------------------------------------------- auth
@@ -235,15 +308,21 @@ def health():
 def session_info():
     user = current_user()
     data = get_store()
-    return jsonify({
+    response = jsonify({
         'ok': True,
+        'csrf': csrf_token(),
         'user': public_user(user),
         'level': level_info(user) if user else None,
         'captcha': captcha.public_config(),
         'games': [{'id': g['id'], 'reward': g['reward'], 'daily': g['daily']} for g in public_games()],
         'achievements': len(data.achievements()),
         'payments': shop.configured(),
+        'role': (user or {}).get('role') or 'guest',
+        'turnstile': captcha.public_config(),
     })
+    if not request.cookies.get(CSRF_COOKIE):
+        issue_csrf(response)
+    return response
 
 
 @app.post('/api/auth/register')
@@ -788,8 +867,8 @@ def leaderboard():
     achievements = data.recent_achievements(12)
     with data.driver.transaction() as c:
         plays = c.execute('SELECT COALESCE(SUM(plays),0) AS n FROM game_stats').fetchone()
-        players = c.execute('SELECT COUNT(*) AS n FROM users').fetchone()
-        coins = c.execute('SELECT COALESCE(SUM(coins),0) AS n FROM users').fetchone()
+        players = c.execute('SELECT COUNT(*) AS n FROM users WHERE banned=FALSE').fetchone()
+        coins = c.execute('SELECT COALESCE(SUM(balance),0) AS n FROM wallets').fetchone()
     return jsonify({
         'ok': True,
         'users': [{'username': u['username'], 'balance': int(u['coins']), 'avatar': u['avatar'],
@@ -809,10 +888,13 @@ def admin_login():
     if not rate('admin_login', int(os.environ.get('ADMIN_LOGIN_RATE', '6')), 900):
         return api_error(429, 'RATE_LIMIT', 'Слишком много попыток. Вход заблокирован на 15 минут.')
     password = str(data.get('password', ''))
-    expected = os.environ.get('ADMIN_PASSWORD', '219384')
-    ok, _ = captcha.verify(data.get('turnstileToken', ''), client_ip())
+    expected = os.environ.get('ADMIN_PASSWORD', '') or os.environ.get('SECRET_KEY', '')
+    ok, code = captcha.verify(data.get('turnstileToken', ''), client_ip())
     if not ok:
-        return api_error(400, 'CAPTCHA', 'Проверка CAPTCHA не пройдена.')
+        return api_error(400, code or 'CAPTCHA', 'Проверка CAPTCHA не пройдена.')
+    if not expected:
+        return api_error(503, 'ADMIN_NOT_CONFIGURED',
+                         'ADMIN_PASSWORD не задан в переменных окружения Render.')
     if not _admin_password_ok(password, expected):
         db = get_store()
         db.admin_log('system', 'admin_login_failed', '', '', store.digest(client_ip()))
@@ -907,7 +989,7 @@ def admin_balance():
         return api_error(400, 'VALUE', 'Некорректная сумма')
     except InsufficientFunds:
         return api_error(400, 'VALUE', 'Баланс не может быть отрицательным')
-    db.admin_log('admin', 'balance', user['username'], f'delta={delta} balance={balance} {reason}',
+    db.admin_log(admin_name(), 'balance', user['username'], f'delta={delta} balance={balance} {reason}',
                  store.digest(client_ip()))
     return jsonify({'ok': True, 'coins': balance, 'delta': delta})
 
@@ -923,7 +1005,7 @@ def admin_ban():
         return api_error(400, 'ADMIN', 'Нельзя заблокировать администратора')
     banned = bool(data.get('banned'))
     db.ban_user(user['id'], banned, str(data.get('reason', ''))[:200])
-    db.admin_log('admin', 'ban' if banned else 'unban', user['username'],
+    db.admin_log(admin_name(), 'ban' if banned else 'unban', user['username'],
                  str(data.get('reason', ''))[:200], store.digest(client_ip()))
     return jsonify({'ok': True, 'banned': banned})
 
@@ -937,9 +1019,92 @@ def admin_set_admin():
         return api_error(404, 'NOT_FOUND', 'Игрок не найден')
     value = bool(data.get('isAdmin'))
     db.set_admin(user['id'], value)
-    db.admin_log('admin', 'grant_admin' if value else 'revoke_admin', user['username'], '',
+    db.admin_log(admin_name(), 'grant_admin' if value else 'revoke_admin', user['username'], '',
                  store.digest(client_ip()))
     return jsonify({'ok': True, 'isAdmin': value})
+
+
+# --------------------------------------------------------------------------- админ: каталог
+@app.get('/api/admin/items')
+@admin_required
+def admin_items():
+    """Все предметы магазина, включая снятые с продажи, — для управления."""
+    return jsonify({'ok': True, 'items': get_store().all_items()})
+
+
+@app.post('/api/admin/items')
+@admin_required
+def admin_items_set():
+    data = json_body()
+    item = data.get('item') if isinstance(data.get('item'), dict) else data
+    try:
+        result = get_store().upsert_item(item)
+    except (StoreError, KeyError, TypeError, ValueError) as exc:
+        return api_error(400, 'ITEM', f'Не удалось сохранить предмет: {exc}')
+    get_store().admin_log(admin_name(), 'item_save', result['id'],
+                          json.dumps({'price': item.get('price')}, ensure_ascii=False),
+                          store.digest(client_ip()))
+    return jsonify({'ok': True, 'item': result})
+
+
+@app.get('/api/admin/achievements')
+@admin_required
+def admin_achievements():
+    return jsonify({'ok': True, 'achievements': get_store().achievements()})
+
+
+@app.post('/api/admin/achievements')
+@admin_required
+def admin_achievements_set():
+    data = json_body()
+    ach = data.get('achievement') if isinstance(data.get('achievement'), dict) else data
+    try:
+        result = get_store().upsert_achievement(ach)
+    except (StoreError, KeyError, TypeError, ValueError) as exc:
+        return api_error(400, 'ACHIEVEMENT', f'Не удалось сохранить достижение: {exc}')
+    get_store().admin_log(admin_name(), 'achievement_save', result['id'], '', store.digest(client_ip()))
+    return jsonify({'ok': True, 'achievement': result})
+
+
+@app.get('/api/admin/tasks')
+@admin_required
+def admin_tasks():
+    return jsonify({'ok': True, 'tasks': get_store().daily_tasks()})
+
+
+@app.post('/api/admin/tasks')
+@admin_required
+def admin_tasks_set():
+    data = json_body()
+    task = data.get('task') if isinstance(data.get('task'), dict) else data
+    try:
+        result = get_store().upsert_daily_task(task)
+    except (StoreError, KeyError, TypeError, ValueError) as exc:
+        return api_error(400, 'TASK', f'Не удалось сохранить задание: {exc}')
+    get_store().admin_log(admin_name(), 'task_save', str(result['id']), '', store.digest(client_ip()))
+    return jsonify({'ok': True, 'task': result})
+
+
+@app.get('/api/admin/transactions')
+@admin_required
+def admin_transactions():
+    """Журнал всех операций: кто, сколько, с каким reference_id."""
+    limit = min(200, max(1, int(request.args.get('limit', 60) or 60)))
+    username = (request.args.get('user') or '').strip()
+    user_id = None
+    if username:
+        found = get_store().find_user(username)
+        if not found:
+            return jsonify({'ok': True, 'items': [], 'total': 0})
+        user_id = found['id']
+    return jsonify({'ok': True, 'items': get_store().transactions(limit, request.args.get('kind'), user_id)})
+
+
+@app.get('/api/admin/casino')
+@admin_required
+def admin_casino_history():
+    limit = min(200, max(1, int(request.args.get('limit', 50) or 50)))
+    return jsonify({'ok': True, 'items': get_store().casino_history_admin(limit, request.args.get('user', ''))})
 
 
 @app.get('/api/admin/log')
@@ -973,7 +1138,7 @@ def admin_settings_set():
             value = '1' if str(value) in ('1', 'True', 'true', 'on') else '0'
         db.set_setting(key, str(value))
         updated[key] = value
-    db.admin_log('admin', 'settings', '', json.dumps(updated), store.digest(client_ip()))
+    db.admin_log(admin_name(), 'settings', '', json.dumps(updated), store.digest(client_ip()))
     return jsonify({'ok': True, 'updated': updated})
 
 
@@ -1005,7 +1170,7 @@ def admin_games_set():
         return api_error(404, 'GAME', 'Неизвестная игра')
     enabled = bool(data.get('enabled'))
     get_store().set_setting(f'game_{game}_enabled', '1' if enabled else '0')
-    get_store().admin_log('admin', 'game_toggle', game, 'enabled' if enabled else 'disabled',
+    get_store().admin_log(admin_name(), 'game_toggle', game, 'enabled' if enabled else 'disabled',
                           store.digest(client_ip()))
     return jsonify({'ok': True, 'enabled': enabled})
 

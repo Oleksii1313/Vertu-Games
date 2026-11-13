@@ -8,8 +8,7 @@
 | --- | --- |
 | `casino.html` | Новая страница «Казино» в стиле сайта: слоты «Тройка V», ад-бонус, ежедневный бонус, билеты, витрина наград, лента операций, магазин монет |
 | `casino-app.js` | Вся клиентская логика: барабаны, выплаты, начисления через `VA`, rewarded-реклама, магазин, i18n RU/EN |
-| `casino_payments.py` | Серверные заказы и вебхуки ЮKassa / Stripe / CryptoBot, защита от двойного начисления |
-| `tools/test_casino_payments.py` | Офлайн-тесты подписей и вебхуков (9 тестов) |
+| `tools/test_economy.py` | Тесты экономики: атомарность, идемпотентность, лимиты казино |
 | `server.py` | Новые роуты `/api/shop/*`, вебхуки, whitelist статики |
 | `index.html`, `top.html`, `roulette.html`, `admin.html` | Пункт меню «Казино», кнопка на главной, блок на рулетке, баннер в топе |
 | `tools/build_info_pages.py` → `privacy.html` | Новый раздел о казино, рекламе и покупках |
@@ -32,7 +31,7 @@ python3 server.py
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install requests
-python3 -m unittest discover -s tools -p test_casino_payments.py -v
+python3 -m unittest tools.test_economy -v
 ```
 
 ## Экономика (что подкрутить)
@@ -94,7 +93,7 @@ CONFIG.adProvider = 'h5games';
 
 ## 2. Магазин монет и приём платежей
 
-Пакеты и цены хранятся **на сервере** (`casino_payments.PACKS`) — браузер присылает только `pack: 'major'`. Локальный демо-режим включается сам, когда `SHOP_PROVIDER` не задан.
+Покупка V-монет за деньги **удалена из продукта**: в магазине только косметика (аватары, цвета, титулы), а V зарабатываются в играх и казино. `SHOP_PACKS` пуст, `shop.create_order` возвращает `PACKS_DISABLED`.
 
 ```bash
 export PUBLIC_URL="https://games.example.com"
@@ -122,7 +121,7 @@ URL вебхуков (укажите их в кабинетах провайде
 | Stripe | `https://games.example.com/api/shop/webhook/stripe` (событие `checkout.session.completed`) |
 | CryptoBot | `https://games.example.com/api/shop/webhook/cryptobot` (`invoice_paid`) |
 
-Что уже реализовано в `casino_payments.py`:
+Что уже реализовано в `shop.py`:
 
 - **ЮKassa:** создание платежа `POST /v3/payments` с `Idempotence-Key`, `metadata.order_id`, `return_url`; уведомления не подписаны, поэтому статус всегда перепроверяется через `GET /v3/payments/{id}` и сверяется сумма.
 - **Stripe:** Checkout Session с `client_reference_id`; подпись `Stripe-Signature` проверяется вручную (HMAC-SHA256 по `timestamp.body`, допуск 5 минут, сравнение `compare_digest`), плюс сверка `amount_total`.
@@ -138,20 +137,17 @@ URL вебхуков (укажите их в кабинетах провайде
 
 После оплаты пользователь возвращается на `casino.html?paid=1&order=…`, страница вызывает `/api/shop/claim` и начисляет монеты в локальный баланс.
 
-## 3. Почему баланс пока локальный
+## 3. Где живёт баланс
 
-`server.py` хранит только учётные записи (`AUTH_SETUP.md`), балансы живут в `database.js` → `localStorage`. Поэтому сейчас:
+Баланс **полностью серверный** (PostgreSQL): `wallets.balance` с
+`CHECK (balance >= 0)`, каждая операция пишется в `transactions`, ставки и
+выплаты казино — в `casino_history`. Браузер не может ни придумать баланс, ни
+подделать результат: клиент присылает только игру и ставку, всё остальное
+считает сервер (`casino_logic.py`) внутри транзакции с блокировкой строки
+кошелька. Подробности — `DATABASE_SETUP.md`, `RENDER_DATABASE_SETUP.md`.
 
-- сервер — источник истины по **оплате** (кто, что и за сколько купил);
-- браузер — источник истины по **балансу**.
-
-Чтобы перевести баланс на сервер, не переписывая казино, достаточно заменить слой хранения в `database.js`: `VA._store` уже переопределяемый (`load()/save(data)`). Дальше по порядку:
-
-1. добавить в `server.py` таблицу `balances(user_id, balance)` и `POST /api/economy/adjust` с проверкой прав;
-2. в `casino-app.js` заменить `VA.adjustUserBalance(...)` на вызов этого API (вся остальная логика не меняется);
-3. ставки и результаты слотов считать на сервере (`/api/casino/spin`) — иначе клиент сможет «накрутить» выигрыш через консоль. В `casino_payments.py` уже есть готовая схема журнала, её можно переиспользовать.
-
-Пока этого нет, честно считать казино **развлекательным режимом**: без реальных ставок и вывода это не нарушает правила, но и защитой от накрутки не является.
+Пакеты V за реальные деньги удалены из продукта: `SHOP_PACKS` пуст, в магазине
+только косметика, вебхуки платёжных провайдеров остались заглушками.
 
 ## 4. Интеграция в существующие страницы
 

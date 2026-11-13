@@ -165,10 +165,20 @@
   }
   ApiError.prototype = Object.create(Error.prototype);
 
+  /* CSRF: сервер кладёт токен в куку vg_csrf, клиент возвращает его заголовком.
+     Сторонняя страница не может прочитать куку этого домена, поэтому подделать
+     POST-запрос из чужого origin не получится. */
+  function csrfToken() {
+    var match = document.cookie.match(/(?:^|;\s*)vg_csrf=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+  VG.csrfToken = csrfToken;
+
   function api(path, options) {
     var opts = options || {};
+    var method = opts.method || (opts.body !== undefined ? 'POST' : 'GET');
     var config = {
-      method: opts.method || (opts.body ? 'POST' : 'GET'),
+      method: method,
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     };
@@ -177,6 +187,8 @@
       config.body = JSON.stringify(opts.body);
       config.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
+    var token = csrfToken();
+    if (token && method !== 'GET' && method !== 'HEAD') config.headers['X-CSRF-Token'] = token;
     if (opts.signal) config.signal = opts.signal;
     return fetch(path, config).then(function (response) {
       var type = response.headers.get('Content-Type') || '';
@@ -269,6 +281,7 @@
 
   function refreshSession() {
     state.sessionReady = api('/api/session').then(function (data) {
+      state.csrf = data.csrf || csrfToken();
       state.captcha = data.captcha || { enabled: false, siteKey: '' };
       VG.session = data;
       state.achievementCount = data.achievements || 0;
@@ -305,7 +318,7 @@
     { href: 'index.html', key: 'home', ru: 'Главная', en: 'Home', icon: 'gamepad' },
     { href: 'top.html', key: 'catalog', ru: 'Каталог игр', en: 'Games', icon: 'grid' },
     { href: 'casino.html', key: 'casino', ru: 'Казино', en: 'Casino', icon: 'wheel' },
-    { href: 'roulette.html', key: 'roulette', ru: 'Рулетка', en: 'Roulette', icon: 'spark' },
+    { href: 'roulette.html', key: 'roulette', ru: 'Рулетка Vert', en: 'Vert Roulette', icon: 'spark' },
     { href: 'shop.html', key: 'shop', ru: 'Магазин', en: 'Shop', icon: 'bag' },
     { href: 'profile.html', key: 'profile', ru: 'Профиль', en: 'Profile', icon: 'user' }
   ];
@@ -613,10 +626,32 @@
   var focusHint = null;
   var focusTimer = null;
 
+  /* Фокус в canvas игры.
+
+     Двухступенчато: (1) фокус на iframe; (2) фокус внутрь документа игры на
+     первом canvas/элементе с tabindex — некоторые браузеры оставляют фокус на
+     iframe, но приложение внутри считает, что клавиатура не у него. Второй шаг
+     безопасен: игры на том же origin, доступ к contentDocument разрешён. */
+  function focusInsideGame(frame) {
+    var doc = null;
+    try { doc = frame.contentDocument; } catch (e) { doc = null; }
+    if (!doc) return false;
+    var target = doc.querySelector('canvas[tabindex], canvas, [data-game-focus], body');
+    if (!target) return false;
+    try {
+      if (!target.hasAttribute('tabindex') && target.tagName === 'CANVAS') target.setAttribute('tabindex', '0');
+      target.focus({ preventScroll: true });
+    } catch (e) { return false; }
+    // Игра может сама перехватить фокус (game-kit.js слушает этот запрос).
+    try { frame.contentWindow.postMessage({ type: 'vg:focus' }, location.origin); } catch (e3) {}
+    try { return doc.activeElement === target || doc.hasFocus(); } catch (e2) { return true; }
+  }
+
   function ensureGameFocus(frame) {
     if (!frame || !VG.activeGame) return;
     try { frame.focus({ preventScroll: true }); } catch (e) { try { frame.focus(); } catch (e2) {} }
-    VG.gameFocus = document.activeElement === frame;
+    var inside = focusInsideGame(frame);
+    VG.gameFocus = document.activeElement === frame || inside;
     if (!VG.gameFocus) showFocusHint();
     else hideFocusHint();
   }
@@ -726,10 +761,30 @@
           if (document.exitFullscreen) document.exitFullscreen();
           return;
         }
+        if (overlay.classList.contains('pseudo-full')) {
+          // Второй тап по кнопке в «псевдополноэкранном» режиме — выход.
+          overlay.classList.remove('pseudo-full');
+          document.body.classList.remove('vg-pseudo-full');
+          syncFullscreenButton();
+          frameFocusSoon();
+          return;
+        }
         // Полноэкранный режим: рамка плеера, а с ней и игра, занимает весь экран.
-        var request = wrap.requestFullscreen || wrap.webkitRequestFullscreen || wrap.msRequestFullscreen;
-        if (!request) { toast(T('Браузер не поддерживает полноэкранный режим.', 'This browser does not support fullscreen.'), 'bad'); return; }
-        try { request.call(wrap, { navigationUI: 'hide' }); } catch (e) { try { request.call(wrap); } catch (e2) {} }
+        var request = wrap.requestFullscreen || wrap.webkitRequestFullscreen
+          || wrap.mozRequestFullScreen || wrap.msRequestFullscreen;
+        if (request) {
+          try {
+            var maybe = request.call(wrap, { navigationUI: 'hide' });
+            if (maybe && maybe.catch) maybe.catch(function () { pseudoFullscreen(); });
+          } catch (e) {
+            try { request.call(wrap); } catch (e2) { pseudoFullscreen(); }
+          }
+          frameFocusSoon();
+          return;
+        }
+        // iOS Safari и встроенные браузеры: Fullscreen API недоступен — игра
+        // всё равно должна занимать весь экран, поэтому включаем CSS-режим.
+        pseudoFullscreen();
       });
     }
     syncFullscreenButton();
@@ -847,6 +902,35 @@
     window.addEventListener('message', VG._gameHandler);
   }
 
+  /* Псевдополноэкранный режим: overlay уже position:fixed/inset:0, добавляем
+     класс, который прячет полосу плеера на телефоне и просит браузер спрятать
+     адресную строку (100dvh + safe-area). */
+  function pseudoFullscreen() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    overlay.classList.add('pseudo-full');
+    document.body.classList.add('vg-pseudo-full');
+    if (document.documentElement.requestFullscreen) {
+      try { document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch (e) {}
+    }
+    // Поворот в ландшафт на телефоне — лучший «полный экран» для игр.
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(function () {});
+    }
+    syncFullscreenButton();
+    frameFocusSoon();
+    toast(T('Полный экран включён. Кнопка «Экран» выключает его.',
+      'Fullscreen on. Tap Screen again to exit.'), 'ok');
+  }
+
+  function frameFocusSoon() {
+    var overlay = $('#playOverlay');
+    var frame = overlay && overlay.querySelector('.play-frame');
+    if (!frame) return;
+    setTimeout(function () { ensureGameFocus(frame); }, 120);
+    setTimeout(function () { ensureGameFocus(frame); }, 420);
+  }
+
   function currentGameReward() {
     return VG.activeGame ? VG.activeGame.reward : 0;
   }
@@ -855,7 +939,7 @@
     if (!overlay) return;
     var button = overlay.querySelector('[data-fullscreen]');
     if (!button) return;
-    var active = !!document.fullscreenElement;
+    var active = !!document.fullscreenElement || overlay.classList.contains('pseudo-full');
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
     var label = button.querySelector('span');
     if (label) label.textContent = active ? T('Выйти', 'Exit') : T('Экран', 'Screen');

@@ -44,12 +44,16 @@ E = lambda value: html.escape(str(value), quote=True)  # noqa: E731
 
 
 # --------------------------------------------------------------------------- #  shell
+TITLES_EN = {'Рулетка Vert': 'Vert Roulette'}
+
+
 def head(title: str, description: str, page: str, extra_css: str = '') -> str:
+    title_en = TITLES_EN.get(title, title)
     return f'''<!doctype html>
-<html lang="ru">
+<html lang="ru" data-title-en="{E(title_en)} — Vertu Games">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="{E(description)}">
@@ -83,7 +87,7 @@ def footer() -> str:
         <a href="index.html">Главная</a>
         <a href="top.html">Каталог игр</a>
         <a href="casino.html">Казино</a>
-        <a href="roulette.html">Рулетка</a>
+        <a href="roulette.html">Рулетка Vert</a>
         <a href="shop.html">Магазин</a>
       </div>
       <div class="footer-col">
@@ -415,7 +419,7 @@ def build_casino() -> str:
             самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги.</p>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
             <button class="btn btn-ghost btn-sm" data-limits="open">Настроить ограничения</button>
-            <a class="btn btn-ghost btn-sm" href="roulette.html">Классическая рулетка</a>
+            <a class="btn btn-ghost btn-sm" href="roulette.html">Рулетка Vert</a>
           </div>
         </div>
       </div>
@@ -471,13 +475,13 @@ def build_casino() -> str:
 
 # --------------------------------------------------------------------------- #  roulette
 def build_roulette() -> str:
-    return f'''{head('Рулетка', 'Колесо фортуны Vertu Games: бесплатный спин каждый день и честные серверные вероятности.', 'roulette')}
+    return f'''{head('Рулетка Vert', 'Рулетка Vert — колесо фортуны Vertu Games: бесплатный спин каждый день и честные серверные вероятности.', 'roulette')}
 {header('roulette')}
 <main class="wrap">
   <section class="section" style="margin-top:22px">
     <div class="section-head">
-      <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны</span>
-        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vertu</h1>
+      <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны · Рулетка Vert</span>
+        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vert</h1>
         <p>Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер.</p></div>
       <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
     </div>
@@ -727,6 +731,8 @@ def build_admin() -> str:
         <button class="on" data-view="overview"><span data-ico="chart"></span> Обзор</button>
         <button data-view="users"><span data-ico="user"></span> Пользователи</button>
         <button data-view="games"><span data-ico="gamepad"></span> Игры</button>
+        <button data-view="catalog"><span data-ico="bag"></span> Каталог</button>
+        <button data-view="transactions"><span data-ico="coin"></span> Операции</button>
         <button data-view="casino"><span data-ico="wheel"></span> Казино</button>
         <button data-view="log"><span data-ico="clock"></span> Журнал</button>
         <div class="divider"></div>
@@ -758,6 +764,32 @@ def build_admin() -> str:
           <div class="card panel"><div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Игры платформы</h2>
             <p class="muted" style="font-size:12.5px;margin:4px 0 0">Отключение скрывает награды за игру; файлы игр не удаляются.</p></div></div>
             <div id="adminGames"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div></div>
+        </div>
+        <div id="view-catalog" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Предметы магазина</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только косметика: аватары, цвета, титулы. Пакеты V не продаются.</p></div></div>
+            <div id="adminItems"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
+          <div class="card panel" style="margin-top:16px">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Достижения</h2></div></div>
+            <div id="adminAchievements"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
+          <div class="card panel" style="margin-top:16px">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Ежедневные задания</h2></div></div>
+            <div id="adminTasks"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
+        </div>
+        <div id="view-transactions" class="hidden">
+          <div class="card panel">
+            <div class="toolbar" style="margin-bottom:14px">
+              <label class="search"><span data-ico="search"></span>
+                <input type="search" id="txUser" placeholder="Ник игрока (пусто — все)" aria-label="Фильтр по нику"></label>
+              <button class="btn btn-sm btn-ghost" id="txRefresh">Обновить</button>
+              <span class="muted" style="font-size:12px">Каждая операция — одна строка в transactions</span>
+            </div>
+            <div id="adminTx"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
         </div>
         <div id="view-casino" class="hidden">
           <div class="card panel">

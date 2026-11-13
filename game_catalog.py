@@ -283,23 +283,17 @@ SHOP_ITEMS = [
      'icon': '', 'payload': 'Ас', 'order': 32},
     {'id': 't:legend', 'kind': 'title', 'name_ru': 'Легенда', 'name_en': 'Legend', 'price': 260,
      'icon': '', 'payload': 'Легенда', 'order': 33},
-    # Одноразовые бонусы
-    {'id': 'boost:500', 'kind': 'boost', 'name_ru': 'Пакет 500 V', 'name_en': '500 V pack', 'price': 250,
-     'icon': 'coin', 'payload': '500', 'order': 40},
-    {'id': 'boost:1500', 'kind': 'boost', 'name_ru': 'Пакет 1 500 V', 'name_en': '1 500 V pack', 'price': 700,
-     'icon': 'coin', 'payload': '1500', 'order': 41},
-    {'id': 'boost:5000', 'kind': 'boost', 'name_ru': 'Пакет 5 000 V', 'name_en': '5 000 V pack', 'price': 2000,
-     'icon': 'coin', 'payload': '5000', 'order': 42},
 ]
 
-SHOP_KINDS = ['avatar', 'color', 'title', 'boost']
+# Только косметика. Пакеты V (в том числе за V-монеты) удалены: монеты
+# нельзя ни купить, ни обменять — их зарабатывают в играх и казино.
+SHOP_KINDS = ['avatar', 'color', 'title']
 
 # Пакеты V за реальные деньги (выключены, пока не задан SHOP_PROVIDER).
-SHOP_PACKS = {
-    'start': {'coins': 1000, 'rub': 99, 'usd': 1.5, 'title_ru': 'Старт', 'title_en': 'Start'},
-    'major': {'coins': 6050, 'rub': 449, 'usd': 5.9, 'title_ru': 'Мажор', 'title_en': 'Major'},
-    'whale': {'coins': 18000, 'rub': 990, 'usd': 12.9, 'title_ru': 'Кит', 'title_en': 'Whale'},
-}
+# Продажа V-монет за реальные деньги удалена из продукта.
+# Словарь сохранён пустым: код магазина и страницы проверяют, что пакетов нет, и
+# показывают «V зарабатываются в играх», а не форму оплаты.
+SHOP_PACKS = {}
 
 # --------------------------------------------------------------------------- #
 #  Достижения

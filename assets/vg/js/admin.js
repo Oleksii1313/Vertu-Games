@@ -203,6 +203,75 @@
     }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
   }
 
+  /* ---------------------------------------------------------------- catalog */
+  function loadItems() {
+    var box = $('#adminItems');
+    if (!box) return;
+    api('/api/admin/items').then(function (data) {
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Тип</th>' +
+        '<th>Название</th><th>Цена, V</th><th>В продаже</th><th></th></tr></thead><tbody>' +
+        (data.items || []).map(function (item) {
+          return '<tr><td class="muted">' + esc(item.id) + '</td><td>' + esc(item.kind) + '</td>' +
+            '<td><input type="text" data-item-name="' + esc(item.id) + '" value="' + esc(item.name_ru) + '" style="width:150px"></td>' +
+            '<td><input type="number" data-item-price="' + esc(item.id) + '" value="' + Number(item.price) + '" min="0" style="width:86px"></td>' +
+            '<td><input type="checkbox" data-item-active="' + esc(item.id) + '"' + (item.is_active ? ' checked' : '') + '></td>' +
+            '<td><button class="btn btn-sm btn-ghost" data-item-save="' + esc(item.id) + '">Сохранить</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  function loadAchievements() {
+    var box = $('#adminAchievements');
+    if (!box) return;
+    api('/api/admin/achievements').then(function (data) {
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Название</th>' +
+        '<th>Награда, V</th><th></th></tr></thead><tbody>' +
+        (data.achievements || []).map(function (ach) {
+          return '<tr><td class="muted">' + esc(ach.id) + '</td>' +
+            '<td><input type="text" data-ach-name="' + esc(ach.id) + '" value="' + esc(ach.name_ru) + '" style="width:180px"></td>' +
+            '<td><input type="number" data-ach-coins="' + esc(ach.id) + '" value="' + Number(ach.coins) + '" min="0" style="width:86px"></td>' +
+            '<td><button class="btn btn-sm btn-ghost" data-ach-save="' + esc(ach.id) + '">Сохранить</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  function loadTasks() {
+    var box = $('#adminTasks');
+    if (!box) return;
+    api('/api/admin/tasks').then(function (data) {
+      var rows = (data.tasks || []).map(function (task) {
+        return '<tr><td class="muted">' + esc(task.id) + '</td>' +
+          '<td><input type="text" data-task-title="' + esc(task.id) + '" value="' + esc(task.title) + '" style="width:180px"></td>' +
+          '<td><input type="text" data-task-type="' + esc(task.id) + '" value="' + esc(task.task_type) + '" style="width:100px"></td>' +
+          '<td><input type="number" data-task-target="' + esc(task.id) + '" value="' + Number(task.target_value) + '" min="1" style="width:80px"></td>' +
+          '<td><input type="number" data-task-reward="' + esc(task.id) + '" value="' + Number(task.reward) + '" min="0" style="width:86px"></td>' +
+          '<td><button class="btn btn-sm btn-ghost" data-task-save="' + esc(task.id) + '">Сохранить</button></td></tr>';
+      }).join('');
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Задание</th>' +
+        '<th>Тип</th><th>Цель</th><th>Награда, V</th><th></th></tr></thead><tbody>' +
+        (rows || '<tr><td colspan="6" class="muted">Заданий пока нет — добавьте первое через API ' +
+          'POST /api/admin/tasks</td></tr>') + '</tbody></table></div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  function loadTransactions(username) {
+    var box = $('#adminTx');
+    if (!box) return;
+    var query = '/api/admin/transactions?limit=80' + (username ? '&user=' + encodeURIComponent(username) : '');
+    api(query).then(function (data) {
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Игрок</th>' +
+        '<th>Сумма</th><th>Баланс</th><th>Тип</th><th>Описание</th><th>reference_id</th></tr></thead><tbody>' +
+        ((data.items || []).map(function (row) {
+          return '<tr><td class="muted">' + esc(row.id) + '</td><td><b>' + esc(row.username || row.user_id) + '</b></td>' +
+            '<td class="' + (row.amount > 0 ? 'pos' : 'neg') + '" style="font-weight:800">' +
+            (row.amount > 0 ? '+' : '') + fmt(row.amount) + '</td>' +
+            '<td>' + fmt(row.balance_after) + '</td><td class="muted">' + esc(row.transaction_type) + '</td>' +
+            '<td class="muted">' + esc(row.description) + '</td>' +
+            '<td class="muted" style="font-size:11.5px">' + esc(row.reference_id || '') + '</td></tr>';
+        }).join('') || '<tr><td colspan="7" class="muted">Операций нет</td></tr>') + '</tbody></table></div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
   /* ----------------------------------------------------------------- casino */
   function loadCasino() {
     var box = $('#adminCasino');
@@ -230,13 +299,15 @@
     $$('.admin-side [data-view]').forEach(function (button) {
       button.classList.toggle('on', button.getAttribute('data-view') === name);
     });
-    ['overview', 'users', 'games', 'casino', 'log'].forEach(function (panel) {
+    ['overview', 'users', 'games', 'catalog', 'transactions', 'casino', 'log'].forEach(function (panel) {
       var node = $('#view-' + panel);
       if (node) node.classList.toggle('hidden', panel !== name);
     });
     if (name === 'overview') loadOverview();
     if (name === 'users') loadUsers('');
     if (name === 'games') loadGames();
+    if (name === 'catalog') { loadItems(); loadAchievements(); loadTasks(); }
+    if (name === 'transactions') loadTransactions('');
     if (name === 'casino') loadCasino();
     if (name === 'log') api('/api/admin/log').then(function (data) {
       renderLog($('#adminLog'), data.items || []);
@@ -257,6 +328,50 @@
         return;
       }
       if (event.target.closest('#userRefresh')) { loadUsers($('#userSearch').value); return; }
+      if (event.target.closest('#txRefresh')) { loadTransactions($('#txUser').value.trim()); return; }
+
+      var itemSave = event.target.closest('[data-item-save]');
+      if (itemSave) {
+        var itemId = itemSave.getAttribute('data-item-save');
+        var itemRow = itemSave.closest('tr');
+        api('/api/admin/items', { body: { item: {
+          id: itemId,
+          name_ru: itemRow.querySelector('[data-item-name]').value,
+          price: Number(itemRow.querySelector('[data-item-price]').value),
+          active: itemRow.querySelector('[data-item-active]').checked
+        } } }).then(function () {
+          VG.toast('Предмет сохранён');
+        }).catch(function (error) { VG.toast(error.message, 'bad'); });
+        return;
+      }
+      var achSave = event.target.closest('[data-ach-save]');
+      if (achSave) {
+        var achId = achSave.getAttribute('data-ach-save');
+        var achRow = achSave.closest('tr');
+        api('/api/admin/achievements', { body: { achievement: {
+          id: achId,
+          name_ru: achRow.querySelector('[data-ach-name]').value,
+          coins: Number(achRow.querySelector('[data-ach-coins]').value)
+        } } }).then(function () {
+          VG.toast('Достижение сохранено');
+        }).catch(function (error) { VG.toast(error.message, 'bad'); });
+        return;
+      }
+      var taskSave = event.target.closest('[data-task-save]');
+      if (taskSave) {
+        var taskId = taskSave.getAttribute('data-task-save');
+        var taskRow = taskSave.closest('tr');
+        api('/api/admin/tasks', { body: { task: {
+          id: Number(taskId),
+          title: taskRow.querySelector('[data-task-title]').value,
+          task_type: taskRow.querySelector('[data-task-type]').value,
+          target_value: Number(taskRow.querySelector('[data-task-target]').value),
+          reward: Number(taskRow.querySelector('[data-task-reward]').value)
+        } } }).then(function () {
+          VG.toast('Задание сохранено');
+        }).catch(function (error) { VG.toast(error.message, 'bad'); });
+        return;
+      }
       var openUser = event.target.closest('[data-user]');
       if (openUser) { loadUser(openUser.getAttribute('data-user')); return; }
       if (event.target.closest('[data-close-user]')) { $('#userDetail').classList.add('hidden'); return; }

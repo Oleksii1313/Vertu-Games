@@ -60,6 +60,9 @@ class Client:
             head['Content-Type'] = 'application/json'
         if self.cookies:
             head['Cookie'] = '; '.join(f'{k}={v}' for k, v in self.cookies.items())
+        # CSRF как в браузере: токен из куки vg_csrf уходит заголовком.
+        if method not in ('GET', 'HEAD') and self.cookies.get('vg_csrf'):
+            head['X-CSRF-Token'] = self.cookies['vg_csrf']
         head.update(headers or {})
         req = urllib.request.Request(self.base + path, data=data, headers=head, method=method)
         try:
@@ -86,6 +89,15 @@ class Client:
 
     def post(self, path, body=None):
         return self.request('POST', path, body if body is not None else {})
+
+
+def public_games_catalog(base):
+    """Каталог игр с сервера: проверяем, что скрытые игры не отдаются."""
+    try:
+        with urllib.request.urlopen(base + '/api/games', timeout=10) as response:
+            return json.loads(response.read().decode()).get('games', [])
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def start_server(port, env_extra):
@@ -148,8 +160,9 @@ def main():
                      'assets/vg/css/platform.css', 'assets/vg/js/platform.js'):
             with urllib.request.urlopen(base + '/' + page, timeout=10) as response:
                 check(f'{page} отдаётся (200)', response.status == 200)
-        for secret in ('db.py', 'server.py', 'casino_logic.py', 'requirements.txt', '.env',
-                       'tools/build_platform.py', 'database.js'):
+        for secret in ('db.py', 'schema_sql.py', 'schema_sqlite.py', 'server.py',
+                       'casino_logic.py', 'shop.py', 'requirements.txt', '.env',
+                       'alembic.ini', 'migrate_sqlite_to_postgres.py', 'tools/build_platform.py'):
             try:
                 urllib.request.urlopen(base + '/' + secret, timeout=5)
                 check(f'{secret} недоступен', False, 'файл отдаётся публично!')
@@ -210,6 +223,54 @@ def main():
         platform_js = urllib.request.urlopen(base + '/assets/vg/js/platform.js', timeout=10).read().decode()
         check('openGame достраивает пустой оверлей', "overlay.querySelector('.play-bar')" in platform_js)
         check('getCurrentUser доступен играм', 'window.getCurrentUser' in platform_js)
+
+        print('== Клиентские исправления (мобильный экран, фокус, резкость)')
+        games = ('flappy', 'game2048', 'platformer', 'pong', 'shooter', 'snake', 'minicraft',
+                 'doodle', 'sky-isle', 'chefs-rover', 'redline')
+        for game in games:
+            html = urllib.request.urlopen(base + '/games/' + game + '.html', timeout=10).read().decode()
+            check(f'{game}: ландшафт на весь экран без полос',
+                  'vg-landscape-fullscreen' in html and '100dvh' in html
+                  and 'safe-area-inset' in html, 'нет мобильного ландшафтного CSS')
+            check(f'{game}: подключён game-kit (фокус и DPR)',
+                  'game-kit.js' in html, 'game-kit.js не подключён')
+        player = urllib.request.urlopen(base + '/assets/vg/js/platform.js', timeout=10).read().decode()
+        check('плеер: псевдополный экран, если Fullscreen API недоступен',
+              'pseudoFullscreen' in player and 'pseudo-full' in player)
+        check('плеер: фокус внутрь canvas игры',
+              'focusInsideGame' in player and 'vg:focus' in player)
+        css = urllib.request.urlopen(base + '/assets/vg/css/platform.css', timeout=10).read().decode()
+        check('плеер: рамка игры 100vw × 100dvh',
+              '.play-overlay' in css and '100dvh' in css and 'orientation:landscape' in css)
+        kit = urllib.request.urlopen(base + '/assets/vg/js/game-kit.js', timeout=10).read().decode()
+        check('game-kit: devicePixelRatio для canvas', 'devicePixelRatio' in kit and 'setTransform' in kit)
+        check('game-kit: автофокус канваса', 'focusGame' in kit)
+        roulette_page = urllib.request.urlopen(base + '/roulette.html', timeout=10).read().decode()
+        check('страница рулетки называется «Рулетка Vert»',
+              'Рулетка Vert' in roulette_page and '<title>Рулетка Vert' in roulette_page)
+        check('в навигации «Рулетка Vert»', 'Рулетка Vert' in player)
+
+        print('== Безопасность: CSRF и сессия')
+        status, data = guest.get('/api/session')
+        check('/api/session отдаёт csrf-токен', status == 200 and bool(data.get('csrf')), str(data)[:80])
+        check('/api/session отдаёт роль', status == 200 and data.get('role') in ('guest', 'player', 'admin'))
+        raw = urllib.request.Request(base + '/api/auth/logout', data=b'{}', method='POST',
+                                     headers={'Content-Type': 'application/json'})
+        try:
+            urllib.request.urlopen(raw, timeout=10)
+            csrf_blocked = False
+        except urllib.error.HTTPError as exc:
+            csrf_blocked = exc.code == 403
+        check('POST без CSRF-токена отклоняется', csrf_blocked, 'запрос без токена прошёл')
+        forged = Client(base)
+        forged.cookies['vg_session'] = alice.cookies.get('vg_session', '')
+        forged.cookies['vg_csrf'] = 'forged'
+        status, data = forged.request('POST', '/api/games/reward',
+                                      {'game': 'flappy', 'receipt': 'csrf-123456'},
+                                      headers={'X-CSRF-Token': 'other'})
+        check('несовпадающий CSRF-токен отклоняется', status == 403 and data.get('code') == 'CSRF', str(data))
+        status, data = guest.get('/api/shop')
+        check('в магазине нет пакетов V', status == 200 and data.get('packs') == [], str(data.get('packs')))
 
         print('== Баланс и монеты')
         status, data = guest.get('/api/balance')
@@ -353,6 +414,39 @@ def main():
         check('настройки казино сохраняются', status == 200, str(data))
         status, data = admin.get('/api/admin/games')
         check('список игр в админке', status == 200 and len(data['games']) == 11, str(len(data.get('games', []))))
+        check('Redline скрыт из каталога игр',
+              all(g.get('id') != 'redline' for g in public_games_catalog(base)),
+              str([g.get('id') for g in public_games_catalog(base)]))
+        status, data = admin.get('/api/admin/items')
+        check('админ: каталог предметов', status == 200 and len(data.get('items', [])) >= 15,
+              str(len(data.get('items', []))))
+        status, data = admin.post('/api/admin/items', {'item': {'id': 'av:fox', 'name_ru': 'Лис',
+                                                                'price': 120, 'active': True}})
+        check('админ: предмет сохраняется', status == 200 and data.get('item', {}).get('id') == 'av:fox', str(data))
+        status, data = admin.get('/api/admin/achievements')
+        check('админ: достижения', status == 200 and len(data.get('achievements', [])) >= 5,
+              str(len(data.get('achievements', []))))
+        status, data = admin.post('/api/admin/achievements', {'achievement': {'id': 'first_login',
+                                                                              'name_ru': 'Добро пожаловать',
+                                                                              'coins': 50}})
+        check('админ: достижение сохраняется', status == 200, str(data))
+        status, data = admin.get('/api/admin/tasks')
+        check('админ: ежедневные задания', status == 200 and isinstance(data.get('tasks'), list), str(data))
+        status, data = admin.post('/api/admin/tasks', {'task': {'title': 'Сыграйте 3 игры',
+                                                                'task_type': 'play', 'target_value': 3,
+                                                                'reward': 40}})
+        check('админ: задание создаётся', status == 200 and data.get('task', {}).get('id'), str(data))
+        status, data = admin.get('/api/admin/transactions?limit=20')
+        check('админ: журнал операций', status == 200 and len(data.get('items', [])) >= 3,
+              str(len(data.get('items', []))))
+        check('в журнале есть reference_id (идемпотентность)',
+              any(row.get('reference_id') for row in data.get('items', [])), 'нет reference_id')
+        status, data = admin.get('/api/admin/casino')
+        check('админ: история казино', status == 200 and isinstance(data.get('items'), list), str(data))
+        status, data = banned_login.get('/api/admin/stats')
+        check('обычный игрок не видит админку', status == 401, str(data))
+        status, data = alice.get('/api/admin/transactions')
+        check('админ-API закрыт для игрока', status == 401, str(data))
         status, data = admin.post('/api/admin/logout', {})
         check('выход из админки', status == 200)
         status, data = admin.get('/api/admin/stats')
