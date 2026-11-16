@@ -168,9 +168,13 @@
   /* CSRF: сервер кладёт токен в куку vg_csrf, клиент возвращает его заголовком.
      Сторонняя страница не может прочитать куку этого домена, поэтому подделать
      POST-запрос из чужого origin не получится. */
+  var csrfFromSession = '';
   function csrfToken() {
     var match = document.cookie.match(/(?:^|;\s*)vg_csrf=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
+    if (match) return decodeURIComponent(match[1]);
+    // Кука могла ещё не примениться в этом же тике (первый визит) — берём токен
+    // из ответа /api/session: он ровно тот же, что сервер записал в куку.
+    return csrfFromSession || '';
   }
   VG.csrfToken = csrfToken;
 
@@ -281,7 +285,8 @@
 
   function refreshSession() {
     state.sessionReady = api('/api/session').then(function (data) {
-      state.csrf = data.csrf || csrfToken();
+      csrfFromSession = data.csrf || '';
+      state.csrf = csrfFromSession || csrfToken();
       state.captcha = data.captcha || { enabled: false, siteKey: '' };
       VG.session = data;
       state.achievementCount = data.achievements || 0;

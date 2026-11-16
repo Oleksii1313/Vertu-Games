@@ -84,7 +84,7 @@ CSRF_HEADER = 'X-CSRF-Token'
 CSRF_SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
 
 
-def issue_csrf(response):
+def issue_csrf(response, token: str | None = None):
     """Выдать CSRF-токен (double-submit cookie).
 
     Кука читается только своим JS, сам токен прикладывается к каждому
@@ -92,7 +92,7 @@ def issue_csrf(response):
     прочитать куку (SameSite=Lax + HttpOnly нет только у неё), ни подставить
     заголовок, поэтому POST-запросы из чужого origin отклоняются.
     """
-    token = request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(24)
+    token = token or request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(24)
     response.set_cookie(CSRF_COOKIE, token, max_age=30 * 24 * 3600, httponly=False,
                         samesite='Lax', secure=is_https(), path='/')
     return token
@@ -308,9 +308,12 @@ def health():
 def session_info():
     user = current_user()
     data = get_store()
+    # На первом визите куки ещё нет — выдаём токен сразу и в ответе, и в куке,
+    # чтобы клиент мог отправить любой POST без лишнего круга.
+    token = csrf_token() or secrets.token_urlsafe(24)
     response = jsonify({
         'ok': True,
-        'csrf': csrf_token(),
+        'csrf': token,
         'user': public_user(user),
         'level': level_info(user) if user else None,
         'captcha': captcha.public_config(),
@@ -320,8 +323,8 @@ def session_info():
         'role': (user or {}).get('role') or 'guest',
         'turnstile': captcha.public_config(),
     })
-    if not request.cookies.get(CSRF_COOKIE):
-        issue_csrf(response)
+    if request.cookies.get(CSRF_COOKIE) != token:
+        issue_csrf(response, token)
     return response
 
 

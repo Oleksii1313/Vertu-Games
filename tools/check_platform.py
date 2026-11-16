@@ -251,9 +251,23 @@ def main():
         check('в навигации «Рулетка Vert»', 'Рулетка Vert' in player)
 
         print('== Безопасность: CSRF и сессия')
-        status, data = guest.get('/api/session')
-        check('/api/session отдаёт csrf-токен', status == 200 and bool(data.get('csrf')), str(data)[:80])
-        check('/api/session отдаёт роль', status == 200 and data.get('role') in ('guest', 'player', 'admin'))
+        # Первый визит без единой куки: токен обязан прийти и в теле, и в Set-Cookie,
+        # иначе фронтенд не сможет отправить ни одного POST (вход/регистрация).
+        fresh = urllib.request.Request(base + '/api/session')
+        with urllib.request.urlopen(fresh, timeout=10) as response:
+            body = json.loads(response.read().decode())
+            cookies = '; '.join(response.headers.get_all('Set-Cookie') or [])
+        check('/api/session отдаёт csrf-токен', bool(body.get('csrf')), str(body)[:80])
+        check('csrf-токен приходит и кукой (первый визит)',
+              'vg_csrf=' + body.get('csrf', 'x') in cookies, cookies[:120])
+        # Второй визит уже с кукой: токен обязан сохраниться (иначе слетят POST'ы).
+        follow = Client(base)
+        follow.cookies['vg_csrf'] = body.get('csrf', '')
+        status, again = follow.get('/api/session')
+        check('csrf-токен стабилен между запросами', again.get('csrf') == body.get('csrf'),
+              'токен меняется')
+        check('/api/session отдаёт роль', status == 200 and again.get('role') in ('guest', 'player', 'admin'),
+              str(again.get('role')))
         raw = urllib.request.Request(base + '/api/auth/logout', data=b'{}', method='POST',
                                      headers={'Content-Type': 'application/json'})
         try:
