@@ -260,6 +260,8 @@ def main():
         check('/api/session отдаёт csrf-токен', bool(body.get('csrf')), str(body)[:80])
         check('csrf-токен приходит и кукой (первый визит)',
               'vg_csrf=' + body.get('csrf', 'x') in cookies, cookies[:120])
+        check('на запрос выдаётся ровно одна cookie csrf', cookies.count('vg_csrf=') == 1,
+              f'Set-Cookie содержит {cookies.count("vg_csrf=")} csrf-куки: {cookies[:200]}')
         # Второй визит уже с кукой: токен обязан сохраниться (иначе слетят POST'ы).
         follow = Client(base)
         follow.cookies['vg_csrf'] = body.get('csrf', '')

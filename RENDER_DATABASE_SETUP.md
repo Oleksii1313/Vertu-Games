@@ -124,6 +124,17 @@ python -c "import db; s=db.get_store(); print(s.backend, s.platform_stats())"
 
 На сайте: `GET /api/health` должен вернуть `"backend": "postgresql"`.
 
+Полная дымовая проверка живого деплоя (без браузера, только стандартный Python):
+
+```bash
+python tools/smoke_deploy.py https://vertu-games.onrender.com --admin-password '…'
+```
+
+Скрипт проверяет `/api/health` (`backend=postgresql`), выдачу CSRF-токена,
+регистрацию, вход, награду за игру и её идемпотентность, бесплатный спин
+«Рулетки Vert», отсутствие пакетов V, админ-вход, каталог, журналы и выход.
+Код выхода 0 — деплой здоров.
+
 ---
 
 ## 6. Перенос данных из SQLite

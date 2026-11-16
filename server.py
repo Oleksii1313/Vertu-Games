@@ -84,6 +84,21 @@ CSRF_HEADER = 'X-CSRF-Token'
 CSRF_SAFE_METHODS = {'GET', 'HEAD', 'OPTIONS'}
 
 
+def ensure_csrf_token() -> str:
+    """Один CSRF-токен на запрос: кука → или новый, закэшированный в g.
+
+    Важно, чтобы все, кто спрашивает токен в рамках одного запроса (вьюха и
+    ``after_request``), получили одно и то же значение — иначе браузер сохранит
+    одну куку, а фронтенд получит в JSON другую и все POST'ы упадут с 403.
+    """
+    token = getattr(g, 'csrf_token', '')
+    if token:
+        return token
+    token = request.cookies.get(CSRF_COOKIE, '') or secrets.token_urlsafe(24)
+    g.csrf_token = token
+    return token
+
+
 def issue_csrf(response, token: str | None = None):
     """Выдать CSRF-токен (double-submit cookie).
 
@@ -92,14 +107,17 @@ def issue_csrf(response, token: str | None = None):
     прочитать куку (SameSite=Lax + HttpOnly нет только у неё), ни подставить
     заголовок, поэтому POST-запросы из чужого origin отклоняются.
     """
-    token = token or request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(24)
+    token = token or ensure_csrf_token()
+    g.csrf_token = token
+    g.csrf_issued = True
     response.set_cookie(CSRF_COOKIE, token, max_age=30 * 24 * 3600, httponly=False,
                         samesite='Lax', secure=is_https(), path='/')
     return token
 
 
 def csrf_token() -> str:
-    return request.cookies.get(CSRF_COOKIE, '')
+    """Токен из куки (или уже выданный в этом запросе)."""
+    return request.cookies.get(CSRF_COOKIE, '') or getattr(g, 'csrf_token', '')
 
 
 def csrf_ok() -> bool:
@@ -284,7 +302,8 @@ def security_headers(response):
         response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000')
     # CSRF-токен выдаём на любом ответе, если куки ещё нет: клиент читает её и
     # возвращает заголовком X-CSRF-Token. Double-submit cookie, без состояния.
-    if response.status_code < 400 and not request.cookies.get(CSRF_COOKIE):
+    if (response.status_code < 400 and not getattr(g, 'csrf_issued', False)
+            and not request.cookies.get(CSRF_COOKIE)):
         issue_csrf(response)
     return response
 
@@ -310,7 +329,7 @@ def session_info():
     data = get_store()
     # На первом визите куки ещё нет — выдаём токен сразу и в ответе, и в куке,
     # чтобы клиент мог отправить любой POST без лишнего круга.
-    token = csrf_token() or secrets.token_urlsafe(24)
+    token = ensure_csrf_token()
     response = jsonify({
         'ok': True,
         'csrf': token,
