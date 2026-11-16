@@ -97,7 +97,11 @@ def main() -> int:
     guest = Browser(args.base)
     status, health = guest.get('/api/health')
     check('сайт отвечает на /api/health', status == 200 and health.get('ok'), f'HTTP {status}')
-    check('backend = postgresql', health.get('backend') == 'postgresql', health.get('backend'))
+    local = any(h in args.base for h in ('localhost', '127.0.0.1', '0.0.0.0', ':80'))
+    if local:
+        print(f"  ⚠ локальный запуск, backend={health.get('backend')} (для прода нужен postgresql)")
+    else:
+        check('backend = postgresql', health.get('backend') == 'postgresql', health.get('backend'))
     captcha = health.get('captcha') or {}
     if captcha.get('required'):
         check('Cloudflare Turnstile настроен', bool(captcha.get('enabled')), captcha)
