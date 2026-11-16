@@ -73,16 +73,23 @@ export DATABASE_URL="postgres://..."
   выигрыш начисляется в той же транзакции. Клиент только проигрывает анимацию.
 * Магазин: цена и владение проверяются на сервере, повторная покупка не
   списывает деньги второй раз.
+* Ежедневные задания: прогресс (игры, ставки) пишет сервер, награду выдаёт
+  `/api/tasks/claim` — один раз в сутки на задание, повод для начисления
+  `task:<uid>:<task>:<дата>`, сброс в 00:00 UTC.
 * Баланс никогда не уходит в минус и не приходит из localStorage.
 
 ## Безопасность входа
 
 * Только ник + пароль. Никаких email и подтверждений.
-* Пароли — PBKDF2-HMAC-SHA256, 310 000 итераций, соль на пользователя; формат
-  `pbkdf2_sha256$rounds$salt$hash` совместим со старой базой.
+* Пароли — Argon2id (`argon2-cffi`), соль на пользователя. Старые
+  `pbkdf2_sha256$rounds$salt$hash` и bcrypt-хеши продолжают проверяться и
+  автоматически перехешируются в Argon2id при успешном входе.
 * Ник уникален без учёта регистра, служебные имена зарезервированы.
 * Turnstile проверяется запросом к Cloudflare с сервера (`captcha.py`).
 * Ограничение попыток входа по IP и по нику, honeypot-поле в форме регистрации.
+* CSRF: токен приходит в `GET /api/session` (тело + кука `vg_csrf`), все
+  небезопасные запросы обязаны прислать его в `X-CSRF-Token`; исключения —
+  вход/регистрация без куки, вебхук магазина и вход администратора.
 * Сессии — случайный токен в httpOnly cookie, в базе хранится только SHA-256
   хеш; срок 30 дней, продлевается при активности; выход удаляет сессию, смена
   пароля закрывает все сессии.
@@ -127,18 +134,22 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 112 проверок
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 160 проверок
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 160 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```
 
 `check_platform.py` поднимает настоящий сервер на свободном порту и проходит
-94 проверок: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
-награды и их повторы, магазин, слоты, колесо, лимиты, админ-панель, сохранение
-данных после перезапуска, защита статики и API, сборка игрового плеера.
+160 проверок: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
+CSRF и сессия, награды и их повторы, ежедневные задания, магазин, слоты, колесо,
+лимиты и самоисключение, админ-панель и каталог, сохранение данных после
+перезапуска, защита статики и API, мобильная вёрстка игр, сборка плеера.
 С `DATABASE_URL` тот же набор выполняется в отдельной схеме PostgreSQL.
+
+Для живого деплоя (после `RENDER_DATABASE_SETUP.md`) есть дымовая проверка без
+браузера: `python tools/smoke_deploy.py https://vertu-games.onrender.com --admin-password '…'`.
 
 ### Производительность
 
@@ -187,16 +198,19 @@ DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 5. Deploy. Схема таблиц создаётся автоматически при старте (`db.py`),
    администратор — из `ADMIN_PASSWORD`. Health-check: `/api/health`.
 6. Проверьте после деплоя: регистрация, вход, баланс в шапке, магазин, слоты и
-   колесо, `admin.html`, мобильная вёрстка.
+   колесо, `admin.html`, мобильная вёрстка. Быстро и без браузера —
+   `python tools/smoke_deploy.py https://<адрес> --admin-password '…'`.
 
 Локальный Postgres для отладки: `tools/dev_pg.py` создаёт `.pgdata/` и печатает
 готовый `DATABASE_URL` (каталог в `.gitignore`).
 
 ## Структура данных (основное)
 
-`users`, `sessions`, `coin_ledger`, `game_stats`, `game_receipts`,
+`users`, `sessions`, `coin_ledger` (`transactions`), `game_stats`, `game_receipts`,
 `game_limits`, `shop_items`, `purchases`, `achievements`, `user_achievements`,
-`casino_bets`, `casino_limits`, `admin_log`, `settings`, `orders`.
+`casino_bets` (`casino_history`), `casino_limits`, `daily_tasks`,
+`user_daily_tasks`, `admin_log`, `settings`, `orders`. Канонический DDL —
+`schema_sql.py`, совместимые представления — `COMPAT_VIEWS`.
 
 Все изменения баланса проходят через `DataStore.add_coins` /
 `DataStore.casino_bet` / `DataStore.buy_item` — с блокировкой строки и записью в
