@@ -259,5 +259,5 @@ python server.py
 ```bash
 python -m unittest tools.test_economy          # SQLite (быстро)
 DATABASE_URL=... python -m unittest tools.test_economy   # PostgreSQL (отдельная схема)
-DATABASE_URL=... python tools/check_platform.py          # 160 e2e-проверок
+DATABASE_URL=... python tools/check_platform.py          # 162 e2e-проверки
 ```

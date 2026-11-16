@@ -627,6 +627,23 @@ class DataStore:
                     c.execute('INSERT INTO achievements(id,name,description,icon,reward,name_en,'
                               'desc_en,item_order,is_active,created_at) VALUES(?,?,?,?,?,?,?,?,TRUE,?)',
                               (ach['id'],) + values)
+            # -------- ежедневные задания (по ключу в описании, чтобы не дублировать)
+            for task in getattr(game_catalog, 'DAILY_TASKS', []):
+                marker = '[seed:%s]' % task['key']
+                exists = c.execute('SELECT id FROM daily_tasks WHERE description LIKE ?',
+                                   ('%' + marker + '%',)).fetchone()
+                values = (task['title'], (task.get('description') or '') + ' ' + marker,
+                          int(task.get('reward') or 0), task.get('task_type') or 'play',
+                          max(1, int(task.get('target_value') or 1)),
+                          task.get('title_en') or task['title'], task.get('desc_en') or '')
+                if exists:
+                    c.execute('UPDATE daily_tasks SET title=?,description=?,reward=?,task_type=?,'
+                              'target_value=?,title_en=?,desc_en=? WHERE id=?',
+                              values + (exists['id'],))
+                else:
+                    c.execute('INSERT INTO daily_tasks(title,description,reward,task_type,'
+                              'target_value,title_en,desc_en,is_active,created_at) '
+                              'VALUES(?,?,?,?,?,?,?,TRUE,?)', values + (ts_now,))
             # -------- настройки
             defaults = {
                 'casino_enabled': '1', 'wheel_enabled': '1', 'slots_enabled': '1',

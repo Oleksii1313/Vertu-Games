@@ -296,6 +296,18 @@ SHOP_KINDS = ['avatar', 'color', 'title']
 SHOP_PACKS = {}
 
 # --------------------------------------------------------------------------- #
+#  Ежедневные задания (сброс в 00:00 UTC)
+# --------------------------------------------------------------------------- #
+DAILY_TASKS = [
+    {'key': 'play3', 'title': 'Играть 3 раза', 'title_en': 'Play 3 games',
+     'description': 'Сыграйте три любые партии за день.', 'desc_en': 'Play any three rounds today.',
+     'task_type': 'play', 'target_value': 3, 'reward': 40},
+    {'key': 'casino3', 'title': '3 ставки в казино', 'title_en': '3 casino bets',
+     'description': 'Любые ставки в «Рулетке Vert» — слоты или колесо.', 'desc_en': 'Any bets in Vert Roulette — slots or wheel.',
+     'task_type': 'casino', 'target_value': 3, 'reward': 60},
+]
+
+# --------------------------------------------------------------------------- #
 #  Достижения
 # --------------------------------------------------------------------------- #
 ACHIEVEMENTS = [

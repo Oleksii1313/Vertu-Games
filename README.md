@@ -134,15 +134,15 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 160 проверок
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 160 на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 162 проверки
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 162 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```
 
 `check_platform.py` поднимает настоящий сервер на свободном порту и проходит
-160 проверок: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
+162 проверки: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
 CSRF и сессия, награды и их повторы, ежедневные задания, магазин, слоты, колесо,
 лимиты и самоисключение, админ-панель и каталог, сохранение данных после
 перезапуска, защита статики и API, мобильная вёрстка игр, сборка плеера.

@@ -393,6 +393,11 @@ def main():
         print('== Ежедневные задания')
         status, data = alice.get('/api/tasks')
         check('список заданий доступен', status == 200 and isinstance(data.get('tasks'), list), str(data)[:80])
+        seeded = {t['title']: t for t in data.get('tasks', [])}
+        check('задания засеяны по умолчанию',
+              'Играть 3 раза' in seeded and '3 ставки в казино' in seeded, str(list(seeded))[:120])
+        check('у засеянного задания есть цель и награда',
+              all(t['target_value'] >= 1 and t['reward'] > 0 for t in seeded.values()), str(seeded)[:120])
         task_admin = Client(base)
         task_admin.post('/api/admin/login', {'password': 'CheckAdmin#2026'})
         status, data = task_admin.post('/api/admin/tasks', {'task': {'title': 'Проверка заданий',
