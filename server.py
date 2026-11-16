@@ -531,6 +531,7 @@ def me():
         'achievements': db.user_achievements(user['id']),
         'purchases': db.purchases(user['id']),
         'ledger': db.ledger(user['id'], limit=15),
+        'tasks': db.user_daily_tasks(user['id']),
         'pendingItem': None,
     })
 
@@ -661,6 +662,7 @@ def game_reward():
         return api_error(400, 'REWARD', str(exc))
     if result.get('awarded'):
         db.record_play(user['id'], game)
+        db.progress_task(user['id'], 'play', 1)
     return jsonify({'ok': True, 'awarded': result.get('awarded', 0), 'repeated': result['repeated'],
                     'coins': result['balance'], 'dailyLeft': result.get('daily_left'),
                     'ceiling': result.get('capped', False)})
@@ -794,6 +796,7 @@ def casino_wheel():
         return api_error(402, 'NO_FUNDS', 'Недостаточно V-монет для ставки.')
     result['ok'] = True
     result['achievements'] = _casino_achievements(user['id'], result)
+    result['tasks'] = get_store().progress_task(user['id'], 'casino', 1)
     return jsonify(result)
 
 
@@ -814,6 +817,7 @@ def casino_slots():
         return api_error(402, 'NO_FUNDS', 'Недостаточно V-монет для ставки.')
     result['ok'] = True
     result['achievements'] = _casino_achievements(user['id'], result)
+    result['tasks'] = get_store().progress_task(user['id'], 'casino', 1)
     return jsonify(result)
 
 
@@ -879,6 +883,36 @@ def casino_limits():
                  store.digest(client_ip()))
     return jsonify({'ok': True, 'limits': {'daily': limits['daily_limit'],
                                            'excludeUntil': limits['exclude_until']}})
+
+
+# --------------------------------------------------------------------------- задания
+@app.get('/api/tasks')
+@login_required
+def tasks_list():
+    user = current_user()
+    db = get_store()
+    return jsonify({'ok': True, 'tasks': db.user_daily_tasks(user['id']),
+                    'resetAt': store.next_reset()})
+
+
+@app.post('/api/tasks/claim')
+@login_required
+def tasks_claim():
+    data = json_body()
+    user = current_user()
+    try:
+        task_id = int(data.get('task', 0))
+    except (TypeError, ValueError):
+        return api_error(400, 'TASK', 'Некорректное задание')
+    try:
+        result = get_store().claim_task(user['id'], task_id)
+    except NotFound as exc:
+        return api_error(404, 'TASK', str(exc))
+    except LimitExceeded as exc:
+        return api_error(400, 'TASK', str(exc))
+    result['tasks'] = get_store().user_daily_tasks(user['id'])
+    result['user'] = public_user(get_store().get_user(user['id']))
+    return jsonify(result)
 
 
 # --------------------------------------------------------------------------- leaderboard

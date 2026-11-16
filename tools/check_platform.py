@@ -243,7 +243,9 @@ def main():
         check('плеер: рамка игры 100vw × 100dvh',
               '.play-overlay' in css and '100dvh' in css and 'orientation:landscape' in css)
         kit = urllib.request.urlopen(base + '/assets/vg/js/game-kit.js', timeout=10).read().decode()
-        check('game-kit: devicePixelRatio для canvas', 'devicePixelRatio' in kit and 'setTransform' in kit)
+        check('game-kit: не ломает размеры canvas игр',
+              'sharpCanvas' in kit and 'imageRendering' in kit
+              and 'document.querySelectorAll(\'canvas\'), function (canvas) {\n      var ctx' not in kit)
         check('game-kit: автофокус канваса', 'focusGame' in kit)
         roulette_page = urllib.request.urlopen(base + '/roulette.html', timeout=10).read().decode()
         check('страница рулетки называется «Рулетка Vert»',
@@ -387,6 +389,30 @@ def main():
         status, data = alice.post('/api/casino/slots', {'stake': 10})
         check('во время самоисключения ставки запрещены', status == 403, str(data))
         alice.post('/api/casino/limits', {'excludeMinutes': 0, 'daily': 0})
+
+        print('== Ежедневные задания')
+        status, data = alice.get('/api/tasks')
+        check('список заданий доступен', status == 200 and isinstance(data.get('tasks'), list), str(data)[:80])
+        task_admin = Client(base)
+        task_admin.post('/api/admin/login', {'password': 'CheckAdmin#2026'})
+        status, data = task_admin.post('/api/admin/tasks', {'task': {'title': 'Проверка заданий',
+                                                                'task_type': 'play', 'target_value': 1,
+                                                                'reward': 25}})
+        task_id = (data.get('task') or {}).get('id')
+        check('задание создано для проверки', status == 200 and bool(task_id), str(data))
+        status, data = alice.post('/api/games/reward', {'game': 'pong', 'receipt': 'task-play-1'})
+        check('игровое событие двигает задание', status == 200 and data.get('ok'), str(data)[:80])
+        status, data = alice.get('/api/tasks')
+        mine = [t for t in data.get('tasks', []) if t.get('id') == task_id]
+        check('прогресс задания записан', bool(mine) and mine[0]['progress'] >= 1, str(mine)[:120])
+        coins_before_task = alice.get('/api/balance')[1]['coins']
+        status, data = alice.post('/api/tasks/claim', {'task': task_id})
+        check('награда за задание начислена', status == 200 and data.get('reward') == 25, str(data)[:120])
+        check('баланс вырос на награду', data.get('user', {}).get('coins') == coins_before_task + 25,
+              f'{coins_before_task} -> {data.get("user", {}).get("coins")}')
+        status, data = alice.post('/api/tasks/claim', {'task': task_id})
+        check('повторная выдача задания не платит', status == 200 and data.get('already') is True
+              and data.get('reward') == 0, str(data)[:120])
 
         print('== Казино: математика выплат')
         sys.path.insert(0, str(ROOT))

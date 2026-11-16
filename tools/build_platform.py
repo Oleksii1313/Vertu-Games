@@ -588,6 +588,11 @@ def build_profile() -> str:
         <div id="casinoBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
       </div>
       <div class="card panel">
+        <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Задания</span><h2 style="font-size:19px">Ежедневные задания</h2>
+          <p class="muted" style="font-size:12.5px;margin:4px 0 0">Прогресс обнуляется в 00:00 UTC. Награду выдаёт сервер.</p></div></div>
+        <div id="tasksBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+      </div>
+      <div class="card panel">
         <div class="section-head" style="margin-bottom:12px"><div><span class="eyebrow">Инвентарь</span><h2 style="font-size:19px">Купленные предметы</h2></div></div>
         <div id="itemsBody"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
       </div>

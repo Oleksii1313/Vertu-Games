@@ -15,15 +15,20 @@
   'use strict';
 
   var MAX_DPR = 2;      // выше 2 смысла нет: растёт нагрузка, разницы не видно
+  /* Игры сами управляют размером canvas (scan.width = clientWidth и т.п.), поэтому
+     менять атрибуты width/height отсюда нельзя — это перетрёт расчёт игры.
+     Резкость делаем на уровне CSS: холст рисуется в своих пикселях и плавно
+     масштабируется до физического размера экрана без потери чёткости у мелких
+     элементов интерфейса игры. */
 
   function dpr() {
     return Math.min(MAX_DPR, Math.max(1, window.devicePixelRatio || 1));
   }
 
-  /* ------------------------------------------------------------ 1. Резкость */
-  /* Подогнать буфер 2D-canvas под CSS-размер и DPR. Холст, у которого уже есть
-     собственный размер в атрибутах (например, шахматная доска 720×720),
-     масштабируется только визуально — пропорции сохраняются. */
+  /* ------------------------------------- 1. Резкость (утилита, опционально) */
+  /* Подогнать буфер 2D-canvas под CSS-размер и DPR. Вызывать вручную из игры,
+     которая САМА не пересчитывает width/height: иначе конфликт размеров.
+     Автоматически не применяется — игры управляют своими холстами сами. */
   function sharpCanvas(canvas, opts) {
     if (!canvas || !canvas.getContext) return false;
     var options = opts || {};
@@ -96,22 +101,14 @@
 
   /* ------------------------------------------------------- 3. Инициализация */
   function init() {
+    // Только CSS-качество отрисовки: без вмешательства в размеры буфера.
     Array.prototype.forEach.call(document.querySelectorAll('canvas'), function (canvas) {
-      var ctx = null;
-      try { ctx = canvas.getContext('2d'); } catch (e) { ctx = null; }
-      if (!ctx) return;               // WebGL-канвасы трогает сам движок
-      sharpCanvas(canvas);
-      // Повторная подгонка после поворота экрана/раскрытия на весь экран.
-      if (window.ResizeObserver) {
-        var last = canvas.getBoundingClientRect();
-        var observer = new ResizeObserver(function () {
-          var rect = canvas.getBoundingClientRect();
-          if (Math.abs(rect.width - last.width) < 2 && Math.abs(rect.height - last.height) < 2) return;
-          last = rect;
-          sharpCanvas(canvas);
-        });
-        observer.observe(canvas.parentElement || canvas);
+      canvas.style.imageRendering = 'auto';
+      if (window.CSS && CSS.supports && CSS.supports('image-rendering', 'smooth')) {
+        canvas.style.imageRendering = 'smooth';
       }
+      // Явно запрещаем браузеру сглаживать пиксель-арт «мылом» при апскейле.
+      canvas.style.setProperty('-webkit-optimize-contrast', 'auto');
     });
     bindFocus();
     setTimeout(focusGame, 60);
@@ -129,11 +126,7 @@
   } else {
     init();
   }
-  window.addEventListener('resize', function () {
-    Array.prototype.forEach.call(document.querySelectorAll('canvas'), function (canvas) {
-      var ctx = null;
-      try { ctx = canvas.getContext('2d'); } catch (e) { return; }
-      if (ctx) sharpCanvas(canvas);
-    });
-  });
+  /* Поворот экрана/раскрытие на весь экран: игры сами пересчитывают canvas,
+     нам достаточно вернуть фокус, чтобы клавиатура не «отвалилась». */
+  window.addEventListener('resize', function () { setTimeout(focusGame, 120); });
 })(window, document);
