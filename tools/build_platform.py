@@ -25,9 +25,8 @@ sys.path.insert(0, str(ROOT / 'tools' / 'i18n'))
 
 from markup import localize as localize_markup  # noqa: E402
 
-from game_catalog import (ACHIEVEMENTS, CASINO_STAKES, GAMES, SHOP_ITEMS,  # noqa: E402
-                          visible_games,
-                          casino_rules)
+from game_catalog import (ACHIEVEMENTS, APP_VERSION, CASINO_STAKES, GAMES,  # noqa: E402
+                          SHOP_ITEMS, visible_games, casino_rules)
 
 def games_count_ru() -> str:
     # 10 игр / 11 игр / 12 игр - простая русская плюрализация
@@ -57,6 +56,7 @@ def head(title: str, description: str, page: str, extra_css: str = '') -> str:
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="{E(description)}">
+<meta name="vertu-build" content="{E(APP_VERSION)}">
 <title>{E(title)} — Vertu Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -516,6 +516,7 @@ def build_roulette() -> str:
           </tbody></table></div>
           <p class="muted" style="font-size:12px;margin-top:10px">RTP колеса: {casino_rules()['wheel']['rtp'] * 100:.1f}%.
             Ставка списывается до вращения, выигрыш начисляется сразу после.</p>
+          <p class="muted" style="font-size:11px;margin-top:6px">Версия сборки: <b id="buildStamp">{E(APP_VERSION)}</b></p>
         </div>
         <div class="card panel">
           <h3 style="font-size:16px;margin-bottom:10px">Личная статистика</h3>

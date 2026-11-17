@@ -440,6 +440,7 @@ UI_EN.update({
     'Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован.': 'Slots return to player (RTP): 92.4%. Variance is high: wins are not guaranteed.',
     'Вопросы об обработке данных — через страницу': 'Questions about data processing go through the',
     'Восстановления по e-mail нет, потому что e-mail не используется. Обратитесь к владельцу платформы: он может сменить пароль через админ-панель или CLI.': 'There is no e-mail recovery because no e-mail is used. Contact the platform owner: they can reset the password through the admin panel or the CLI.',
+    'Версия сборки:': 'Build version:',
     'Вращение колеса: {': 'Wheel spin: {',
     'Все ошибки возвращаются как': 'All errors are returned as',
     'Все результаты генерируются на сервере криптографическим генератором случайных чисел. Ставка списывается до розыгрыша, выигрыш начисляется в той же транзакции. Клиент не может повлиять на результат.': 'Every result is generated on the server by a cryptographic random number generator. The stake is charged before the draw and the win is credited in the same transaction. The client cannot influence the outcome.',

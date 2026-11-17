@@ -111,6 +111,23 @@ def main() -> int:
         if 'onrender.com' in args.base:
             check('Cloudflare Turnstile включён на проде', False, 'TURNSTILE_REQUIRED нужно выставить в 1')
 
+    print('== Публикация колеса')
+    status, version = guest.get('/api/version')
+    check('/api/version отвечает', status == 200 and version.get('ok') is True, f'HTTP {status}')
+    check('версия сборки видна', bool(version.get('version')), str(version.get('version')))
+    live_wheel = version.get('wheel') or {}
+    check('множители колеса целые (0,1,2,3,4,5,10)',
+          live_wheel.get('segments') == [0, 10, 1, 5, 2, 4, 3], str(live_wheel.get('segments')))
+    check('RTP колеса 93.5 %', abs((live_wheel.get('rtp') or 0) - 0.935) < 1e-9,
+          str(live_wheel.get('rtp')))
+    live_page = (version.get('pages') or {}).get('roulette.html') or {}
+    check('опубликованный roulette.html содержит новые множители',
+          live_page.get('probabilities') == ['x0 48.0%', 'x10 0.5%', 'x1 27.0%', 'x5 1.5%',
+                                             'x2 16.0%', 'x4 1.0%', 'x3 6.0%'],
+          str(live_page.get('probabilities')))
+    check('на сайте нет дробных множителей',
+          live_page.get('legacy_multipliers') is False, str(live_page))
+
     print('== CSRF и сессия')
     status, session = guest.get('/api/session')
     check('сессия отдаёт csrf-токен', status == 200 and bool(session.get('csrf')), str(session)[:80])

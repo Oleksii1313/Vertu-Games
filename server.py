@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import hmac
 import json
 import os
@@ -36,7 +37,8 @@ import db as store
 import shop
 from db import (AccountBanned, DuplicateUser, InsufficientFunds, InvalidCredentials,
                 LimitExceeded, NotFound, StoreError, get_store)
-from game_catalog import GAMES, GAMES_BY_ID, game_available, public_games
+from game_catalog import (APP_VERSION, GAMES, GAMES_BY_ID, WHEEL_SEGMENTS, WHEEL_WEIGHTS,
+                          game_available, public_games, wheel_probabilities, wheel_rtp)
 
 ROOT = Path(__file__).resolve().parent
 COOKIE = 'vg_session'
@@ -289,10 +291,10 @@ def serve_file(rel: str):
     if rel.endswith('.html'):
         response.headers['Cache-Control'] = 'no-cache'
     elif rel.startswith('assets/vg/') and Path(rel).suffix.lower() in ('.js', '.css'):
-        # Код игры меняется: минута кеша, дальше браузер обязан перепроверить
-        # ETag. Иначе игрок сутки (и до 7 дней на stale-while-revalidate) видит
-        # старый JS — например, старые баннеры казино без списания/выплаты.
-        response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'
+        # Код игры меняется: никакого «свежего» окна — браузер обязан
+        # перепроверить ETag на каждой загрузке. Иначе рядом с новой страницей
+        # мог отработать старый casino.js с прежними множителями колеса.
+        response.headers['Cache-Control'] = 'no-cache'
     elif rel.startswith(('assets/vg/', 'coin.svg')):
         # Картинки и шрифты кешируем надолго; ETag/Last-Modified всё равно
         # заставят браузер перепроверить содержимое после истечения.
@@ -349,6 +351,8 @@ def _is_admin_response() -> bool:
 
 @app.after_request
 def security_headers(response):
+    # Видно в DevTools → Network: какая сборка ответила на запрос.
+    response.headers.setdefault('X-Build', APP_VERSION)
     response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'same-origin')
@@ -410,6 +414,47 @@ def health():
     return jsonify({'ok': True, 'backend': data.backend, 'time': now(),
                     'captcha': captcha.public_config(), 'payments': shop.configured(),
                     'signing': anticheat.describe()})
+
+
+def _page_fingerprint(name: str) -> dict:
+    """Что за файл лежит на диске у этого инстанса: хеш и таблица множителей.
+
+    Нужен, чтобы отличить «на сервере старая версия» от «в браузере старая
+    страница»: /api/version читает те же байты, что отдаёт /roulette.html.
+    """
+    path = ROOT / name
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return {'exists': False}
+    text = raw.decode('utf-8', 'ignore')
+    rows = re.findall(r'<tr><td>x(\d+(?:\.\d+)?)</td><td>([\d.]+)%</td></tr>', text)
+    return {
+        'exists': True,
+        'bytes': len(raw),
+        'sha256': hashlib.sha256(raw).hexdigest()[:16],
+        'probabilities': ['x%s %s%%' % (mult, chance) for mult, chance in rows],
+        'legacy_multipliers': any(tag in text for tag in ('x0.25', 'x0.5')),
+    }
+
+
+@app.get('/api/version')
+def api_version():
+    """Версия сборки, коммит Render и реальное содержимое страниц колеса."""
+    return jsonify({
+        'ok': True,
+        'version': APP_VERSION,
+        'commit': os.environ.get('RENDER_GIT_COMMIT', ''),
+        'branch': os.environ.get('RENDER_GIT_BRANCH', ''),
+        'service': os.environ.get('RENDER_SERVICE_NAME', ''),
+        'wheel': {
+            'segments': WHEEL_SEGMENTS,
+            'weights': WHEEL_WEIGHTS,
+            'rtp': wheel_rtp(),
+            'probabilities': wheel_probabilities(),
+        },
+        'pages': {name: _page_fingerprint(name) for name in ('roulette.html', 'casino.html')},
+    })
 
 
 @app.get('/api/session')

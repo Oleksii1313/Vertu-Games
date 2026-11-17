@@ -13,8 +13,10 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -174,6 +176,45 @@ def main():
                 check(f'{secret} недоступен', False, 'файл отдаётся публично!')
             except urllib.error.HTTPError as exc:
                 check(f'{secret} недоступен (404)', exc.code == 404)
+
+        print('== Версия сборки и публикация колеса')
+        status, version = guest.get('/api/version')
+        check('/api/version отвечает', status == 200 and version.get('ok') is True, str(version)[:120])
+        check('/api/version отдаёт версию сборки', bool(version.get('version')), str(version.get('version')))
+        check('/api/version сообщает коммит и ветку Render',
+              'commit' in version and 'branch' in version and 'service' in version,
+              str({k: version.get(k) for k in ('commit', 'branch', 'service')}))
+        version_wheel = version.get('wheel') or {}
+        check('/api/version: только целые множители',
+              version_wheel.get('segments') == [0, 10, 1, 5, 2, 4, 3], str(version_wheel.get('segments')))
+        check('/api/version: RTP 93.5 %', abs((version_wheel.get('rtp') or 0) - 0.935) < 1e-9,
+              str(version_wheel.get('rtp')))
+        served = (version.get('pages') or {}).get('roulette.html') or {}
+        expected_rows = ['x0 48.0%', 'x10 0.5%', 'x1 27.0%', 'x5 1.5%',
+                         'x2 16.0%', 'x4 1.0%', 'x3 6.0%']
+        check('сервер отдаёт roulette.html с новой таблицей множителей',
+              served.get('probabilities') == expected_rows, str(served.get('probabilities')))
+        check('в отдаваемом roulette.html нет дробных множителей',
+              served.get('legacy_multipliers') is False, str(served))
+        page_bytes = (ROOT / 'roulette.html').read_bytes()
+        check('sha256 отдаваемой страницы совпадает с файлом в репозитории',
+              served.get('sha256') == hashlib.sha256(page_bytes).hexdigest()[:16],
+              f"{served.get('sha256')} != файл")
+        status, _ = guest.get('/roulette.html')
+        build_header = {k.lower(): v for k, v in guest.last_headers.items()}.get('x-build')
+        check('заголовок X-Build сообщает версию сборки', build_header == version.get('version'),
+              str(build_header))
+        status, _ = guest.get('/assets/vg/js/wheel-math.js')
+        cache = {k.lower(): v for k, v in guest.last_headers.items()}.get('cache-control')
+        check('JS колеса не кешируется надолго (no-cache)', cache == 'no-cache', str(cache))
+        status, _ = guest.get('/roulette.html')
+        html_cache = {k.lower(): v for k, v in guest.last_headers.items()}.get('cache-control')
+        check('HTML не кешируется (no-cache)', html_cache == 'no-cache', str(html_cache))
+        stamp = re.search(r'<meta name="vertu-build" content="([^"]+)">',
+                          (ROOT / 'roulette.html').read_text(encoding='utf-8'))
+        check('страница помечена версией сборки в <meta>',
+              bool(stamp) and stamp.group(1) == version.get('version'),
+              stamp.group(1) if stamp else 'нет meta')
 
         print('== Регистрация и защита ника')
         alice = Client(base)
@@ -365,8 +406,8 @@ def main():
               str(hdrs.get('X-Content-Type-Options')))
         alice.get('/assets/vg/js/casino.js')
         js_cache = str(alice.last_headers.get('Cache-Control', ''))
-        check('JS казино кешируется не дольше минуты (правки доходят сразу)',
-              'max-age=60' in js_cache and 'must-revalidate' in js_cache, js_cache)
+        check('JS казино не кешируется надолго (правки доходят сразу)',
+              js_cache.strip() == 'no-cache', js_cache)
         flat_csp = csp
         alice.get('/games/minicraft.html')
         game_csp = str(alice.last_headers.get('Content-Security-Policy', ''))
