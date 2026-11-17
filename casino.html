@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="Социальное казино Vertu Games: слоты и колесо фортуны на виртуальные V-монеты. Вся логика и выплаты — на сервере.">
-<meta name="vertu-build" content="2026-11-17-wheel-v2">
+<meta name="vertu-build" content="2026-11-11-wheel-v3">
 <title>Казино — Vertu Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,7 +55,7 @@
 
         <div id="panel-wheel" class="hidden">
           <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow"><span data-ru="Колесо фортуны" data-en="Wheel of fortune">Колесо фортуны</span></span><h2 style="font-size:20px">Roulette Wheel</h2></div>
-            <span class="badge badge-line">RTP 93.5%</span></div>
+            <span class="badge badge-line">RTP 95.0%</span></div>
           <div class="wheel-stage">
             <div class="wheel-pointer"></div>
             <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны" data-aria-label-en="Wheel of fortune"></canvas>
@@ -64,7 +64,7 @@
           <div class="machine-foot">
             <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> <span data-ru="Крутить колесо" data-en="Spin the wheel">Крутить колесо</span></button>
             <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite"><span data-ru="Бесплатно: 1/1 · Платных: 5/5" data-en="Free: 1/1 · Paid: 5/5">Бесплатно: 1/1 · Платных: 5/5</span></div>
-            <span class="potential"><span data-ru="Секторы: x10, x5, x4, x3, x2, x1, x0 ·" data-en="Segments: x10, x5, x4, x3, x2, x1, x0 ·">Секторы: x10, x5, x4, x3, x2, x1, x0 ·</span> <b id="freeSpinNote"></b></span>
+            <span class="potential"><span data-ru="Секторы: x5, x2, x1, x0 ·" data-en="Segments: x5, x2, x1, x0 ·">Секторы: x5, x2, x1, x0 ·</span> <b id="freeSpinNote"></b></span>
           </div>
           <div class="result-banner" id="wheelResult"><span data-ru="Крутите колесо — результат придёт с сервера" data-en="Spin the wheel — the result comes from the server">Крутите колесо — результат придёт с сервера</span></div>
         </div>
@@ -86,14 +86,14 @@
           <p class="muted" style="font-size:12px;margin-top:8px"><span data-ru="Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован." data-en="Slots return to player (RTP): 92.4%. Variance is high: wins are not guaranteed.">Возврат игроку (RTP) слотов: 92.4%. Дисперсия высокая: выигрыш не гарантирован.</span></p>
           <h4 style="margin:16px 0 8px;font-size:15px"><span data-ru="Колесо: секторы и вероятности" data-en="Wheel: segments and probabilities">Колесо: секторы и вероятности</span></h4>
           <div class="table-wrap"><table><thead><tr><th><span data-ru="Множитель" data-en="Multiplier">Множитель</span></th><th><span data-ru="Вес" data-en="Weight">Вес</span></th><th><span data-ru="Вероятность" data-en="Probability">Вероятность</span></th><th><span data-ru="Вклад в RTP" data-en="Contribution to RTP">Вклад в RTP</span></th></tr></thead>
-            <tbody><tr><td>x0</td><td>480</td><td>48.0%</td><td>0.0%</td></tr><tr><td>x10</td><td>5</td><td>0.5%</td><td>5.0%</td></tr><tr><td>x1</td><td>270</td><td>27.0%</td><td>27.0%</td></tr><tr><td>x5</td><td>15</td><td>1.5%</td><td>7.5%</td></tr><tr><td>x2</td><td>160</td><td>16.0%</td><td>32.0%</td></tr><tr><td>x4</td><td>10</td><td>1.0%</td><td>4.0%</td></tr><tr><td>x3</td><td>60</td><td>6.0%</td><td>18.0%</td></tr></tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:8px"><span data-ru="RTP колеса: 93.5%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC." data-en="Wheel RTP: 93.5%. Every day brings one free spin and up to five paid spins; the limit resets at 00:00 UTC.">RTP колеса: 93.5%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC.</span></p>
+            <tbody><tr><td>x0</td><td>7</td><td>35.0%</td><td>0.0%</td></tr><tr><td>x1</td><td>10</td><td>50.0%</td><td>50.0%</td></tr><tr><td>x2</td><td>2</td><td>10.0%</td><td>20.0%</td></tr><tr><td>x5</td><td>1</td><td>5.0%</td><td>25.0%</td></tr></tbody></table></div>
+          <p class="muted" style="font-size:12px;margin-top:8px"><span data-ru="RTP колеса: 95.0%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC." data-en="Wheel RTP: 95.0%. Every day brings one free spin and up to five paid spins; the limit resets at 00:00 UTC.">RTP колеса: 95.0%. В сутки доступно одно бесплатное вращение и до пяти платных; лимит сбрасывается в 00:00 UTC.</span></p>
           <div class="divider"></div>
           <h4 style="margin:0 0 8px;font-size:15px"><span data-ru="Ограничения" data-en="Limits">Ограничения</span></h4>
           <p class="muted" style="font-size:13px"><span data-ru="Ставки: от 5 до 100 V. Доступен дневной лимит ставок и добровольное самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги." data-en="Stakes: 5 to 100 V. A daily stake limit and voluntary self-exclusion are available. V-coins are never bought for cash-out and never exchanged for money.">Ставки: от 5 до 100 V. Доступен дневной лимит ставок и добровольное самоисключение. V-монеты не покупаются «на вывод» и не обмениваются на деньги.</span></p>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
             <button class="btn btn-ghost btn-sm" data-limits="open"><span data-ru="Настроить ограничения" data-en="Set limits">Настроить ограничения</span></button>
-            <a class="btn btn-ghost btn-sm" href="roulette.html">Рулетка Vert</a>
+            <a class="btn btn-ghost btn-sm" href="roulette.html"><span data-ru="Рулетка Vert" data-en="Vert Roulette">Рулетка Vert</span></a>
           </div>
         </div>
       </div>
@@ -138,7 +138,7 @@
         <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
         <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
         <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
-        <a href="roulette.html">Рулетка Vert</a>
+        <a href="roulette.html"><span data-ru="Рулетка Vert" data-en="Vert Roulette">Рулетка Vert</span></a>
         <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">

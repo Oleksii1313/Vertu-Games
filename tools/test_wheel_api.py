@@ -107,8 +107,11 @@ class WheelApiFormula(unittest.TestCase):
         finally:
             casino_logic._rng_choice_weighted = original
 
-    def test_every_segment_pays_stake_times_multiplier(self):
-        for index, multiplier in enumerate(WHEEL_SEGMENTS):
+    def test_every_multiplier_pays_stake_times_multiplier(self):
+        # 4 множителя × 6 ставок = 24 спина; покрытие всех 20 секторов
+        # проверяют tools/test_wheel.py и tools/test_wheel_math.js.
+        for multiplier in sorted(set(WHEEL_SEGMENTS)):
+            index = WHEEL_SEGMENTS.index(multiplier)
             for stake in CASINO_STAKES:
                 with self.subTest(segment=multiplier, stake=stake):
                     self._new_player()

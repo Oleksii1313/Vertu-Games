@@ -25,8 +25,10 @@ sys.path.insert(0, str(ROOT / 'tools' / 'i18n'))
 
 from markup import localize as localize_markup  # noqa: E402
 
-from game_catalog import (ACHIEVEMENTS, APP_VERSION, CASINO_STAKES, GAMES,  # noqa: E402
-                          SHOP_ITEMS, visible_games, casino_rules)
+from game_catalog import (ACHIEVEMENTS, APP_VERSION, CASINO_CARD,  # noqa: E402
+                          CASINO_STAKES, GAMES, SHOP_ITEMS,
+                          visible_games, casino_rules)
+
 
 def games_count_ru() -> str:
     # 10 игр / 11 игр / 12 игр - простая русская плюрализация
@@ -144,6 +146,25 @@ def game_card(game: dict, index: int, compact: bool = False) -> str:
 </article>'''
 
 
+def casino_card() -> str:
+    """Карточка рулетки для каталога: тот же стиль, что у игр, но со ставками."""
+    card = CASINO_CARD
+    return f'''<a class="game-card" href="{E(card['href'])}" data-game="{E(card['id'])}"
+   data-name="{E(card['name'])}" data-cats="{E('|'.join(card['cat']))}" data-reward="0" data-order="-1"
+   data-href="{E(card['href'])}">
+  <div class="game-cover cover-{E(card['cover'])}">
+    <div class="tags"><span class="badge badge-hot">{E(card['tag'])}</span></div>
+    <span class="reward"><span data-ico="wheel"></span>до x5</span>
+    <span class="art" data-ico="{E(card['icon'])}" data-size="64"></span>
+  </div>
+  <div class="game-body">
+    <h3>{E(card['name'])}</h3>
+    <p>{E(card['desc'])}</p>
+    <div class="foot"><span>{E(card['cat'][0])}</span><span>RTP {card['rtp']}%</span></div>
+  </div>
+</a>'''
+
+
 # --------------------------------------------------------------------------- #  index
 def build_index() -> str:
     cards = '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
@@ -249,7 +270,7 @@ def build_index() -> str:
 
 # --------------------------------------------------------------------------- #  top (catalog)
 def build_catalog() -> str:
-    cards = '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
+    cards = casino_card() + '\n' + '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
     return f'''{head('Каталог игр', 'Все игры Vertu Games: аркады, головоломки, гонки и 3D-приключения с серверными наградами V-монет.', 'catalog')}
 {header('catalog')}
 <main class="wrap">
@@ -485,52 +506,79 @@ def build_casino() -> str:
 
 # --------------------------------------------------------------------------- #  roulette
 def build_roulette() -> str:
-    return f'''{head('Рулетка Vert', 'Рулетка Vert — колесо фортуны Vertu Games: бесплатный спин каждый день и честные серверные вероятности.', 'roulette')}
+    """Страница рулетки: большое колесо, панель ставки и таблица выплат."""
+    wheel = casino_rules()['wheel']
+    def stake_button(value: int) -> str:
+        active = ' class="on"' if value == 20 else ''
+        return (f'<button{active} data-stake="{value}">{value} V'
+                f'<small>x5 · {value * 5} V</small></button>')
+
+    stakes_html = ''.join(stake_button(value) for value in CASINO_STAKES)
+    probs_html = ''.join(
+        f'<tr><td>x{r["multiplier"]:g}</td><td>{r["sectors"]}</td>'
+        f'<td>{r["chance"] * 100:.1f}%</td><td>{r["rtp"] * 100:.1f}%</td></tr>'
+        for r in wheel['probabilities'])
+    return f'''{head('Рулетка Vert', 'Рулетка Vert — колесо фортуны Vertu Games: 20 равных секторов, выплата ровно ставка × множитель, честные серверные вероятности.', 'roulette')}
 {header('roulette')}
 <main class="wrap">
-  <section class="section" style="margin-top:22px">
-    <div class="section-head">
-      <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны · Рулетка Vert</span>
-        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vert</h1>
-        <p>Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер.</p></div>
-      <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
-    </div>
-    <div class="casino-layout">
-      <div class="card machine">
-        <div class="wheel-stage"><div class="wheel-pointer"></div>
-          <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны"></canvas></div>
-        <div class="stake-row" id="wheelStakes">{''.join(f'<button class="stake{" on" if s == 20 else ""}" data-stake="{s}">{s} V</button>' for s in CASINO_STAKES)}</div>
-        <div class="machine-foot">
-          <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> Крутить</button>
-          <label class="checkbox" style="flex:1"><input type="checkbox" id="useFree" checked>
-            <span>Использовать бесплатный спин, если доступен</span></label>
-        </div>
-        <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
-        <div class="result-banner" id="wheelResult">Готово к вращению</div>
+  <section class="rl-hero">
+    <div class="rl-head">
+      <div>
+        <span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны</span>
+        <h1>Рулетка Vert</h1>
+        <p>20 равных секторов по 18°. Ставка списывается до вращения, выплата — это полная сумма: ставка × множитель. Результат определяет сервер.</p>
       </div>
-      <aside class="stack" style="gap:16px">
-        <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px">Множители</h3>
-          <div class="table-wrap"><table><thead><tr><th>Сектор</th><th>Шанс</th></tr></thead><tbody>
-            {''.join(f'<tr><td>x{r["multiplier"]:g}</td><td>{r["chance"] * 100:.1f}%</td></tr>' for r in casino_rules()['wheel']['probabilities'])}
-          </tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:10px">RTP колеса: {casino_rules()['wheel']['rtp'] * 100:.1f}%.
-            Ставка списывается до вращения, выигрыш начисляется сразу после.</p>
-          <p class="muted" style="font-size:11px;margin-top:6px">Версия сборки: <b id="buildStamp">{E(APP_VERSION)}</b></p>
+      <div class="rl-balance"><span>Баланс</span><b data-coins>0</b><i>V</i></div>
+    </div>
+
+    <div class="rl-grid">
+      <div class="rl-stage">
+        <div class="rl-pointer" aria-hidden="true"></div>
+        <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны"></canvas>
+      </div>
+
+      <aside class="rl-panel">
+        <div class="rl-result is-idle" id="wheelResult" role="status" aria-live="polite">
+          <div class="rl-mult" id="rlMult">x1</div>
+          <div class="rl-math" id="rlMath"></div>
+          <div class="rl-net" id="rlNet"></div>
+          <div class="rl-hint" id="rlHint">Готово к вращению</div>
         </div>
-        <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px">Личная статистика</h3>
-          <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
-            <div class="stat-card"><span>Вращений</span><b id="wheelSpins">0</b></div>
-            <div class="stat-card"><span>Итог</span><b id="wheelNet">0 V</b></div>
-          </div>
-          <p class="muted" style="font-size:12px;margin-top:10px">Виртуальные V-монеты. Реальные деньги не используются.</p>
-        </div>
-        <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px">Последние вращения</h3>
-          <div id="wheelHistory"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
-        </div>
+
+        <div class="rl-panel-title">Ставка</div>
+        <div class="rl-stakes" id="wheelStakes">{stakes_html}</div>
+
+        <button class="rl-spin" id="spinWheel"><span data-ico="wheel"></span> Крутить</button>
+
+        <label class="rl-free"><input type="checkbox" id="useFree" checked>
+          <span>Использовать бесплатный спин</span></label>
+
+        <div class="rl-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
+
+        <div class="rl-payouts" id="rlPayouts"></div>
       </aside>
+    </div>
+
+    <div class="rl-bottom">
+      <div class="rl-card">
+        <h3>Множители</h3>
+        <table class="rl-table"><thead><tr><th>Сектор</th><th>Секторов</th><th>Шанс</th><th>RTP</th></tr></thead>
+          <tbody>{probs_html}</tbody></table>
+        <p>RTP колеса: {wheel['rtp'] * 100:.1f}%. Ставка списывается до вращения, выигрыш начисляется сразу после.</p>
+        <p>Версия сборки: <b id="buildStamp">{E(APP_VERSION)}</b></p>
+      </div>
+      <div class="rl-card">
+        <h3>Личная статистика</h3>
+        <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+          <div class="stat-card"><span>Вращений</span><b id="wheelSpins">0</b></div>
+          <div class="stat-card"><span>Итог</span><b id="wheelNet">0 V</b></div>
+        </div>
+        <p>Виртуальные V-монеты. Реальные деньги не используются.</p>
+      </div>
+      <div class="rl-card">
+        <h3>Последние вращения</h3>
+        <div id="wheelHistory"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+      </div>
     </div>
   </section>
 </main>

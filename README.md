@@ -69,13 +69,15 @@ export DATABASE_URL="postgres://..."
 * Награда за игру: браузер присылает только `{game, receipt}`. Сумма берётся из
   `game_catalog.py`, суточный лимит проверяется на сервере, повторная квитанция
   не начисляет монеты второй раз.
-* Рулетка: 7 целых множителей — x0 48 %, x1 27 %, x2 16 %, x3 6 %, x4 1 %,
-  x5 1.5 %, x10 0.5 % (ровно 100 %), RTP 93.5 %. Выплата — ровно
-  `FLOOR(ставка × множитель)`, считает её одна функция
-  `casino_logic.wheel_payout`, а геометрия остановки — один файл
-  `assets/vg/js/wheel-math.js` (секторы пропорциональны вероятностям); инвариант
-  «под указателем тот же сектор, за который заплатили» проверяют
-  `tools/test_wheel_math.js`, `test_wheel.py` и `test_wheel_api.py`.
+* Рулетка: **20 одинаковых секторов по 18°** и четыре множителя — x0 (7 секторов,
+  35 %), x1 (10, 50 %), x2 (2, 10 %), x5 (1, 5 %); RTP ровно 95 %.
+  Старые множители x0.25/x0.5/x3/x4/x10 удалены и из конфига, и из истории
+  (миграция `0005_wheel_retired_multipliers`). Выплата — это **полная** сумма
+  `ставка × множитель`, считает её одна функция `casino_logic.wheel_payout`,
+  а геометрия и отрисовка живут в одном файле `assets/vg/js/wheel-math.js`;
+  инвариант «под указателем тот же сектор, за который заплатил сервер»
+  проверяют `tools/test_wheel_math.js`, `test_wheel.py` и `test_wheel_api.py`.
+  Карточка рулетки в каталоге (`top.html`) ведёт на `/roulette.html`.
 * Казино: ставка списывается **до** вращения (`charge`), выплата начисляется
   **после** и целиком — `credit == payout == stake * multiplier` (×1 возвращает
   ставку, ×2 даёт двойную ставку, ×0 не даёт ничего); итог за спин —
@@ -163,19 +165,19 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 204 проверки
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 180 на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 207 проверок
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же проверки на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (25)
-python -m unittest tools.test_wheel                 # колесо: 7 множителей × 6 ставок, charge/credit/net (25)
-python -m unittest tools.test_wheel_api             # выплата = FLOOR(ставка × множитель) сквозь HTTP (4)
-node tools/test_wheel_math.js                       # колесо встаёт на оплаченный сектор
+python -m unittest tools.test_wheel                 # колесо: 4 множителя × 6 ставок, 20 секторов по 18° (37)
+python -m unittest tools.test_wheel_api             # выплата = ставка × множитель сквозь HTTP (4)
+node tools/test_wheel_math.js                       # 20 равных секторов, колесо встаёт на оплаченный сектор
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```
 
 `check_platform.py` поднимает настоящий сервер на свободном порту и проходит
-172 проверки: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
+207 проверок: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
 CSRF и сессия, подписанные билеты и попытки их подделать, ежедневные задания,
 магазин, слоты, колесо,
 лимиты и самоисключение, админ-панель и каталог, сохранение данных после
@@ -255,7 +257,7 @@ curl -s https://<адрес>/api/version | python3 -m json.tool
   файла, который лежит на диске у инстанса**, плюс `legacy_multipliers`
   (должен быть `false`).
 
-Если `pages['roulette.html'].probabilities` = `x0 48.0% … x10 0.5%`, а в браузере
+Если `pages['roulette.html'].probabilities` = `x0 35.0% … x5 5.0%`, а в браузере
 всё ещё старые проценты — это кеш браузера (жёсткая перезагрузка Ctrl+Shift+R),
 а не деплой. Если там старые значения — не переехала сама сборка: нужен
 `Manual Deploy → Clear build cache & deploy` в Render.

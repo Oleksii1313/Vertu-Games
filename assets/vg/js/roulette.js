@@ -1,7 +1,10 @@
-/* Отдельная страница рулетки. Логика результатов — только на сервере
-   (/api/casino/wheel); здесь анимация, история и бесплатный спин. */
+/* Страница рулетки. Результат определяет только сервер (/api/casino/wheel):
+   он списывает ставку, выбирает сектор, считает выплату и начисляет её одной
+   транзакцией. Клиент лишь проигрывает анимацию до присланного сектора и
+   показывает те же числа, что пришли в ответе. */
 (function () {
   'use strict';
+
   var VG = window.VG;
   var $ = VG.$, $$ = VG.$$, T = VG.T, fmt = VG.fmt, escapeHtml = VG.escapeHtml;
   var rules = (window.VG_DATA && window.VG_DATA.casino) || null;
@@ -17,7 +20,10 @@
   var LIMIT_CACHE = 'vg.wheelLimits';
   var sfx = VG.sfx;
 
-  function colors() { return ['#ff2d95', '#c6ff3d', '#8b5cf6', '#2ee6c8', '#3b82f6', '#e8b64c', '#5f6980']; }
+  function setText(selector, value) {
+    var node = $(selector);
+    if (node) node.textContent = value;
+  }
 
   function draw(current) {
     if (!canvas) return;
@@ -28,13 +34,66 @@
       canvas.height = Math.round(size * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Секторы пропорциональны вероятностям (x0 — 48 %, x10 — 0.5 %);
-    // отрисовка живёт в wheel-math.js, чтобы обе страницы рисовали одинаково.
+    /* 20 равных секторов по 18°: отрисовка живёт в wheel-math.js, чтобы казино
+       и рулетка рисовали одно и то же колесо. */
     VGWheel.draw(ctx, {
       size: size, rotation: current,
       segments: rules.wheel.segments, weights: rules.wheel.weights,
-      colors: colors(), center: 'VERTU'
+      center: 'VERTU'
     });
+  }
+
+  /* --- блок результата ------------------------------------------------------ */
+
+  function renderIdle(message) {
+    var box = $('#wheelResult');
+    if (!box) return;
+    box.className = 'rl-result is-idle';
+    setText('#rlMult', '');
+    setText('#rlMath', '');
+    setText('#rlNet', '');
+    setText('#rlHint', message || T('Готово к вращению', 'Ready to spin'));
+  }
+
+  function renderSpinning(free) {
+    var box = $('#wheelResult');
+    if (!box) return;
+    box.className = 'rl-result is-spin';
+    setText('#rlMult', '…');
+    setText('#rlMath', free ? T('Бесплатный спин', 'Free spin')
+      : T('Списано ' + fmt(stake) + ' V', 'Charged ' + fmt(stake) + ' V'));
+    setText('#rlNet', '');
+    setText('#rlHint', T('Колесо вращается…', 'Spinning…'));
+  }
+
+  function renderResult(data) {
+    var box = $('#wheelResult');
+    if (!box) return;
+    var payout = Number(data.payout) || 0;
+    var charged = Number(data.charge) || 0;
+    var net = data.net != null ? Number(data.net) : payout - charged;
+    var kind = payout > 0 ? (net > 0 ? 'is-win' : 'is-even') : 'is-lose';
+    box.className = 'rl-result ' + kind;
+    setText('#rlMult', 'x' + data.multiplier);
+    /* Сама арифметика: ставка × множитель = выплата (полная, вместе со ставкой). */
+    setText('#rlMath', fmt(data.stake) + ' × ' + data.multiplier + ' = ' + fmt(payout) + ' V');
+    setText('#rlNet', T('Итог: ', 'Net: ') + (net >= 0 ? '+' : '−') + fmt(Math.abs(net)) + ' V · ' +
+      T('баланс ', 'balance ') + fmt(data.balance) + ' V');
+    setText('#rlHint', data.free
+      ? T('Бесплатный спин', 'Free spin')
+      : (payout > 0 ? T('Выплата зачислена', 'Payout credited')
+        : T('Ставка списана, выплаты нет', 'Stake charged, no payout')));
+  }
+
+  /* Таблица выплат для выбранной ставки: столько же чисел, сколько пришлёт сервер. */
+  function renderPayouts() {
+    var box = $('#rlPayouts');
+    if (!box || !rules || !rules.wheel) return;
+    box.innerHTML = (rules.wheel.probabilities || []).map(function (row) {
+      var mult = Number(row.multiplier);
+      return '<div><span class="m' + mult + '"><b>x' + mult + '</b> · ' +
+        Math.round(row.chance * 100) + '%</span><span>' + fmt(stake * mult) + ' V</span></div>';
+    }).join('');
   }
 
   function cacheLimits(data) {
@@ -60,15 +119,13 @@
     return two(h) + ':' + two(m) + ':' + two(sec);
   }
 
-  /* Кнопка, баннер и чип лимитов: блокировка до полуночи UTC с обратным отсчётом. */
+  /* Кнопка, результат и чип лимитов: блокировка до полуночи UTC с обратным отсчётом. */
   function renderLimits(data) {
     var button = $('#spinWheel');
-    var banner = $('#wheelResult');
     var chip = $('#wheelLimits');
     var freeBox = $('#useFree');
     if (!data) return;
     limits = data;
-    var left = Math.max(0, (data.resetAt - (data.serverNow || Date.now() / 1000)) * 1000);
     var blocked = data.freeLeft <= 0 && data.paidLeft <= 0;
     if (!blocked) clearLimitCache(); else cacheLimits(data);
     if (chip) {
@@ -88,16 +145,15 @@
       button.disabled = busy;
       button.removeAttribute('data-blocked');
       button.innerHTML = VG.icon('wheel', 16) + ' ' + T('Крутить', 'Spin');
-      if (banner && !busy) {
-        banner.className = 'result-banner';
-        banner.textContent = data.freeLeft > 0
-          ? T('Доступен бесплатный спин. Ставка ' + stake + ' V.', 'A free spin is available. Stake ' + stake + ' V.')
+      if (!busy) {
+        renderIdle(data.freeLeft > 0
+          ? T('Доступен бесплатный спин. Ставка ' + stake + ' V.',
+              'A free spin is available. Stake ' + stake + ' V.')
           : T('Осталось платных вращений: ' + data.paidLeft + '. Ставка ' + stake + ' V.',
-              'Paid spins left: ' + data.paidLeft + '. Stake ' + stake + ' V.');
+              'Paid spins left: ' + data.paidLeft + '. Stake ' + stake + ' V.'));
       }
       return;
     }
-    // Лимит исчерпан: блокируем кнопку и показываем обратный отсчёт до сброса.
     button.disabled = true;
     button.setAttribute('data-blocked', '1');
     var tick = function () {
@@ -105,12 +161,10 @@
       var remaining = Math.max(0, (data.resetAt * 1000) - now);
       button.innerHTML = VG.icon('clock', 16) + ' ' +
         T('Следующее вращение через ' + formatLeft(remaining), 'Next spin in ' + formatLeft(remaining));
-      if (banner && !busy) {
-        banner.className = 'result-banner lose';
-        banner.textContent = T(
-          'Лимит на сегодня исчерпан (1 бесплатное + 5 платных). Новые вращения — через ' +
+      if (!busy) {
+        renderIdle(T('Лимит на сегодня исчерпан (1 бесплатное + 5 платных). Новые вращения — через ' +
           formatLeft(remaining) + ' (00:00 UTC).',
-          'Daily limit reached (1 free + 5 paid). New spins in ' + formatLeft(remaining) + ' (00:00 UTC).');
+          'Daily limit reached (1 free + 5 paid). New spins in ' + formatLeft(remaining) + ' (00:00 UTC).'));
       }
       if (remaining <= 0) {
         clearInterval(countdownTimer);
@@ -134,10 +188,17 @@
       var label = box && box.parentElement.querySelector('span');
       if (label) label.textContent = (data.freeSpin)
         ? T('Использовать бесплатный спин (доступен сегодня)', 'Use the free spin (available today)')
-        : T('Бесплатный спин уже использован — спинов за V', 'Free spin used — spins cost V');
+        : T('Бесплатный спин уже использован — спины за V', 'Free spin used — spins cost V');
       if (data.wheelLimits) renderLimits(data.wheelLimits);
       else if (box) box.disabled = !data.freeSpin;
     }).catch(function () {});
+  }
+
+  function setBusy(value) {
+    busy = value;
+    var button = $('#spinWheel');
+    if (button && value) button.disabled = true;
+    $$('#wheelStakes [data-stake]').forEach(function (node) { node.disabled = value; });
   }
 
   function spin() {
@@ -157,37 +218,27 @@
       VG.toast(T('Недостаточно V-монет для этой ставки.', 'Not enough V-coins for this stake.'), 'bad');
       return;
     }
-    busy = true;
+    setBusy(true);
     if (sfx) { sfx.unlock(); sfx.press(); }
-    var button = $('#spinWheel');
-    button.disabled = true;
-    var banner = $('#wheelResult');
-    banner.className = 'result-banner';
-    // Явно показываем, что ставка уже списана, — а выплата будет в конце.
-    banner.textContent = free
-      ? T('Бесплатный спин · колесо вращается…', 'Free spin · spinning…')
-      : T('Ставка ' + fmt(stake) + ' V списана · колесо вращается…',
-          'Stake ' + fmt(stake) + ' V charged · spinning…');
+    renderSpinning(free);
 
-    // Ставка списывается в момент старта: показываем это сразу, не дожидаясь
-    // конца анимации. Итог (зачисление payout) придёт от сервера ниже.
+    /* Ставка списывается на старте: показываем это сразу. Итоговое начисление
+       придёт от сервера, и баланс выставится ровно по его ответу. */
     if (!free) VG.updateCoins(Math.max(0, VG.coins() - stake));
 
     VG.api('/api/casino/wheel', { body: { stake: stake, free: free } }).then(function (data) {
       var weights = rules.wheel.weights || [];
-      // Геометрия — из единственной реализации (wheel-math.js): колесо обязано
-      // встать именно на сектор data.segment, который оплатил сервер. Ширина
-      // сектора равна его вероятности, поэтому «дорога» до x10 короче, чем до x0.
+      /* Геометрия — из единственной реализации (wheel-math.js): колесо обязано
+         встать ровно на сектор `data.segment`, за который заплатил сервер. */
       var target = VGWheel.target(rotation, data.segment, weights, 6);
       var from = rotation;
       var start = performance.now();
       var lastIndex = VGWheel.segmentAt(from, weights);
       (function animate(now) {
-        var elapsed = Math.min((now - start) / 3400, 1);
+        var elapsed = Math.min((now - start) / 3600, 1);
         var eased = 1 - Math.pow(1 - elapsed, 3.2);
         var current = from + (target - from) * eased;
         draw(current);
-        // Тик при переходе границы сектора — звук замедляется вместе с колесом.
         var tickIndex = VGWheel.segmentAt(current, weights);
         if (sfx && tickIndex !== lastIndex) {
           lastIndex = tickIndex;
@@ -195,50 +246,34 @@
         }
         if (elapsed < 1) return requestAnimationFrame(animate);
         rotation = VGWheel.normalize(target);
-        busy = false;
+        setBusy(false);
         VG.updateCoins(data.balance);
         if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
-        if (data.limits) renderLimits(data.limits); else button.disabled = false;
-        // Общая сумма выплаты и чистое изменение баланса — разные числа:
-        // x1 -> выплата равна ставке (баланс не изменился), x2 -> выплата
-        // двойная (чистый плюс равен ставке), x0 -> выплаты нет.
+        renderResult(data);
         var net = (data.net != null) ? Number(data.net) : (Number(data.payout) - (data.free ? 0 : stake));
-        // Показываем саму арифметику: ставка × множитель = выплата. Так игрок
-        // видит, что «×2 при ставке 20» — это ровно 40, а не 5 и не 10.
-        var rule = fmt(data.stake) + ' × ' + data.multiplier + ' = ' + fmt(data.payout) + ' V';
-        if (data.payout > 0) {
-          banner.className = 'result-banner ' + (net > 0 ? 'win' : 'even');
-          banner.textContent = (data.free ? T('Бесплатный спин! ', 'Free spin! ') : '') +
-            'x' + data.multiplier + ' · ' + rule +
-            ' · ' + T('итог ' + (net >= 0 ? '+' : '') + fmt(net) + ' V',
-              'net ' + (net >= 0 ? '+' : '') + fmt(net) + ' V');
-          // Тост — только про чистый плюс: «+5 V» при потере 15 монет путал.
-          if (net > 0) VG.toast('+' + fmt(net) + ' V');
-        } else {
-          banner.className = 'result-banner lose';
-          banner.textContent = data.free
-            ? T('Сектор x0 · бесплатный спин, выплаты нет',
-                'x0 · free spin, no payout')
-            : T('Сектор x0 · ставка ' + fmt(stake) + ' V списана, выплаты нет',
-                'x0 · stake ' + fmt(stake) + ' V charged, no payout');
-        }
+        if (!data.free && net > 0) VG.toast('+' + fmt(net) + ' V');
+        if (data.limits) renderLimits(data.limits); else if ($('#spinWheel')) $('#spinWheel').disabled = false;
         loadFreeState();
         loadHistory();
         loadStats();
       })(start);
     }).catch(function (error) {
-      busy = false;
-      // Ставка не принята сервером — возвращаем показанный баланс к реальному.
+      setBusy(false);
+      /* Ставка не принята сервером — возвращаем баланс к реальному состоянию. */
       VG.refreshCoins();
       if (error.limits) {
-        // Сервер вернул состояние лимитов вместе с ошибкой — включаем отсчёт.
         renderLimits(error.limits);
         VG.toast(error.message, 'bad');
         return;
       }
-      banner.className = 'result-banner lose';
-      banner.textContent = error.message;
-      button.disabled = false;
+      var box = $('#wheelResult');
+      if (box) box.className = 'rl-result is-lose';
+      setText('#rlMult', '');
+      setText('#rlMath', '');
+      setText('#rlNet', '');
+      setText('#rlHint', error.message);
+      var button = $('#spinWheel');
+      if (button) button.disabled = false;
     });
   }
 
@@ -255,7 +290,7 @@
         return;
       }
       box.innerHTML = data.items.map(function (row) {
-        // Списывается ставка, зачисляется выплата; справа — итог за спин.
+        /* Списание и начисление — отдельно, справа итог за спин. */
         var rowNet = Number(row.payout) - Number(row.stake);
         return '<div class="list-row"><span class="ico">' + VG.icon(row.payout > 0 ? 'trophy' : 'dice', 16) + '</span>' +
           '<span class="meta"><b>' + escapeHtml(VG.casinoOutcome(row.outcome)) + '</b><small>' + VG.timeAgo(row.created) +
@@ -287,6 +322,7 @@
     if (!rules) return;
     canvas = $('#wheelCanvas');
     ctx = canvas && canvas.getContext('2d');
+    renderPayouts();
     draw(rotation);
     window.addEventListener('resize', VG.debounce(function () { draw(rotation); }, 150));
 
@@ -294,15 +330,13 @@
     if (row) {
       row.addEventListener('click', function (event) {
         var button = event.target.closest('[data-stake]');
-        if (!button) return;
+        if (!button || busy) return;
         stake = Number(button.getAttribute('data-stake'));
         $$('[data-stake]', row).forEach(function (node) { node.classList.toggle('on', node === button); });
-        var banner = $('#wheelResult');
-        if (banner && !busy) {
-          banner.className = 'result-banner';
-          banner.textContent = T('Ставка ' + stake + ' V · возможный выигрыш до ' + stake * 5 + ' V',
-            'Stake ' + stake + ' V · max win ' + stake * 5 + ' V');
-        }
+        renderPayouts();
+        if (limits && limits.freeLeft <= 0 && limits.paidLeft <= 0) return;
+        renderIdle(T('Ставка ' + stake + ' V · возможный выигрыш до ' + stake * 5 + ' V',
+          'Stake ' + stake + ' V · max win ' + stake * 5 + ' V'));
       });
     }
     var button = $('#spinWheel');
@@ -313,6 +347,7 @@
     }
     loadFreeState();
     loadHistory();
+    loadStats();
     VG.onChange(function () {
       loadFreeState();
       loadHistory();

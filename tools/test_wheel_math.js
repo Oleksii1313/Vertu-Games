@@ -1,16 +1,14 @@
 #!/usr/bin/env node
-/* Тест колеса: секторы пропорциональны вероятностям и колесо встаёт на
- * оплаченный сервером сектор.
+/* Тест колеса: 20 равных секторов по 18° и остановка на оплаченном секторе.
  *
- * Проверяется настоящий `assets/vg/js/wheel-math.js` (без копий формулы):
+ * Конфигурация берётся не из копии, а из сгенерированного
+ * `assets/vg/js/catalog-data.js` (VG_DATA.casino.wheel), то есть из того же
+ * `game_catalog.py`, что отдаёт сервер:
  *
- * 1. вероятности из весов совпадают с требованиями (48/27/16/6/1/1.5/0.5 %) и
- *    дают ровно 100 % и RTP 93.5 %;
- * 2. ширина сектора на колесе пропорциональна его вероятности (x0 в 96 раз
- *    шире x10);
+ * 1. множители только x0/x1/x2/x5, вероятности 35/50/10/5 %, RTP 95 %;
+ * 2. все секторы одинаковой ширины — 18°;
  * 3. для каждого сектора и любого начального угла `segmentAt(target(...))`
- *    возвращает именно этот сектор — то есть колесо останавливается там, за что
- *    заплатил сервер;
+ *    возвращает именно этот сектор — колесо встаёт там, за что заплатил сервер;
  * 4. колесо всегда крутится вперёд минимум на 6 оборотов.
  *
  * Запуск: node tools/test_wheel_math.js
@@ -41,36 +39,57 @@ function check(name, condition, detail) {
   console.error('FAIL: ' + name + (detail ? ' — ' + detail : ''));
 }
 
-/* Ровно те значения, что отдаёт сервер (game_catalog.WHEEL_SEGMENTS/WEIGHTS). */
-const SEGMENTS = [0, 10, 1, 5, 2, 4, 3];
-const WEIGHTS = [480, 5, 270, 15, 160, 10, 60];
-const EXPECTED = { 0: 0.48, 1: 0.27, 2: 0.16, 3: 0.06, 4: 0.01, 5: 0.015, 10: 0.005 };
-const TWO_PI = Math.PI * 2;
+/* Конфигурация сервера: тот же файл, что читает браузер на страницах. */
+const dataSource = fs.readFileSync(
+  path.join(__dirname, '..', 'assets', 'vg', 'js', 'catalog-data.js'), 'utf8');
+const dataWindow = {};
+new Function('window', dataSource)(dataWindow);
+const WHEEL = (dataWindow.VG_DATA && dataWindow.VG_DATA.casino
+  && dataWindow.VG_DATA.casino.wheel) || null;
+if (!WHEEL || !Array.isArray(WHEEL.segments) || !Array.isArray(WHEEL.weights)) {
+  console.error('catalog-data.js не содержит wheel.segments/weights');
+  process.exit(1);
+}
 
-/* 0. Набор множителей: только целые, без старых дробных. */
-const sorted = SEGMENTS.slice().sort((a, b) => a - b);
-check('множители ровно x0,x1,x2,x3,x4,x5,x10', sorted.join(',') === '0,1,2,3,4,5,10', sorted.join(','));
-check('нет дробных множителей', SEGMENTS.every((m) => Number.isInteger(m)), SEGMENTS.join(','));
-check('нет дубликатов', new Set(SEGMENTS).size === SEGMENTS.length, SEGMENTS.join(','));
+const SEGMENTS = WHEEL.segments;
+const WEIGHTS = WHEEL.weights;
+const TWO_PI = Math.PI * 2;
+const EXPECTED = { 0: 0.35, 1: 0.5, 2: 0.1, 5: 0.05 };
+const SECTOR_COUNT = { 0: 7, 1: 10, 2: 2, 5: 1 };
+
+/* 0. Набор множителей: только x0/x1/x2/x5, 20 секторов. */
+const sorted = Array.from(new Set(SEGMENTS)).sort((a, b) => a - b);
+check('множители ровно x0,x1,x2,x5', sorted.join(',') === '0,1,2,5', sorted.join(','));
+check('все множители целые', SEGMENTS.every(Number.isInteger), SEGMENTS.join(','));
+check('20 секторов', SEGMENTS.length === 20, String(SEGMENTS.length));
+check('20 весов', WEIGHTS.length === 20, String(WEIGHTS.length));
+Object.keys(SECTOR_COUNT).forEach((mult) => {
+  const count = SEGMENTS.filter((value) => value === Number(mult)).length;
+  check(`секторов x${mult} = ${SECTOR_COUNT[mult]}`,
+    count === SECTOR_COUNT[mult], String(count));
+});
+check('соседние секторы разные',
+  SEGMENTS.every((value, index) => value !== SEGMENTS[(index + 1) % SEGMENTS.length]), '');
 
 /* 1. Вероятности и RTP. */
 const totalWeight = WEIGHTS.reduce((a, b) => a + b, 0);
-check('сумма весов = 1000', totalWeight === 1000, String(totalWeight));
+check('веса равные', new Set(WEIGHTS).size === 1, WEIGHTS.join(','));
+check('сумма весов = 20', totalWeight === 20, String(totalWeight));
 
 let rtp = 0;
 let sumChance = 0;
 const layout = W.layout(WEIGHTS);
-SEGMENTS.forEach((mult, index) => {
-  const share = layout[index].share;
-  const chance = WEIGHTS[index] / totalWeight;
+sorted.forEach((mult) => {
+  const sectors = SEGMENTS.filter((value) => value === mult).length;
+  const chance = sectors / SEGMENTS.length;
   sumChance += chance;
   rtp += chance * mult;
   check(`вероятность x${mult} = ${EXPECTED[mult] * 100}%`,
-    Math.abs(share - EXPECTED[mult]) < 1e-12,
-    String(share));
+    Math.abs(chance - EXPECTED[mult]) < 1e-12,
+    String(chance));
 });
 check('сумма вероятностей = 100%', Math.abs(sumChance - 1) < 1e-12, String(sumChance));
-check('RTP колеса = 93.5%', Math.abs(rtp - 0.935) < 1e-12, String(rtp));
+check('RTP колеса = 95%', Math.abs(rtp - 0.95) < 1e-12, String(rtp));
 
 /* 2. Ширина сектора пропорциональна вероятности. */
 SEGMENTS.forEach((mult, index) => {
@@ -79,12 +98,12 @@ SEGMENTS.forEach((mult, index) => {
     Math.abs(sweepShare - WEIGHTS[index] / totalWeight) < 1e-12,
     String(sweepShare));
 });
-const sweepOf = (m) => layout[SEGMENTS.indexOf(m)].sweep;
-check('x0 самый широкий', sweepOf(0) > sweepOf(1) && sweepOf(1) > sweepOf(2), '');
-check('x10 самый узкий', sweepOf(10) < sweepOf(4) && sweepOf(4) < sweepOf(5), '');
-check('x0 ровно в 96 раз шире x10',
-  Math.abs(sweepOf(0) / sweepOf(10) - 96) < 1e-9, String(sweepOf(0) / sweepOf(10)));
-check('секторы не одинаковые', new Set(layout.map((s) => s.sweep.toFixed(6))).size === 7, '');
+check('все секторы по 18°', layout.every((item) => {
+  const degrees = item.sweep * 360 / TWO_PI;
+  return Math.abs(degrees - 18) < 1e-9;
+}), layout.map((item) => (item.sweep * 360 / TWO_PI).toFixed(3)).join(','));
+check('все секторы одинаковой ширины',
+  new Set(layout.map((item) => item.sweep.toFixed(9))).size === 1, '');
 
 /* 3. Остановка ровно на оплаченном секторе при любом начальном угле. */
 for (let start = 0; start < TWO_PI; start += 0.013) {
