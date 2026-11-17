@@ -196,6 +196,12 @@ def main():
               served.get('probabilities') == expected_rows, str(served.get('probabilities')))
         check('в отдаваемом roulette.html нет дробных множителей',
               served.get('legacy_multipliers') is False, str(served))
+        casino_served = (version.get('pages') or {}).get('casino.html') or {}
+        # В casino.html выше таблицы слотов, поэтому множители колеса — хвост списка.
+        check('страница казино тоже перечисляет новые множители колеса',
+              (casino_served.get('probabilities') or [])[-7:] == expected_rows
+              and casino_served.get('legacy_multipliers') is False,
+              str(casino_served.get('probabilities')))
         page_bytes = (ROOT / 'roulette.html').read_bytes()
         check('sha256 отдаваемой страницы совпадает с файлом в репозитории',
               served.get('sha256') == hashlib.sha256(page_bytes).hexdigest()[:16],

@@ -163,7 +163,7 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 191 проверка
+.venv/bin/python tools/check_platform.py                      # SQLite, 204 проверки
 DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 180 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (25)

@@ -805,7 +805,7 @@ if origin in ALLOWED:
 ## 5. Проверки
 
 ```bash
-# сквозные: 191 проверка, включая подделку билета и отсутствие награды без билета
+# сквозные: 204 проверки, включая подделку билета и отсутствие награды без билета
 python tools/check_platform.py
 DATABASE_URL=postgresql://… python tools/check_platform.py
 
