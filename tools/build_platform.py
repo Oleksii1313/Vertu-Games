@@ -128,6 +128,18 @@ def scripts(extra: str = '') -> str:
             f'{extra}\n</body>\n</html>')
 
 
+def cover_art(game: dict, alt_mode: str = 'empty') -> str:
+    """Обложка игры: арт-файл assets/vg/img/games/<id>.jpg.
+
+    Разметка та же, что была у иконки: класс ``art``, его анимация при наведении
+    и позиционирование сохраняются. ``alt_mode`` — 'empty' для декоративной
+    обложки карточки и 'name' там, где картинка несёт смысл сама по себе.
+    """
+    alt = E(game['name']) if alt_mode == 'name' else ''
+    return (f'<img class="art" src="assets/vg/img/games/{E(game["id"])}.jpg" '
+            f'alt="{alt}" width="1200" height="750" loading="lazy" decoding="async">')
+
+
 def game_card(game: dict, index: int, compact: bool = False) -> str:
     tag = game['tag']
     badge_class = {'NEW': 'badge-new', 'HOT': 'badge-hot'}.get(tag, 'badge-line')
@@ -136,7 +148,7 @@ def game_card(game: dict, index: int, compact: bool = False) -> str:
   <div class="game-cover cover-{index % 8}">
     <div class="tags"><span class="badge {badge_class}">{E(tag)}</span></div>
     <span class="reward"><span data-ico="coin"></span>+{game['reward']} V</span>
-    <span class="art" data-ico="{E(game['icon'])}" data-size="64"></span>
+    {cover_art(game)}
   </div>
   <div class="game-body">
     <h3>{E(game['name'])}</h3>
@@ -155,7 +167,7 @@ def casino_card() -> str:
   <div class="game-cover cover-{E(card['cover'])}">
     <div class="tags"><span class="badge badge-hot">{E(card['tag'])}</span></div>
     <span class="reward"><span data-ico="wheel"></span>до x5</span>
-    <span class="art" data-ico="{E(card['icon'])}" data-size="64"></span>
+    {cover_art(card)}
   </div>
   <div class="game-body">
     <h3>{E(card['name'])}</h3>
@@ -171,7 +183,7 @@ def build_index() -> str:
     featured = visible_games()[:2]
     featured_html = ''.join(
         f'''<a class="feature" href="#" data-game="{E(g['id'])}">
-  <div class="feature-art cover-{i % 8}"><span data-ico="{E(g['icon'])}" data-size="72"></span></div>
+  <div class="feature-art cover-{i % 8}">{cover_art(g, alt_mode='name')}</div>
   <div class="feature-body"><span class="badge badge-new">NEW</span><h3>{E(g['name'])}</h3><p>{E(g['desc'])}</p>
   <span class="btn btn-sm btn-ghost">Играть {VG_ARROW}</span></div>
 </a>''' for i, g in enumerate(featured))

@@ -196,7 +196,7 @@ input::placeholder,textarea::placeholder{color:var(--dim)}
 .game-card:hover{transform:translateY(-5px);border-color:rgba(255,255,255,.2);box-shadow:0 30px 60px -30px rgba(139,92,246,.7)}
 .game-cover{position:relative;aspect-ratio:16/10;display:grid;place-items:center;overflow:hidden}
 .game-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,rgba(7,8,12,.86) 100%)}
-.game-cover .art{width:64px;height:64px;color:#fff;opacity:.95;filter:drop-shadow(0 12px 26px rgba(0,0,0,.55));z-index:1;transform:translateZ(0);transition:transform .3s var(--ease)}
+.game-cover .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;color:#fff;opacity:.95;filter:drop-shadow(0 12px 26px rgba(0,0,0,.55));z-index:1;transform:translateZ(0);transition:transform .3s var(--ease)}
 .game-card:hover .game-cover .art{transform:scale(1.08) rotate(-3deg)}
 .game-cover .tags{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:2}
 .game-cover .reward{position:absolute;top:10px;right:10px;z-index:2;display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:999px;background:rgba(7,8,12,.72);border:1px solid rgba(198,255,61,.34);color:#dcff8a;font-size:11px;font-weight:800;backdrop-filter:blur(6px)}
@@ -520,8 +520,10 @@ details[open] summary{border-bottom:1px solid var(--line)}
 .feature{display:grid;grid-template-columns:150px 1fr;gap:16px;border-radius:20px;overflow:hidden;
   border:1px solid var(--line);background:var(--surface);transition:.25s var(--ease)}
 .feature:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.2)}
-.feature-art{display:grid;place-items:center;min-height:150px;color:#fff}
+.feature-art{display:grid;place-items:center;min-height:150px;color:#fff;position:relative;overflow:hidden}
 .feature-art span{filter:drop-shadow(0 12px 26px rgba(0,0,0,.6))}
+.feature-art .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s var(--ease)}
+.feature:hover .feature-art .art{transform:scale(1.05)}
 .feature-body{padding:16px 18px 18px 0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .feature-body h3{font-size:19px}
 .feature-body p{margin:0;color:var(--muted);font-size:12.5px}
