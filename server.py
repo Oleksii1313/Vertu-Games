@@ -428,12 +428,19 @@ def _page_fingerprint(name: str) -> dict:
     except OSError:
         return {'exists': False}
     text = raw.decode('utf-8', 'ignore')
-    rows = re.findall(r'<tr><td>x(\d+(?:\.\d+)?)</td><td>([\d.]+)%</td></tr>', text)
+    # Страницы свёрстаны по-разному: в рулетке строка «xN | 48.0%», в казино —
+    # «xN | вес | вероятность | вклад в RTP». Берём из строки первый процент.
+    rows = []
+    for row in re.findall(r'<tr>(.*?)</tr>', text):
+        mult = re.search(r'<td>x(\d+(?:\.\d+)?)</td>', row)
+        chance = re.search(r'(\d+(?:\.\d+)?%)', row)
+        if mult and chance:
+            rows.append('x%s %s' % (mult.group(1), chance.group(1)))
     return {
         'exists': True,
         'bytes': len(raw),
         'sha256': hashlib.sha256(raw).hexdigest()[:16],
-        'probabilities': ['x%s %s%%' % (mult, chance) for mult, chance in rows],
+        'probabilities': rows,
         'legacy_multipliers': any(tag in text for tag in ('x0.25', 'x0.5')),
     }
 

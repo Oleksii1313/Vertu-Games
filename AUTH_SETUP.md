@@ -65,7 +65,7 @@
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py      # 191 проверка, включая CSRF и сессии
+.venv/bin/python tools/check_platform.py      # 204 проверки, включая CSRF и сессии
 .venv/bin/python -m unittest tools.test_anticheat    # билеты, лимиты, заголовки
 .venv/bin/python tools/smoke_deploy.py https://<адрес> --admin-password '…'
 ```
