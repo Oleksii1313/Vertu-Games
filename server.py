@@ -330,9 +330,21 @@ def compress_response(response):
     return response
 
 
+# Фрейминг разрешён только своему origin: игры каталога открываются во фрейме
+# `#playOverlay` на top.html/index.html, а чужой сайт встроить платформу не может.
+# Админка — исключение: её нельзя встраивать даже со своего origin.
+ADMIN_PATHS = ('/admin.html', '/admin')
+
+
+def _is_admin_response() -> bool:
+    return any(request.path == p or request.path.startswith(p + '/') or
+               request.path.startswith(p + '.') for p in ADMIN_PATHS) \
+        or request.path.startswith('/api/admin/')
+
+
 @app.after_request
 def security_headers(response):
-    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'same-origin')
     response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
@@ -358,11 +370,18 @@ def security_headers(response):
     if external_3d:
         script_src += ' https://cdn.babylonjs.com'
         connect_src += ' https://cdn.babylonjs.com'
+    # frame-src 'self' — страница может вложить свои же игры (каталог → iframe),
+    # frame-ancestors 'self' — вложить саму платформу может только свой origin.
+    frame_ancestors = "'self'"
+    if _is_admin_response():
+        response.headers['X-Frame-Options'] = 'DENY'
+        frame_ancestors = "'none'"
     response.headers.setdefault(
         'Content-Security-Policy',
         f"default-src 'self'; script-src {script_src}; style-src {style_src}; "
         f"img-src 'self' data: blob:; font-src {font_src}; connect-src {connect_src}; "
-        "frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; "
+        "frame-src 'self' https://challenges.cloudflare.com; "
+        f"frame-ancestors {frame_ancestors}; "
         "base-uri 'self'; form-action 'self'; object-src 'none'; worker-src 'self' blob:")
     # CSRF-токен выдаём на любом ответе, если куки ещё нет: клиент читает её и
     # возвращает заголовком X-CSRF-Token. Double-submit cookie, без состояния.

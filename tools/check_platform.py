@@ -342,12 +342,25 @@ def main():
         status, _ = alice.get('/')
         hdrs = alice.last_headers
         csp = str(hdrs.get('Content-Security-Policy', ''))
-        check('CSP запрещает внешние скрипты и framing',
-              'default-src' in csp and "frame-ancestors 'none'" in csp and "object-src 'none'" in csp,
-              csp[:140])
+        check('CSP запрещает внешние скрипты',
+              'default-src' in csp and "object-src 'none'" in csp, csp[:140])
         check('CSP без unsafe-eval', 'unsafe-eval' not in csp, 'ok')
-        check('клики по сайту запрещены (X-Frame-Options)',
-              hdrs.get('X-Frame-Options') == 'DENY', str(hdrs.get('X-Frame-Options')))
+        check('свои игры можно вложить во фрейм (каталог → плеер)',
+              "frame-src 'self'" in csp and "frame-ancestors 'self'" in csp, csp[:160])
+        check('чужой сайт вложить платформу не может (X-Frame-Options)',
+              hdrs.get('X-Frame-Options') == 'SAMEORIGIN', str(hdrs.get('X-Frame-Options')))
+        alice.get('/admin.html')
+        admin_headers = alice.last_headers
+        check('админку нельзя вложить даже с своего домена',
+              admin_headers.get('X-Frame-Options') == 'DENY'
+              and "frame-ancestors 'none'" in str(admin_headers.get('Content-Security-Policy', '')),
+              str(admin_headers.get('X-Frame-Options')))
+        alice.get('/games/flappy.html')
+        game_headers = alice.last_headers
+        check('страница игры разрешает фрейм с того же домена',
+              game_headers.get('X-Frame-Options') == 'SAMEORIGIN'
+              and "frame-src 'self'" in str(game_headers.get('Content-Security-Policy', '')),
+              str(game_headers.get('X-Frame-Options')))
         check('MIME-sniffing запрещён', hdrs.get('X-Content-Type-Options') == 'nosniff',
               str(hdrs.get('X-Content-Type-Options')))
         flat_csp = csp

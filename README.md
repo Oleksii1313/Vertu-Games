@@ -90,9 +90,10 @@ export DATABASE_URL="postgres://..."
 * Rate limiting в три уровня: токен-бакет в памяти → скользящее окно в БД →
   Cloudflare. Поведенческие аномалии (частота, V/мин, «машинный» интервал)
   сначала занижают выплату, потом блокируют и пишут в журнал админа.
-* CSP, HSTS preload, `X-Frame-Options: DENY`, COOP/CORP, nosniff,
-  Permissions-Policy — на каждом ответе; сторонние хосты (шрифты, Babylon.js
-  для 3D-игр) перечислены явно.
+* CSP, HSTS preload, `X-Frame-Options: SAMEORIGIN` + `frame-ancestors 'self'`
+  (игры открываются во фрейме каталога, чужой сайт вложить платформу не может;
+  админка — `DENY`), COOP/CORP, nosniff, Permissions-Policy — на каждом ответе;
+  сторонние хосты (шрифты, Babylon.js для 3D-игр) перечислены явно.
 * `TRUSTED_PROXY=1` — обязателен на Render/Cloudflare, иначе IP клиента
   берётся из сокета, а не из подделываемого `X-Forwarded-For`.
 
@@ -152,10 +153,11 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 172 проверки
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 172 на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 175 проверок
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 175 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
-python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (24)
+python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (25)
+python -m unittest tools.test_wheel                 # колесо: ставка × множитель (8)
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```

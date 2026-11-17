@@ -202,7 +202,17 @@
     VG.api('/api/casino/wheel', { body: { stake: stake, free: free } }).then(function (data) {
       var segments = rules.wheel.segments || [];
       var arc = (Math.PI * 2) / segments.length;
-      var target = rotation + Math.PI * 2 * 6 - (data.segment * arc + arc / 2) + Math.PI * 2;
+      // Геометрия: сектор i занимает углы [rotation + i*arc, rotation + (i+1)*arc),
+      // указатель висит сверху — это угол 3*PI/2. Чтобы после остановки под
+      // указателем оказался именно сектор data.segment, итоговый поворот обязан
+      // давать 3*PI/2 - (segment*arc + arc/2) по модулю 2*PI. Раньше здесь не
+      // было слагаемого 3*PI/2, поэтому колесо останавливалось на соседнем
+      // секторе и выплата не совпадала с тем, что видит игрок.
+      var pointer = Math.PI * 3 / 2;
+      var desired = pointer - (data.segment * arc + arc / 2);
+      var delta = desired - rotation;
+      delta = ((delta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      var target = rotation + Math.PI * 2 * 6 + delta;
       var from = rotation;
       var start = performance.now();
       var lastTick = 0;
