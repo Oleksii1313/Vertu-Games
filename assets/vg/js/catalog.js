@@ -43,6 +43,13 @@
     games.forEach(function (game) {
       (game.cat || []).forEach(function (cat) { if (cats.indexOf(cat) === -1) cats.push(cat); });
     });
+    /* Карточки не из списка игр (рулетка казино) тоже добавляют свои жанры,
+       иначе фильтр «Казино» не смог бы её показать. */
+    cards().forEach(function (card) {
+      (card.getAttribute('data-cats') || '').split('|').forEach(function (cat) {
+        if (cat && cats.indexOf(cat) === -1) cats.push(cat);
+      });
+    });
     box.innerHTML = '<button class="chip on" data-cat="">Все</button>' + cats.map(function (cat) {
       return '<button class="chip" data-cat="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</button>';
     }).join('');
@@ -135,7 +142,10 @@
         if (!card) return;
         var id = card.getAttribute('data-game');
         var game = games.filter(function (g) { return g.id === id; })[0];
-        if (game) openDetails(game);
+        if (game) return openDetails(game);
+        /* Своя страница (рулетка) открывается сразу, без модалки правил. */
+        var href = card.getAttribute('data-href');
+        if (href) location.href = href;
       });
       grid.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -143,7 +153,9 @@
         if (!card) return;
         event.preventDefault();
         var game = games.filter(function (g) { return g.id === card.getAttribute('data-game'); })[0];
-        if (game) openDetails(game);
+        if (game) return openDetails(game);
+        var href = card.getAttribute('data-href');
+        if (href) location.href = href;
       });
     }
     if (VG.user()) VG.refreshCoins();

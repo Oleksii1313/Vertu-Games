@@ -215,6 +215,28 @@ GAMES = [
 GAME_IDS = {g['id'] for g in GAMES}
 GAMES_BY_ID = {g['id']: g for g in GAMES}
 
+# Карточка рулетки в каталоге. Отдельная запись, потому что это не игра с
+# наградой за действия, а социальное казино со своими ставками и лимитами;
+# карточка каталога — единственное место, где она смешивается с играми.
+CASINO_CARD = {
+    'id': 'roulette', 'name': 'Рулетка Vert', 'name_en': 'Vert Roulette',
+    'href': 'roulette.html', 'icon': 'wheel', 'tag': 'HOT', 'cover': 'roulette',
+    'cat': ['Казино', 'Удача'], 'cat_en': ['Casino', 'Luck'],
+    'desc': 'Испытай удачу и забери выигрыш до x5',
+    'desc_en': 'Try your luck and win up to x5',
+    'long_ru': 'Колесо фортуны Vertu Games: 20 равных секторов по 18°, четыре множителя — x0, x1, x2 и x5, '
+               'теоретический возврат 95 %.\n\nСтавка списывается до вращения, а выплата — это полная сумма: '
+               'ставка × множитель. Результат, начисление и история считает сервер в одной транзакции; '
+               'клиент только показывает присланный сектор.',
+    'long_en': 'The Vertu Games wheel of fortune: 20 equal 18° sectors, four multipliers — x0, x1, x2 and x5, '
+               'with a 95 % theoretical return.\n\nThe stake is charged before the spin and the payout is the '
+               'full amount: stake × multiplier. The server computes the result, the credit and the history in a '
+               'single transaction; the client only shows the returned sector.',
+    'stakes_ru': 'Ставки: 5, 10, 20, 25, 50 и 100 V. Бесплатное вращение — 1 в сутки, платных — до 5 в сутки.',
+    'stakes_en': 'Stakes: 5, 10, 20, 25, 50 and 100 V. One free spin per day and up to 5 paid spins per day.',
+    'rtp': 95,
+}
+
 
 def visible_games() -> list[dict]:
     """Игры, доступные на витрине: скрытые (``hidden``) не показываем и не запускаем."""
@@ -340,29 +362,31 @@ ACHIEVEMENTS = [
 # Версия сборки: попадает в <meta name="vertu-build">, в заголовок X-Build и в
 # /api/version. По ней видно, какая именно версия страниц реально отдаётся
 # сервером (а не закеширована браузером). Меняется при правках казино/колеса.
-APP_VERSION = '2026-11-17-wheel-v2'
+APP_VERSION = '2026-11-11-wheel-v3'
 
-# Колесо «Рулетки Vert»: только целые множители.
+# Колесо «Рулетки Vert»: 20 одинаковых секторов по 18°, только целые множители.
 #
-#   сектор | вес | вероятность | вклад в RTP (вес/1000 × множитель)
-#   x0     | 480 | 48.0 %      | 0.000
-#   x10    |   5 |  0.5 %      | 0.050
-#   x1     | 270 | 27.0 %      | 0.270
-#   x5     |  15 |  1.5 %      | 0.075
-#   x2     | 160 | 16.0 %      | 0.320
-#   x4     |  10 |  1.0 %      | 0.040
-#   x3     |  60 |  6.0 %      | 0.180
-#   ------------------------------------------
-#   сумма  |1000 | 100 %       | 0.935  → RTP 93.5 %
+#   множитель | секторов | вероятность | вклад в RTP
+#   x0        |    7     |    35 %     | 0.00
+#   x1        |   10     |    50 %     | 0.50
+#   x2        |    2     |    10 %     | 0.20
+#   x5        |    1     |     5 %     | 0.25
+#   ----------+----------+-------------+------------
+#   итого     |   20     |   100 %     | 0.95  → RTP 95 %
 #
-# Веса заданы в тысячных, поэтому вероятности ровные и их сумма всегда 100 %.
-# Порядок секторов на колесе чередует крупные и редкие, чтобы узкие секторы
-# (x10, x5, x4) не слипались в одну полосу и их подписи читались.
-WHEEL_SEGMENTS = [0, 10, 1, 5, 2, 4, 3]
-WHEEL_WEIGHTS = [480, 5, 270, 15, 160, 10, 60]
+# Секторы равные по геометрии (18° каждый), поэтому вероятности задаются
+# количеством секторов, а не шириной дуги. Веса у всех секторов одинаковые (1),
+# и колесо рисует ровно 18° на сектор.
+#
+# Одинаковые множители намеренно не стоят рядом (в том числе через границу
+# 19 → 0): соседние секторы всегда разные, чтобы границы читались.
+WHEEL_SECTORS = 20
+WHEEL_SECTOR_DEGREES = 18
+WHEEL_SEGMENTS = [0, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 5, 1, 0, 1, 0, 1, 0, 1]
+WHEEL_WEIGHTS = [1] * WHEEL_SECTORS
 
 # Для проверок и документации: ожидаемые вероятности (доли единицы).
-WHEEL_CHANCES = {0: 0.48, 10: 0.005, 1: 0.27, 5: 0.015, 2: 0.16, 4: 0.01, 3: 0.06}
+WHEEL_CHANCES = {0: 0.35, 1: 0.50, 2: 0.10, 5: 0.05}
 
 # Слоты: символы, выплата за три в ряд и вес.
 SLOT_SYMBOLS = [
@@ -379,9 +403,26 @@ CASINO_STAKES = [5, 10, 20, 25, 50, 100]
 
 
 def wheel_probabilities() -> list[dict]:
+    """Вероятности по множителям, а не по секторам.
+
+    Секторов 20 (по 18°), но множители повторяются, поэтому в таблице для
+    игрока — одна строка на множитель: сколько секторов, какая вероятность и
+    какой вклад в RTP.
+    """
     total = sum(WHEEL_WEIGHTS)
-    return [{'multiplier': m, 'weight': w, 'chance': round(w / total, 4),
-             'rtp': round(w / total * m, 4)} for m, w in zip(WHEEL_SEGMENTS, WHEEL_WEIGHTS)]
+    rows: dict = {}
+    order: list = []
+    for mult, weight in zip(WHEEL_SEGMENTS, WHEEL_WEIGHTS):
+        if mult not in rows:
+            rows[mult] = {'multiplier': mult, 'weight': 0, 'sectors': 0,
+                          'chance': 0.0, 'rtp': 0.0}
+            order.append(mult)
+        rows[mult]['weight'] += weight
+        rows[mult]['sectors'] += 1
+    for mult in order:
+        rows[mult]['chance'] = round(rows[mult]['weight'] / total, 6)
+        rows[mult]['rtp'] = round(rows[mult]['chance'] * mult, 6)
+    return [rows[mult] for mult in order]
 
 
 def wheel_rtp() -> float:
@@ -419,6 +460,7 @@ def casino_rules() -> dict:
     return {
         'stakes': CASINO_STAKES,
         'wheel': {'segments': WHEEL_SEGMENTS, 'weights': WHEEL_WEIGHTS,
+                  'sectors': WHEEL_SECTORS, 'sectorDegrees': WHEEL_SECTOR_DEGREES,
                   'probabilities': wheel_probabilities(), 'rtp': wheel_rtp()},
         'slots': {'symbols': SLOT_SYMBOLS, 'two_pay': SLOT_TWO_PAY,
                   'probabilities': slot_probabilities(), 'rtp': slot_rtp()},

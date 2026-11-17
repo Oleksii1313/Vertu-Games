@@ -212,6 +212,17 @@ input::placeholder,textarea::placeholder{color:var(--dim)}
 .cover-5{background:linear-gradient(135deg,#301a44,#5b2a70 55%,#0f0a17)}
 .cover-6{background:linear-gradient(135deg,#123b2e,#1d6149 55%,#081810)}
 .cover-7{background:linear-gradient(135deg,#3a1f12,#6f3418 55%,#170d08)}
+/* Обложка карточки рулетки: те же 20 секторов по 18°, что и на колесе. */
+.cover-roulette{background:
+  radial-gradient(circle at 50% 45%,rgba(255,255,255,.16),rgba(255,255,255,0) 58%),
+  conic-gradient(from -90deg,
+    #8b5cf6 0deg 18deg,#c6ff3d 18deg 36deg,#8b5cf6 36deg 54deg,#c6ff3d 54deg 72deg,
+    #2ee6c8 72deg 90deg,#c6ff3d 90deg 108deg,#8b5cf6 108deg 126deg,#c6ff3d 126deg 144deg,
+    #2ee6c8 144deg 162deg,#c6ff3d 162deg 180deg,#8b5cf6 180deg 198deg,#c6ff3d 198deg 216deg,
+    #ff2d95 216deg 234deg,#c6ff3d 234deg 252deg,#8b5cf6 252deg 270deg,#c6ff3d 270deg 288deg,
+    #8b5cf6 288deg 306deg,#c6ff3d 306deg 324deg,#8b5cf6 324deg 342deg,#c6ff3d 342deg 360deg);
+  box-shadow:inset 0 0 60px rgba(7,8,12,.55)}
+.game-card:hover .cover-roulette{filter:saturate(1.12) brightness(1.06)}
 
 /* ---------- hero ---------- */
 .hero{position:relative;margin-top:24px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--line);background:linear-gradient(115deg,rgba(18,14,30,.95) 0%,rgba(30,14,40,.9) 45%,rgba(12,16,24,.95) 100%);box-shadow:var(--shadow)}
@@ -520,3 +531,117 @@ details[open] summary{border-bottom:1px solid var(--line)}
 .cat-hero{padding:34px 30px;border-radius:24px;margin-top:22px;border:1px solid var(--line);
   background:linear-gradient(120deg,rgba(26,20,44,.92),rgba(12,16,24,.94))}
 @media(max-width:640px){.cat-hero{padding:22px 16px}}
+
+/* ============================================================================
+   РУЛЕТКА VERT · roulette.html
+   Всё ниже включается только на странице рулетки (body[data-page="roulette"]),
+   поэтому остальные страницы платформы не меняются.
+   ========================================================================== */
+body[data-page="roulette"] .rl-hero{display:flex;flex-direction:column;gap:18px;margin-top:18px}
+body[data-page="roulette"] .rl-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap}
+body[data-page="roulette"] .rl-head h1{font-family:var(--head);font-size:clamp(30px,4.4vw,52px);line-height:1.02;letter-spacing:-.03em;margin:8px 0 6px}
+body[data-page="roulette"] .rl-head p{margin:0;color:var(--muted);font-size:14px;max-width:56ch}
+body[data-page="roulette"] .rl-balance{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:16px;border:1px solid var(--line-2);background:var(--glass-strong);backdrop-filter:blur(14px);box-shadow:var(--shadow-soft)}
+body[data-page="roulette"] .rl-balance span{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:800}
+body[data-page="roulette"] .rl-balance b{font-family:var(--head);font-size:26px;font-weight:900;color:var(--lime);font-variant-numeric:tabular-nums}
+body[data-page="roulette"] .rl-balance i{font-style:normal;color:var(--lime);font-weight:900}
+
+body[data-page="roulette"] .rl-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(320px,.82fr);gap:20px;align-items:start}
+body[data-page="roulette"] .rl-stage{position:relative;display:grid;place-items:center;padding:clamp(14px,2.4vw,26px);border-radius:var(--radius-lg);border:1px solid var(--line);background:
+  radial-gradient(70% 70% at 50% 0%,rgba(198,255,61,.10),transparent 62%),
+  radial-gradient(80% 80% at 50% 100%,rgba(139,92,246,.16),transparent 66%),
+  linear-gradient(180deg,rgba(20,24,35,.92),rgba(9,11,17,.96));
+  box-shadow:var(--shadow);overflow:hidden}
+body[data-page="roulette"] .rl-stage::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(60% 50% at 50% 8%,rgba(198,255,61,.10),transparent 70%)}
+body[data-page="roulette"] .rl-stage canvas{display:block;width:100%;max-width:min(620px,64vh);height:auto;aspect-ratio:1/1;
+  filter:drop-shadow(0 34px 70px rgba(0,0,0,.75))}
+body[data-page="roulette"] .rl-pointer{position:absolute;top:clamp(6px,1.4vw,14px);left:50%;transform:translateX(-50%);z-index:4;
+  width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:28px solid var(--lime);
+  filter:drop-shadow(0 0 14px rgba(198,255,61,.85)) drop-shadow(0 6px 18px rgba(0,0,0,.6))}
+body[data-page="roulette"] .rl-pointer::after{content:"";position:absolute;left:-9px;top:-20px;width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,#f2ffd0,var(--lime));box-shadow:0 0 16px rgba(198,255,61,.9)}
+
+body[data-page="roulette"] .rl-panel{display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:var(--radius-lg);
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(20,24,35,.92),rgba(11,13,19,.96));box-shadow:var(--shadow-soft)}
+body[data-page="roulette"] .rl-panel-title{font-family:var(--head);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800}
+
+body[data-page="roulette"] .rl-result{position:relative;display:grid;gap:4px;padding:16px 18px;border-radius:18px;text-align:center;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.035);transition:border-color .2s,background .2s,box-shadow .2s}
+body[data-page="roulette"] .rl-result .rl-mult{font-family:var(--head);font-size:34px;font-weight:900;line-height:1;letter-spacing:-.02em}
+body[data-page="roulette"] .rl-result .rl-math{font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
+body[data-page="roulette"] .rl-result .rl-net{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+body[data-page="roulette"] .rl-result .rl-hint{font-size:13px;color:var(--muted);font-weight:700}
+body[data-page="roulette"] .rl-result.is-idle .rl-mult{display:none}
+body[data-page="roulette"] .rl-result.is-spin{border-color:rgba(198,255,61,.45);background:rgba(198,255,61,.08);box-shadow:0 0 0 1px rgba(198,255,61,.18),0 18px 40px -26px rgba(198,255,61,.9)}
+body[data-page="roulette"] .rl-result.is-win{border-color:rgba(198,255,61,.55);background:linear-gradient(120deg,rgba(198,255,61,.18),rgba(46,230,200,.10));box-shadow:0 22px 60px -34px rgba(198,255,61,.85)}
+body[data-page="roulette"] .rl-result.is-win .rl-mult{color:#dcff8a;text-shadow:0 0 22px rgba(198,255,61,.45)}
+body[data-page="roulette"] .rl-result.is-even{border-color:rgba(120,160,220,.42);background:rgba(120,160,220,.10)}
+body[data-page="roulette"] .rl-result.is-even .rl-mult{color:#cfe0f5}
+body[data-page="roulette"] .rl-result.is-lose{border-color:rgba(255,84,112,.38);background:rgba(255,84,112,.08)}
+body[data-page="roulette"] .rl-result.is-lose .rl-mult{color:#ffb3c0}
+
+body[data-page="roulette"] .rl-stakes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+body[data-page="roulette"] .rl-stakes button{display:grid;gap:2px;justify-items:center;padding:11px 8px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.045);color:var(--text);font-family:var(--head);font-weight:900;font-size:16px;
+  transition:transform .15s var(--ease),border-color .15s,background .15s,color .15s}
+body[data-page="roulette"] .rl-stakes button small{font-family:var(--body);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+body[data-page="roulette"] .rl-stakes button:hover{transform:translateY(-2px);border-color:rgba(198,255,61,.45);background:rgba(198,255,61,.08)}
+body[data-page="roulette"] .rl-stakes button.on{background:linear-gradient(135deg,rgba(198,255,61,.95),rgba(46,230,200,.85));color:#07120a;border-color:transparent;box-shadow:0 14px 34px -18px rgba(198,255,61,.9)}
+body[data-page="roulette"] .rl-stakes button.on small{color:rgba(7,18,10,.72)}
+
+body[data-page="roulette"] .rl-spin{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;
+  border:0;border-radius:16px;cursor:pointer;font-family:var(--head);font-size:16px;font-weight:900;letter-spacing:.02em;color:#07120a;
+  background:linear-gradient(120deg,#c6ff3d,#8ef0b4 55%,#2ee6c8);box-shadow:0 20px 46px -22px rgba(198,255,61,.95);
+  transition:transform .15s var(--ease),filter .15s}
+body[data-page="roulette"] .rl-spin:hover{transform:translateY(-2px);filter:brightness(1.06)}
+body[data-page="roulette"] .rl-spin:active{transform:translateY(0)}
+body[data-page="roulette"] .rl-spin[disabled]{cursor:not-allowed;background:rgba(255,255,255,.07);color:var(--muted);box-shadow:none;transform:none}
+body[data-page="roulette"] .rl-spin[data-blocked]{font-size:14px;font-variant-numeric:tabular-nums}
+
+body[data-page="roulette"] .rl-free{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-2);cursor:pointer;user-select:none}
+body[data-page="roulette"] .rl-free input{appearance:none;width:20px;height:20px;border-radius:6px;border:1px solid var(--line-2);
+  background:rgba(255,255,255,.05);cursor:pointer;position:relative;flex:0 0 auto;transition:.15s}
+body[data-page="roulette"] .rl-free input:checked{background:linear-gradient(135deg,#c6ff3d,#2ee6c8);border-color:transparent}
+body[data-page="roulette"] .rl-free input:checked::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;
+  border:solid #07120a;border-width:0 2px 2px 0;transform:rotate(45deg)}
+body[data-page="roulette"] .rl-free input[disabled]{opacity:.45;cursor:not-allowed}
+body[data-page="roulette"] .rl-limits{font-size:12.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;
+  padding:10px 12px;border-radius:12px;border:1px dashed var(--line-2);background:rgba(255,255,255,.02)}
+body[data-page="roulette"] .rl-limits.blocked{color:#ffb3c0;border-color:rgba(255,84,112,.45)}
+
+body[data-page="roulette"] .rl-payouts{display:grid;gap:6px;margin-top:2px}
+body[data-page="roulette"] .rl-payouts div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;
+  border-radius:11px;background:rgba(255,255,255,.03);border:1px solid var(--line);font-size:13px;font-variant-numeric:tabular-nums}
+body[data-page="roulette"] .rl-payouts b{font-family:var(--head);font-weight:900}
+body[data-page="roulette"] .rl-payouts .m0{color:#c4b5fd}
+body[data-page="roulette"] .rl-payouts .m1{color:#d7ff86}
+body[data-page="roulette"] .rl-payouts .m2{color:#7cf0e2}
+body[data-page="roulette"] .rl-payouts .m5{color:#ff8ec7}
+body[data-page="roulette"] .rl-payouts small{color:var(--muted);font-size:11.5px}
+
+body[data-page="roulette"] .rl-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:20px}
+body[data-page="roulette"] .rl-card{padding:18px;border-radius:var(--radius);border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(18,22,32,.9),rgba(10,12,18,.94));box-shadow:var(--shadow-soft)}
+body[data-page="roulette"] .rl-card h3{font-family:var(--head);font-size:15px;margin:0 0 12px;letter-spacing:-.01em}
+body[data-page="roulette"] .rl-card p{margin:10px 0 0;font-size:12px;color:var(--muted)}
+body[data-page="roulette"] .rl-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+body[data-page="roulette"] .rl-table th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 0 8px}
+body[data-page="roulette"] .rl-table td{padding:7px 0;border-top:1px solid var(--line)}
+body[data-page="roulette"] .rl-table td:last-child,body[data-page="roulette"] .rl-table th:last-child{text-align:right}
+
+@media (max-width:980px){
+  body[data-page="roulette"] .rl-grid{grid-template-columns:1fr}
+  body[data-page="roulette"] .rl-stage canvas{max-width:min(560px,86vw)}
+  body[data-page="roulette"] .rl-bottom{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  body[data-page="roulette"] .rl-head h1{font-size:28px}
+  body[data-page="roulette"] .rl-panel{padding:16px}
+  body[data-page="roulette"] .rl-bottom{grid-template-columns:1fr}
+  body[data-page="roulette"] .rl-stakes{grid-template-columns:repeat(3,minmax(0,1fr))}
+  body[data-page="roulette"] .rl-result .rl-mult{font-size:28px}
+}
+@media (max-width:400px){
+  body[data-page="roulette"] .rl-stakes{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

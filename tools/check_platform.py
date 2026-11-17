@@ -185,13 +185,14 @@ def main():
               'commit' in version and 'branch' in version and 'service' in version,
               str({k: version.get(k) for k in ('commit', 'branch', 'service')}))
         version_wheel = version.get('wheel') or {}
-        check('/api/version: только целые множители',
-              version_wheel.get('segments') == [0, 10, 1, 5, 2, 4, 3], str(version_wheel.get('segments')))
-        check('/api/version: RTP 93.5 %', abs((version_wheel.get('rtp') or 0) - 0.935) < 1e-9,
+        check('/api/version: 20 равных секторов по 18°',
+              len(version_wheel.get('segments') or []) == 20
+              and sorted(version_wheel.get('segments') or []) == sorted([0] * 7 + [1] * 10 + [2] * 2 + [5]),
+              str(version_wheel.get('segments')))
+        check('/api/version: RTP 95 %', abs((version_wheel.get('rtp') or 0) - 0.95) < 1e-9,
               str(version_wheel.get('rtp')))
         served = (version.get('pages') or {}).get('roulette.html') or {}
-        expected_rows = ['x0 48.0%', 'x10 0.5%', 'x1 27.0%', 'x5 1.5%',
-                         'x2 16.0%', 'x4 1.0%', 'x3 6.0%']
+        expected_rows = ['x0 35.0%', 'x1 50.0%', 'x2 10.0%', 'x5 5.0%']
         check('сервер отдаёт roulette.html с новой таблицей множителей',
               served.get('probabilities') == expected_rows, str(served.get('probabilities')))
         check('в отдаваемом roulette.html нет дробных множителей',
@@ -199,7 +200,7 @@ def main():
         casino_served = (version.get('pages') or {}).get('casino.html') or {}
         # В casino.html выше таблицы слотов, поэтому множители колеса — хвост списка.
         check('страница казино тоже перечисляет новые множители колеса',
-              (casino_served.get('probabilities') or [])[-7:] == expected_rows
+              (casino_served.get('probabilities') or [])[-4:] == expected_rows
               and casino_served.get('legacy_multipliers') is False,
               str(casino_served.get('probabilities')))
         page_bytes = (ROOT / 'roulette.html').read_bytes()
@@ -446,20 +447,30 @@ def main():
         # Новая система множителей: только целые секторы и вероятности из ТЗ.
         wheel_rules = rules['wheel']
         chances = {item['multiplier']: item['chance'] for item in wheel_rules['probabilities']}
-        required = {0: 0.48, 1: 0.27, 2: 0.16, 3: 0.06, 4: 0.01, 5: 0.015, 10: 0.005}
-        check('колесо: множители только целые (0,1,2,3,4,5,10)',
+        required = {0: 0.35, 1: 0.50, 2: 0.10, 5: 0.05}
+        check('колесо: множители только x0, x1, x2, x5',
               sorted(chances) == sorted(required), str(sorted(chances)))
-        check('колесо: вероятности 48/27/16/6/1/1.5/0.5 %',
+        check('колесо: вероятности 35/50/10/5 %',
               all(abs(chances.get(m, -1) - v) < 1e-9 for m, v in required.items()),
               str(chances))
         check('колесо: сумма вероятностей ровно 100 %',
               abs(sum(chances.values()) - 1) < 1e-9, str(sum(chances.values())))
-        check('колесо: теоретический RTP 93.5 %',
-              abs(wheel_rules['rtp'] - 0.935) < 1e-6, str(wheel_rules['rtp']))
+        check('колесо: теоретический RTP 95 %',
+              abs(wheel_rules['rtp'] - 0.95) < 1e-6, str(wheel_rules['rtp']))
         check('колесо: нет дробных множителей в правилах',
               all(isinstance(m, int) for m in wheel_rules['segments']), str(wheel_rules['segments']))
-        check('колесо: веса пропорциональны вероятностям',
-              sum(wheel_rules['weights']) == 1000, str(wheel_rules['weights']))
+        check('колесо: 20 секторов, веса равные (по 18°)',
+              wheel_rules['sectors'] == 20 and wheel_rules['sectorDegrees'] == 18
+              and len(wheel_rules['weights']) == 20
+              and len(set(wheel_rules['weights'])) == 1,
+              str({k: wheel_rules.get(k) for k in ('sectors', 'sectorDegrees', 'weights')}))
+        check('колесо: секторов по множителям 7/10/2/1',
+              {item['multiplier']: item['sectors'] for item in wheel_rules['probabilities']}
+              == {0: 7, 1: 10, 2: 2, 5: 1},
+              str({item['multiplier']: item['sectors'] for item in wheel_rules['probabilities']}))
+        check('колесо: соседние секторы не одинаковые',
+              all(wheel_rules['segments'][i] != wheel_rules['segments'][(i + 1) % len(wheel_rules['segments'])]
+                  for i in range(len(wheel_rules['segments']))), str(wheel_rules['segments']))
         before = alice.get('/api/balance')[1]['coins']
         status, data = alice.post('/api/casino/slots', {'stake': 10})
         check('слоты: ставка и результат', status == 200 and data.get('reels') and len(data['reels']) == 3, str(data))
@@ -537,14 +548,18 @@ def main():
         casino_page = (ROOT / 'casino.html').read_text(encoding='utf-8')
         roulette_page = (ROOT / 'roulette.html').read_text(encoding='utf-8')
         both = casino_page + roulette_page
-        check('колесо: секторы на странице только целые',
-              'x10, x5, x4, x3, x2, x1, x0' in casino_page
-              and not any(tag in both for tag in ('x0.5', 'x0.25', 'x0,5', 'x0,25')),
-              'casino.html')
+        sector_lists = re.findall(r'Секторы: ((?:x[0-9.]+,\s*)*x[0-9.]+)', casino_page)
+        check('колесо: в списке секторов только x0/x1/x2/x5',
+              bool(sector_lists) and all(
+                  {item.strip() for item in text.split(',')} <= {'x0', 'x1', 'x2', 'x5'}
+                  for text in sector_lists), str(sector_lists))
+        check('колесо: старые множители x0.25/x0.5/x3/x4/x10 убраны',
+              not any(tag in both for tag in ('x0.5', 'x0.25', 'x0,5', 'x0,25',
+                                              'x3, ', 'x4, ', 'x10, ', 'x10 ·')), 'страницы')
         check('колесо: старый RTP 84 % больше не публикуется',
               '84%' not in both and '84 %' not in both, 'страницы казино')
         check('колесо: английская подпись секторов есть',
-              'data-en="Segments: x10, x5, x4, x3, x2, x1, x0' in casino_page, 'data-en')
+              bool(sector_lists) and ('data-en="Segments: ' + sector_lists[0]) in casino_page, 'data-en')
         page_rows = []
         for item in wheel_rules['probabilities']:
             mult = item['multiplier']

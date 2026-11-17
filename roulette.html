@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="ru" data-title-en="Vert Roulette — Vertu Games">
+<html lang="ru" data-title-en="Vert Roulette — Vertu Games" data-title-en="Vert Roulette — Vertu Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
-<meta name="description" content="Рулетка Vert — колесо фортуны Vertu Games: бесплатный спин каждый день и честные серверные вероятности.">
-<meta name="vertu-build" content="2026-11-17-wheel-v2">
+<meta name="description" content="Рулетка Vert — колесо фортуны Vertu Games: 20 равных секторов, выплата ровно ставка × множитель, честные серверные вероятности.">
+<meta name="vertu-build" content="2026-11-11-wheel-v3">
 <title>Рулетка Vert — Vertu Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,48 +19,64 @@
 <body data-page="roulette">
 <header class="site-header" data-page="roulette"></header>
 <main class="wrap">
-  <section class="section" style="margin-top:22px">
-    <div class="section-head">
-      <div><span class="eyebrow"><span data-ico="wheel"></span> Колесо фортуны · Рулетка Vert</span>
-        <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Рулетка Vert</h1>
-        <p><span data-ru="Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер." data-en="One free spin and no more than five paid spins per day. After that the wheel waits until midnight UTC. The server resolves the result.">Один бесплатный спин и не больше пяти платных в сутки. Дальше колесо ждёт полуночи UTC. Результат считает сервер.</span></p></div>
-      <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
-    </div>
-    <div class="casino-layout">
-      <div class="card machine">
-        <div class="wheel-stage"><div class="wheel-pointer"></div>
-          <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны" data-aria-label-en="Wheel of fortune"></canvas></div>
-        <div class="stake-row" id="wheelStakes"><button class="stake" data-stake="5">5 V</button><button class="stake" data-stake="10">10 V</button><button class="stake on" data-stake="20">20 V</button><button class="stake" data-stake="25">25 V</button><button class="stake" data-stake="50">50 V</button><button class="stake" data-stake="100">100 V</button></div>
-        <div class="machine-foot">
-          <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> <span data-ru="Крутить" data-en="Spin">Крутить</span></button>
-          <label class="checkbox" style="flex:1"><input type="checkbox" id="useFree" checked>
-            <span><span data-ru="Использовать бесплатный спин, если доступен" data-en="Use the free spin when available">Использовать бесплатный спин, если доступен</span></span></label>
-        </div>
-        <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite"><span data-ru="Бесплатно: 1/1 · Платных: 5/5" data-en="Free: 1/1 · Paid: 5/5">Бесплатно: 1/1 · Платных: 5/5</span></div>
-        <div class="result-banner" id="wheelResult"><span data-ru="Готово к вращению" data-en="Ready to spin">Готово к вращению</span></div>
+  <section class="rl-hero">
+    <div class="rl-head">
+      <div>
+        <span class="eyebrow"><span data-ico="wheel"></span> <span data-ru="Колесо фортуны" data-en="Wheel of fortune">Колесо фортуны</span></span>
+        <h1><span data-ru="Рулетка Vert" data-en="Vert Roulette">Рулетка Vert</span></h1>
+        <p><span data-ru="20 равных секторов по 18°. Ставка списывается до вращения, выплата — это полная сумма: ставка × множитель. Результат определяет сервер." data-en="20 equal 18° sectors. The stake is charged before the spin and the payout is the full amount: stake × multiplier. The server decides the result.">20 равных секторов по 18°. Ставка списывается до вращения, выплата — это полная сумма: ставка × множитель. Результат определяет сервер.</span></p>
       </div>
-      <aside class="stack" style="gap:16px">
-        <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px"><span data-ru="Множители" data-en="Multipliers">Множители</span></h3>
-          <div class="table-wrap"><table><thead><tr><th><span data-ru="Сектор" data-en="Segment">Сектор</span></th><th><span data-ru="Шанс" data-en="Chance">Шанс</span></th></tr></thead><tbody>
-            <tr><td>x0</td><td>48.0%</td></tr><tr><td>x10</td><td>0.5%</td></tr><tr><td>x1</td><td>27.0%</td></tr><tr><td>x5</td><td>1.5%</td></tr><tr><td>x2</td><td>16.0%</td></tr><tr><td>x4</td><td>1.0%</td></tr><tr><td>x3</td><td>6.0%</td></tr>
-          </tbody></table></div>
-          <p class="muted" style="font-size:12px;margin-top:10px"><span data-ru="RTP колеса: 93.5%. Ставка списывается до вращения, выигрыш начисляется сразу после." data-en="Wheel RTP: 93.5%. The stake is charged before the spin and the win is credited right after.">RTP колеса: 93.5%. Ставка списывается до вращения, выигрыш начисляется сразу после.</span></p>
-          <p class="muted" style="font-size:11px;margin-top:6px"><span data-ru="Версия сборки:" data-en="Build version:">Версия сборки:</span> <b id="buildStamp">2026-11-17-wheel-v2</b></p>
+      <div class="rl-balance"><span><span data-ru="Баланс" data-en="Balance">Баланс</span></span><b data-coins>0</b><i>V</i></div>
+    </div>
+
+    <div class="rl-grid">
+      <div class="rl-stage">
+        <div class="rl-pointer" aria-hidden="true"></div>
+        <canvas id="wheelCanvas" width="720" height="720" role="img" aria-label="Колесо фортуны" data-aria-label-en="Wheel of fortune"></canvas>
+      </div>
+
+      <aside class="rl-panel">
+        <div class="rl-result is-idle" id="wheelResult" role="status" aria-live="polite">
+          <div class="rl-mult" id="rlMult">x1</div>
+          <div class="rl-math" id="rlMath"></div>
+          <div class="rl-net" id="rlNet"></div>
+          <div class="rl-hint" id="rlHint"><span data-ru="Готово к вращению" data-en="Ready to spin">Готово к вращению</span></div>
         </div>
-        <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px"><span data-ru="Личная статистика" data-en="Personal stats">Личная статистика</span></h3>
-          <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
-            <div class="stat-card"><span><span data-ru="Вращений" data-en="Spins">Вращений</span></span><b id="wheelSpins">0</b></div>
-            <div class="stat-card"><span><span data-ru="Итог" data-en="Net">Итог</span></span><b id="wheelNet">0 V</b></div>
-          </div>
-          <p class="muted" style="font-size:12px;margin-top:10px"><span data-ru="Виртуальные V-монеты. Реальные деньги не используются." data-en="Virtual V-coins. No real money is used.">Виртуальные V-монеты. Реальные деньги не используются.</span></p>
-        </div>
-        <div class="card panel">
-          <h3 style="font-size:16px;margin-bottom:10px"><span data-ru="Последние вращения" data-en="Recent spins">Последние вращения</span></h3>
-          <div id="wheelHistory"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
-        </div>
+
+        <div class="rl-panel-title"><span data-ru="Ставка" data-en="Stake">Ставка</span></div>
+        <div class="rl-stakes" id="wheelStakes"><button data-stake="5">5 V<small>x5 · 25 V</small></button><button data-stake="10">10 V<small>x5 · 50 V</small></button><button class="on" data-stake="20">20 V<small>x5 · 100 V</small></button><button data-stake="25">25 V<small>x5 · 125 V</small></button><button data-stake="50">50 V<small>x5 · 250 V</small></button><button data-stake="100">100 V<small>x5 · 500 V</small></button></div>
+
+        <button class="rl-spin" id="spinWheel"><span data-ico="wheel"></span> <span data-ru="Крутить" data-en="Spin">Крутить</span></button>
+
+        <label class="rl-free"><input type="checkbox" id="useFree" checked>
+          <span><span data-ru="Использовать бесплатный спин" data-en="Use the free spin">Использовать бесплатный спин</span></span></label>
+
+        <div class="rl-limits" id="wheelLimits" role="status" aria-live="polite"><span data-ru="Бесплатно: 1/1 · Платных: 5/5" data-en="Free: 1/1 · Paid: 5/5">Бесплатно: 1/1 · Платных: 5/5</span></div>
+
+        <div class="rl-payouts" id="rlPayouts"></div>
       </aside>
+    </div>
+
+    <div class="rl-bottom">
+      <div class="rl-card">
+        <h3><span data-ru="Множители" data-en="Multipliers">Множители</span></h3>
+        <table class="rl-table"><thead><tr><th><span data-ru="Сектор" data-en="Segment">Сектор</span></th><th><span data-ru="Секторов" data-en="Sectors">Секторов</span></th><th><span data-ru="Шанс" data-en="Chance">Шанс</span></th><th>RTP</th></tr></thead>
+          <tbody><tr><td>x0</td><td>7</td><td>35.0%</td><td>0.0%</td></tr><tr><td>x1</td><td>10</td><td>50.0%</td><td>50.0%</td></tr><tr><td>x2</td><td>2</td><td>10.0%</td><td>20.0%</td></tr><tr><td>x5</td><td>1</td><td>5.0%</td><td>25.0%</td></tr></tbody></table>
+        <p><span data-ru="RTP колеса: 95.0%. Ставка списывается до вращения, выигрыш начисляется сразу после." data-en="Wheel RTP: 95.0%. The stake is charged before the spin and the win is credited right after.">RTP колеса: 95.0%. Ставка списывается до вращения, выигрыш начисляется сразу после.</span></p>
+        <p><span data-ru="Версия сборки:" data-en="Build version:">Версия сборки:</span> <b id="buildStamp">2026-11-11-wheel-v3</b></p>
+      </div>
+      <div class="rl-card">
+        <h3><span data-ru="Личная статистика" data-en="Personal stats">Личная статистика</span></h3>
+        <div class="stat-grid" style="grid-template-columns:repeat(2,1fr)">
+          <div class="stat-card"><span><span data-ru="Вращений" data-en="Spins">Вращений</span></span><b id="wheelSpins">0</b></div>
+          <div class="stat-card"><span><span data-ru="Итог" data-en="Net">Итог</span></span><b id="wheelNet">0 V</b></div>
+        </div>
+        <p><span data-ru="Виртуальные V-монеты. Реальные деньги не используются." data-en="Virtual V-coins. No real money is used.">Виртуальные V-монеты. Реальные деньги не используются.</span></p>
+      </div>
+      <div class="rl-card">
+        <h3><span data-ru="Последние вращения" data-en="Recent spins">Последние вращения</span></h3>
+        <div id="wheelHistory"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+      </div>
     </div>
   </section>
 </main>
@@ -77,7 +93,7 @@
         <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
         <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
         <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
-        <a href="roulette.html">Рулетка Vert</a>
+        <a href="roulette.html"><span data-ru="Рулетка Vert" data-en="Vert Roulette">Рулетка Vert</span></a>
         <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">

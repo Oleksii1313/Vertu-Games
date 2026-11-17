@@ -116,14 +116,18 @@ def main() -> int:
     check('/api/version отвечает', status == 200 and version.get('ok') is True, f'HTTP {status}')
     check('версия сборки видна', bool(version.get('version')), str(version.get('version')))
     live_wheel = version.get('wheel') or {}
-    check('множители колеса целые (0,1,2,3,4,5,10)',
-          live_wheel.get('segments') == [0, 10, 1, 5, 2, 4, 3], str(live_wheel.get('segments')))
-    check('RTP колеса 93.5 %', abs((live_wheel.get('rtp') or 0) - 0.935) < 1e-9,
+    live_segments = live_wheel.get('segments') or []
+    check('колесо: 20 секторов, только x0/x0/x1/x2/x5',
+          len(live_segments) == 20 and sorted(set(live_segments)) == [0, 1, 2, 5],
+          str(live_segments))
+    check('колесо: 7 секторов x0, 10 x1, 2 x2, 1 x5',
+          all(live_segments.count(m) == n for m, n in ((0, 7), (1, 10), (2, 2), (5, 1))),
+          str({m: live_segments.count(m) for m in set(live_segments)}))
+    check('RTP колеса 95 %', abs((live_wheel.get('rtp') or 0) - 0.95) < 1e-9,
           str(live_wheel.get('rtp')))
     live_page = (version.get('pages') or {}).get('roulette.html') or {}
     check('опубликованный roulette.html содержит новые множители',
-          live_page.get('probabilities') == ['x0 48.0%', 'x10 0.5%', 'x1 27.0%', 'x5 1.5%',
-                                             'x2 16.0%', 'x4 1.0%', 'x3 6.0%'],
+          live_page.get('probabilities') == ['x0 35.0%', 'x1 50.0%', 'x2 10.0%', 'x5 5.0%'],
           str(live_page.get('probabilities')))
     check('на сайте нет дробных множителей',
           live_page.get('legacy_multipliers') is False, str(live_page))
