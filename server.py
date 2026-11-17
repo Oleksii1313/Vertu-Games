@@ -28,8 +28,10 @@ from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory, make_response, g, abort
 
+import anticheat
 import captcha
 import casino_logic
+import guard
 import db as store
 import shop
 from db import (AccountBanned, DuplicateUser, InsufficientFunds, InvalidCredentials,
@@ -58,9 +60,32 @@ def now() -> int:
     return int(time.time())
 
 
+TRUSTED_PROXY = (os.environ.get('TRUSTED_PROXY', '0') or '0').strip() in ('1', 'true', 'yes')
+
+
 def client_ip() -> str:
-    forwarded = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
-    return forwarded or request.remote_addr or ''
+    """IP клиента с учётом доверенного прокси.
+
+    ``X-Forwarded-For`` пишет кто угодно: клиент может прислать свой заголовок,
+    и прокси **дописывает** реальный адрес в конец. Поэтому:
+
+    * ``TRUSTED_PROXY=0`` (по умолчанию, локально/прямой запуск) — только
+      ``remote_addr``, заголовкам не верим вообще;
+    * ``TRUSTED_PROXY=1`` — берём ``CF-Connecting-IP`` (Cloudflare перезаписывает
+      его сам) или **последний** элемент ``X-Forwarded-For``, то есть тот, что
+      добавил ближайший прокси. Первый элемент — подделываемый, его игнорируем.
+
+    Включать ``TRUSTED_PROXY=1`` можно только если origin недоступен напрямую
+    (иначе подделка заголовка обходит все лимиты по IP).
+    """
+    if TRUSTED_PROXY:
+        cloudflare = (request.headers.get('CF-Connecting-IP') or '').strip()
+        if cloudflare:
+            return cloudflare
+        hops = [h.strip() for h in (request.headers.get('X-Forwarded-For') or '').split(',') if h.strip()]
+        if hops:
+            return hops[-1]
+    return request.remote_addr or ''
 
 
 def is_https() -> bool:
@@ -150,8 +175,21 @@ def api_error(status: int, code: str, message: str):
 
 
 def rate(scope: str, limit: int, seconds: int, extra: str = '') -> bool:
+    """Лимит по «идентификатору» (IP клиента) + грубый лимит по сокету.
+
+    Второй ключ привязан к ``remote_addr`` — его подделать нельзя, даже если
+    ``TRUSTED_PROXY=1`` и атакующий крутит ``X-Forwarded-For``. Потолок там
+    выше (x``RATE_SOCKET_FACTOR``), чтобы NAT/офис за одним IP не страдали.
+    """
+    db = get_store()
+    socket_factor = int(os.environ.get('RATE_SOCKET_FACTOR', '6') or 6)
+    peer = request.remote_addr or ''
+    if peer:
+        peer_key = store.digest(f'{scope}:peer:{peer}')
+        if not db.rate_limit(peer_key, limit * socket_factor, seconds):
+            return False
     key = store.digest(f'{scope}:{client_ip()}:{extra}')
-    return get_store().rate_limit(key, limit, seconds)
+    return db.rate_limit(key, limit, seconds)
 
 
 def public_user(user) -> dict:
@@ -294,12 +332,38 @@ def compress_response(response):
 
 @app.after_request
 def security_headers(response):
-    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
     response.headers.setdefault('X-Content-Type-Options', 'nosniff')
     response.headers.setdefault('Referrer-Policy', 'same-origin')
     response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+    response.headers.setdefault('Cross-Origin-Resource-Policy', 'same-origin')
+    response.headers.setdefault('X-Permitted-Cross-Domain-Policies', 'none')
     if is_https():
-        response.headers.setdefault('Strict-Transport-Security', 'max-age=15552000')
+        response.headers.setdefault('Strict-Transport-Security',
+                                    'max-age=31536000; includeSubDomains; preload')
+    # CSP: свои скрипты и стили (инлайн — только там, где он уже есть в играх),
+    # Cloudflare Turnstile, connect — только свой origin. Данные не уходят третьим
+    # сторонам, framing запрещён (X-Frame-Options дублируется для старых браузеров).
+    # 3D-игры тянут Babylon.js и шрифты с внешних CDN, у остальных страниц —
+    # строгий список источников. 'unsafe-inline' в script-src нужен, пока в
+    # играх остаются встроенные скрипты; следующий шаг — вынести их в файлы и
+    # перейти на nonce (см. SECURITY.md, раздел «CSP без unsafe-inline»).
+    external_3d = request.path in ('/games/minicraft.html', '/games/sky-isle.html',
+                                  '/games/chefs-rover.html')
+    script_src = "'self' 'unsafe-inline' https://challenges.cloudflare.com"
+    style_src = "'self' 'unsafe-inline' https://fonts.googleapis.com"
+    font_src = "'self' data: https://fonts.gstatic.com"
+    connect_src = "'self' https://challenges.cloudflare.com"
+    if external_3d:
+        script_src += ' https://cdn.babylonjs.com'
+        connect_src += ' https://cdn.babylonjs.com'
+    response.headers.setdefault(
+        'Content-Security-Policy',
+        f"default-src 'self'; script-src {script_src}; style-src {style_src}; "
+        f"img-src 'self' data: blob:; font-src {font_src}; connect-src {connect_src}; "
+        "frame-src https://challenges.cloudflare.com; frame-ancestors 'none'; "
+        "base-uri 'self'; form-action 'self'; object-src 'none'; worker-src 'self' blob:")
     # CSRF-токен выдаём на любом ответе, если куки ещё нет: клиент читает её и
     # возвращает заголовком X-CSRF-Token. Double-submit cookie, без состояния.
     if (response.status_code < 400 and not getattr(g, 'csrf_issued', False)
@@ -320,7 +384,8 @@ def csrf_protect():
 def health():
     data = get_store()
     return jsonify({'ok': True, 'backend': data.backend, 'time': now(),
-                    'captcha': captcha.public_config(), 'payments': shop.configured()})
+                    'captcha': captcha.public_config(), 'payments': shop.configured(),
+                    'signing': anticheat.describe()})
 
 
 @app.get('/api/session')
@@ -637,6 +702,31 @@ def game_play():
     return jsonify({'ok': True, 'coins': db.balance(user['id']), 'plays': plays})
 
 
+@app.get('/api/games/session')
+@login_required
+def game_session():
+    """Выдать подписанный билет на игровую сессию.
+
+    Клиент получает ``sid``/``sig`` и присылает их вместе с квитанцией. Сумма
+    награды берётся из каталога на сервере — параметр ``amount`` из запроса
+    игнорируется всегда.
+    """
+    data = request.args
+    user = current_user()
+    game = str(data.get('game', ''))
+    spec = GAMES_BY_ID.get(game)
+    if not spec:
+        return api_error(404, 'GAME', 'Неизвестная игра')
+    if not game_available(game):
+        return api_error(404, 'GAME', 'Игра временно недоступна')
+    if not guard.allow('ticket:%s' % user['id'], rate=1.0, burst=12):
+        return api_error(429, 'RATE_LIMIT', 'Слишком часто. Откройте игру заново.')
+    ticket = anticheat.issue(user['id'], game, spec['reward'], kind='game')
+    ticket['ok'] = True
+    ticket['reward'] = spec['reward']
+    return jsonify(ticket)
+
+
 @app.post('/api/games/reward')
 @login_required
 def game_reward():
@@ -651,12 +741,44 @@ def game_reward():
         return api_error(404, 'GAME', 'Игра временно недоступна')
     if not rate('reward', 60, 60):
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
+    # Дешёвый предохранитель до любых обращений к БД: шквал сообщений из
+    # подделанного клиента гасится на входе.
+    if not guard.allow('reward:%s' % user['id'], rate=2.0, burst=8):
+        return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
     receipt = data.get('receipt') or data.get('ref')
     if not isinstance(receipt, str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{6,120}', receipt):
         return api_error(400, 'RECEIPT', 'Некорректная квитанция события')
-    db = get_store()
+
+    # ---- Подписанный билет: сумма и право на выплату проверяются на сервере.
+    ticket = data.get('ticket') or data
     try:
-        result = db.game_reward(user['id'], game, spec['reward'], f'{user["id"]}:{game}:{receipt}',
+        checked = anticheat.verify(ticket, user['id'], game=game, kind='game')
+    except anticheat.TicketError:
+        db_log = get_store()
+        db_log.admin_log(user['username'], 'bad_ticket', game, 'подпись/срок билета',
+                         store.digest(client_ip()))
+        return api_error(403, 'TICKET', 'Игровая сессия недействительна. Откройте игру заново.')
+    reward = int(checked['amount'])
+    if reward <= 0 or reward > int(spec['daily']) * 2:
+        return api_error(400, 'TICKET', 'Некорректная награда в билете')
+
+    # ---- Поведенческая эвристика: первое срабатывание обнуляет выплату,
+    # повторные — 429. Пишем всё в журнал, чтобы разбирать ложные срабатывания.
+    info = guard.ANOMALIES.observe(user['id'], reward)
+    verdict = guard.anomaly_verdict(info)
+    db = get_store()
+    if verdict != 'ok':
+        db.admin_log(user['username'], 'anomaly', game, '; '.join(info['reasons'])[:180],
+                     store.digest(client_ip()))
+    if verdict == 'block':
+        return api_error(429, 'ANOMALY', 'Активность похожа на автоматическую. Подождите.')
+    if verdict == 'throttle':
+        return jsonify({'ok': True, 'awarded': 0, 'repeated': False, 'coins': db.balance(user['id']),
+                        'dailyLeft': None, 'ceiling': False, 'throttled': True})
+
+    try:
+        result = db.game_reward(user['id'], game, reward,
+                                anticheat.receipt_for(user['id'], checked),
                                 f'Игра: {spec["name"]}', spec['daily'])
     except StoreError as exc:
         return api_error(400, 'REWARD', str(exc))

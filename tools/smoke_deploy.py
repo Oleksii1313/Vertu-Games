@@ -134,12 +134,21 @@ def main() -> int:
     status, data = player.get('/api/balance')
     coins = data.get('coins')
     check('баланс отдаётся сервером', status == 200 and isinstance(coins, int), str(data))
-    status, data = player.post('/api/games/reward', {'game': 'flappy', 'receipt': 'smoke-aaaaaaaa'})
+    status, ticket = player.get('/api/games/session?game=flappy')
+    check('подписанный билет игры выдан',
+          status == 200 and bool(ticket.get('sig')) and ticket.get('amount', 0) > 0, str(ticket)[:90])
+    status, data = player.post('/api/games/reward',
+                               {'game': 'flappy', 'receipt': 'smoke-aaaaaaaa', 'ticket': ticket})
     check('награда за игру начислена', status == 200 and data.get('awarded', 0) > 0, str(data)[:90])
     after = data.get('coins')
-    status, data = player.post('/api/games/reward', {'game': 'flappy', 'receipt': 'smoke-aaaaaaaa'})
-    check('повторная квитанция не платит дважды',
+    status, data = player.post('/api/games/reward',
+                               {'game': 'flappy', 'receipt': 'smoke-aaaaaaaa', 'ticket': ticket})
+    check('повторный билет не платит дважды',
           data.get('repeated') is True and data.get('coins') == after, str(data)[:90])
+    status, data = player.post('/api/games/reward',
+                               {'game': 'flappy', 'receipt': 'smoke-ccccccc',
+                                'ticket': dict(ticket, amount=10000)})
+    check('подделанная сумма в билете отклонена', status == 403, str(data)[:90])
     status, data = player.post('/api/casino/wheel', {'stake': 20, 'free': True})
     check('бесплатный спин «Рулетки Vert»', status == 200 and data.get('ok'), str(data)[:90])
     status, data = player.get('/api/casino/rules')
