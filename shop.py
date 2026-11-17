@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Магазин Vertu Games: каталог, покупки, экипировка.
+"""Магазин Vertu Games: каталог предметов, покупки, экипировка.
 
-Покупка — одна серверная транзакция: списание V и запись покупки. Повторная
-покупка того же предмета отклоняется. Экипировать можно только купленное.
-Пакеты V за реальные деньги включаются только при настроенном ``SHOP_PROVIDER``.
+Покупка — одна серверная транзакция: списание V и запись в ``inventory``.
+Повторная покупка того же предмета отклоняется, экипировать можно только
+купленное.
+
+Пакеты V-монет за реальные деньги **удалены**: монеты нельзя купить, они
+зарабатываются в играх и казино (социальное казино без вывода средств).
+Платёжные провайдеры остались только как заглушки для вебхуков — заказы
+создаваться не могут, пока ``SHOP_PACKS`` пуст.
 """
 from __future__ import annotations
 
@@ -19,9 +24,11 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 import db as store
-from game_catalog import SHOP_KINDS, SHOP_PACKS
+from game_catalog import SHOP_KINDS, SHOP_PACKS  # SHOP_PACKS пуст: продажа V отключена
 
 PROVIDERS = ('yookassa', 'stripe', 'cryptobot')
+# Единственный переключатель продажи V-монет. Выключен: пакеты удалены из каталога.
+PACKS_ENABLED = False
 TOLERANCE = 300
 TIMEOUT = 20
 
@@ -72,8 +79,9 @@ def catalog(user_id: int | None = None) -> dict:
             'payload': item['payload'], 'owned': item['id'] in owned or int(item['price']) == 0,
             'equipped': equipped.get(item['kind']) == item['id'],
         })
+    # Пакеты V за деньги отключены полностью: только предметы.
     packs = []
-    if configured():
+    if PACKS_ENABLED and configured():
         for pid, pack in SHOP_PACKS.items():
             packs.append({'id': pid, 'coins': pack['coins'], 'rub': pack['rub'], 'usd': pack['usd'],
                           'title_ru': pack['title_ru'], 'title_en': pack['title_en']})
@@ -276,6 +284,9 @@ def cryptobot_signature_ok(raw_body, header, token=None):
 
 # --------------------------------------------------------------------------- заказы
 def create_order(user_id: int, pack_id: str, base_url: str) -> dict:
+    if not PACKS_ENABLED:
+        raise ShopError(410, 'PACKS_DISABLED',
+                        'Покупка V-монет за деньги отключена: V зарабатывают в играх и казино.')
     if not configured():
         raise ShopError(503, 'PAYMENTS_NOT_CONFIGURED',
                         'Покупка монет за деньги не подключена. V-монеты зарабатываются в играх.')
@@ -289,7 +300,9 @@ def create_order(user_id: int, pack_id: str, base_url: str) -> dict:
              'pack': pack_id, 'coins': pack['coins'], 'amount_minor': amount_minor,
              'currency': currency, 'created': int(time.time())}
     data = store.get_store()
-    data.create_order(order)
+    # create_order принимает позиционные аргументы канонической таблицы shop_orders.
+    data.create_order(order['id'], order['user_id'], current, pack_id, pack['coins'],
+                      amount_minor, currency)
     return_url = base_url.rstrip('/') + '/shop.html?' + urlencode({'paid': '1', 'order': order['id']})
     cancel_url = base_url.rstrip('/') + '/shop.html?' + urlencode({'cancelled': '1'})
     try:
@@ -319,8 +332,8 @@ def wallet(user_id: int | None) -> dict:
     data = store.get_store()
     if not user_id:
         return {'ok': True, 'mode': 'guest', 'configured': configured(), 'purchases': []}
-    return {'ok': True, 'mode': 'server' if configured() else 'coins-only',
-            'configured': configured(),
+    return {'ok': True, 'mode': 'coins-only', 'configured': False, 'packsEnabled': False,
+            'balance': data.balance(user_id),
             'purchases': [{'pack': r['pack'], 'coins': int(r['coins']), 'status': r['status'],
                            'created': r['created']} for r in data.order_history(user_id)]}
 

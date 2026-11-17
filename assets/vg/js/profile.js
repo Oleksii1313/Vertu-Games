@@ -57,6 +57,31 @@
     }).join('') + '</div>';
   }
 
+  /* Ежедневные задания: прогресс и кнопка «Забрать» (награду выдаёт сервер). */
+  function taskRows(items) {
+    if (!items || !items.length) {
+      return '<div class="empty">' + T('На сегодня заданий нет.', 'No tasks for today.') + '</div>';
+    }
+    return '<div class="list">' + items.map(function (task) {
+      var target = Math.max(1, Number(task.target_value) || 1);
+      var progress = Math.min(target, Number(task.progress) || 0);
+      var pct = Math.round((progress / target) * 100);
+      var done = progress >= target;
+      var action = task.claimed
+        ? '<span class="badge badge-line">' + T('Получено', 'Claimed') + '</span>'
+        : (done
+          ? '<button class="btn btn-sm btn-primary" data-task-claim="' + Number(task.id) + '">' +
+            T('Забрать +', 'Claim +') + fmt(task.reward) + ' V</button>'
+          : '<span class="muted" style="font-size:12px">' + progress + '/' + target + '</span>');
+      return '<div class="list-row"><span class="ico">' + VG.icon('target', 16) + '</span>' +
+        '<span class="meta"><b>' + escapeHtml(VG.lang() === 'en' ? (task.title_en || task.title) : task.title) + '</b>' +
+        '<small>' + escapeHtml(VG.lang() === 'en' ? (task.desc_en || '') : (task.description || '')) + '</small>' +
+        '<span class="progress" style="display:block;height:4px;border-radius:3px;margin-top:6px;background:rgba(255,255,255,.12)">' +
+        '<span style="display:block;height:100%;border-radius:3px;width:' + pct + '%;background:var(--grad)"></span></span>' +
+        '</span>' + action + '</div>';
+    }).join('') + '</div>';
+  }
+
   function purchaseRows(items) {
     if (!items || !items.length) return '<div class="empty">Покупок пока нет. <a href="shop.html" style="color:var(--lime)">В магазин</a></div>';
     return '<div class="list">' + items.map(function (item) {
@@ -83,6 +108,7 @@
     $('#achBody').innerHTML = achievementRows(data.achievements);
     $('#casinoBody').innerHTML = casinoRows(data.casino);
     $('#itemsBody').innerHTML = purchaseRows(data.purchases);
+    if ($('#tasksBody')) $('#tasksBody').innerHTML = taskRows(data.tasks);
     var body = $('#profileBody');
     body.classList.remove('hidden');
     if (areMine) {
@@ -96,6 +122,26 @@
       $('#logoutBtn').classList.add('hidden');
       $('#security').classList.add('hidden');
     }
+  }
+
+  function bindTaskClaims() {
+    document.addEventListener('click', function (event) {
+      var button = event.target.closest && event.target.closest('[data-task-claim]');
+      if (!button) return;
+      button.disabled = true;
+      VG.api('/api/tasks/claim', { body: { task: Number(button.getAttribute('data-task-claim')) } })
+        .then(function (data) {
+          if (data.already) {
+            VG.toast(T('Награда уже получена', 'Reward already claimed'), 'bad');
+          } else if (data.reward > 0) {
+            VG.toast(T('+' + fmt(data.reward) + ' V за задание', '+' + fmt(data.reward) + ' V for the task'));
+          }
+          if (data.user) VG.setUser(data.user);
+          if ($('#tasksBody')) $('#tasksBody').innerHTML = taskRows(data.tasks);
+        })
+        .catch(function (error) { VG.toast(error.message, 'bad'); })
+        .then(function () { button.disabled = false; });
+    });
   }
 
   function load() {
@@ -194,6 +240,7 @@
         if (event.target === modal || event.target.closest('[data-close-style]')) modal.classList.remove('open');
       });
     }
+    bindTaskClaims();
     // Полная перезагрузка — только при входе/выходе. Изменение баланса
     // обновляет шапку (platform.js) и карточку баланса, без лишних запросов.
     VG.onSessionChange(load);

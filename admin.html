@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="ru" data-title-en="Admin panel — Vertu Games">
+<html lang="ru" data-title-en="Админ-панель — Vertu Games" data-title-en="Admin panel — Vertu Games">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="Админ-панель Vertu Games: пользователи, балансы, статистика, игры и журнал действий.">
@@ -47,6 +47,8 @@
         <button class="on" data-view="overview"><span data-ico="chart"></span> <span data-ru="Обзор" data-en="Overview">Обзор</span></button>
         <button data-view="users"><span data-ico="user"></span> <span data-ru="Пользователи" data-en="Users">Пользователи</span></button>
         <button data-view="games"><span data-ico="gamepad"></span> <span data-ru="Игры" data-en="Games">Игры</span></button>
+        <button data-view="catalog"><span data-ico="bag"></span> <span data-ru="Каталог" data-en="Catalog">Каталог</span></button>
+        <button data-view="transactions"><span data-ico="coin"></span> Операции</button>
         <button data-view="casino"><span data-ico="wheel"></span> <span data-ru="Казино" data-en="Casino">Казино</span></button>
         <button data-view="log"><span data-ico="clock"></span> <span data-ru="Журнал" data-en="Log">Журнал</span></button>
         <div class="divider"></div>
@@ -79,6 +81,32 @@
             <p class="muted" style="font-size:12.5px;margin:4px 0 0"><span data-ru="Отключение скрывает награды за игру; файлы игр не удаляются." data-en="Disabling hides the game's rewards; game files are not deleted.">Отключение скрывает награды за игру; файлы игр не удаляются.</span></p></div></div>
             <div id="adminGames"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div></div>
         </div>
+        <div id="view-catalog" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Предметы магазина</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только косметика: аватары, цвета, титулы. Пакеты V не продаются.</p></div></div>
+            <div id="adminItems"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+          <div class="card panel" style="margin-top:16px">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Достижения" data-en="Achievements">Достижения</span></h2></div></div>
+            <div id="adminAchievements"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+          <div class="card panel" style="margin-top:16px">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Ежедневные задания</h2></div></div>
+            <div id="adminTasks"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+        </div>
+        <div id="view-transactions" class="hidden">
+          <div class="card panel">
+            <div class="toolbar" style="margin-bottom:14px">
+              <label class="search"><span data-ico="search"></span>
+                <input type="search" id="txUser" placeholder="Ник игрока (пусто — все)" aria-label="Фильтр по нику"></label>
+              <button class="btn btn-sm btn-ghost" id="txRefresh"><span data-ru="Обновить" data-en="Refresh">Обновить</span></button>
+              <span class="muted" style="font-size:12px">Каждая операция — одна строка в transactions</span>
+            </div>
+            <div id="adminTx"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+        </div>
         <div id="view-casino" class="hidden">
           <div class="card panel">
             <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Настройки казино" data-en="Casino settings">Настройки казино</span></h2></div></div>
@@ -106,7 +134,7 @@
         <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
         <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
         <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
-        <a href="roulette.html"><span data-ru="Рулетка" data-en="Roulette">Рулетка</span></a>
+        <a href="roulette.html">Рулетка Vert</a>
         <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">

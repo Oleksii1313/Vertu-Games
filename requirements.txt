@@ -1,7 +1,19 @@
-# Продакшн-стек
+# Продакшн-стек (Render: pip install -r requirements.txt)
 flask>=3.0,<4
 gunicorn>=21.2,<24
+
+# PostgreSQL: psycopg 3 + пул соединений (free-план Render)
 psycopg[binary,pool]>=3.1,<4
+SQLAlchemy>=2.0,<3
+
+# Миграции схемы
+alembic>=1.13,<2
+
+# Хеширование паролей: Argon2id (bcrypt — резервный вариант)
+argon2-cffi>=23.1,<26
+bcrypt>=4.1,<5
+
+# HTTP-клиент: Cloudflare Turnstile и платёжные вебхуки
 requests>=2.32.5,<3
 
 # Необязательно: только для старого входа через Google (google_oauth.py)

@@ -287,6 +287,58 @@ body[data-game="pong"] .controls{justify-content:space-between}
 })();
 
 </script>
+<style id="vg-landscape-fullscreen">
+/* ==========================================================================
+   Мобильный ландшафт: игра занимает весь экран, без чёрных полос и без
+   пересечения с шапкой платформы (в плеере шапка не показывается).
+   Блок добавляется ко всем играм, ничего не удаляя из существующего CSS.
+   ========================================================================== */
+@media (orientation:landscape) and (max-height:560px){
+  html,body{height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none;
+    width:100vw;max-width:100vw}
+  body{height:100vh;height:100dvh;padding:0;margin:0;display:flex;flex-direction:column;
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  /* Верхняя панель со счётом — тонкая строка, кнопки не перекрывают поле. */
+  body>.info{flex:0 0 auto;min-height:0;padding:2px max(8px,env(safe-area-inset-right,0px)) 2px
+    max(4px,env(safe-area-inset-left,0px));gap:10px;background:rgba(12,16,24,.82)}
+  body>.info .stat{display:flex;align-items:baseline;gap:5px}
+  body>.info .stat .l{font-size:8px;letter-spacing:.5px;display:inline}
+  body>.info .stat .v{font-size:13px;line-height:1.1}
+  /* Игровое поле растягивается на всё оставшееся место: ни полос, ни обрезки. */
+  body>.board,body>.board-wrap,body>.stage,body>.game,main.game,body>main{flex:1 1 auto;
+    min-height:0;min-width:0;padding:0;margin:0;overflow:hidden;display:flex;
+    align-items:center;justify-content:center}
+  body>canvas{flex:1 1 auto;min-height:0;width:100%;height:100%;object-fit:contain}
+  .board>canvas,.board-wrap>canvas,.stage>canvas,.game canvas{max-width:100%;max-height:100%;
+    width:auto;height:auto;object-fit:contain}
+  /* Управление — у самых краёв, под большими пальцами (thumb zone). */
+  body>.controls{flex:0 0 auto;position:relative;z-index:3;justify-content:space-between;
+    gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) max(6px,env(safe-area-inset-bottom,0px))
+    max(8px,env(safe-area-inset-left,0px));background:linear-gradient(0deg,rgba(8,11,17,.9),
+    rgba(8,11,17,.35));border-top:0}
+  body>.controls button{min-height:40px;height:40px;min-width:44px;padding:4px 12px;font-size:11px;
+    border-radius:11px;touch-action:manipulation}
+  body>.controls .dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:4px}
+  body>.controls .dpad button{width:40px;height:40px;min-width:0;min-height:0;padding:6px}
+  body>.controls .dpad button svg{width:18px;height:18px}
+  /* Всплывающие окна (game over, пауза) не должны обрезаться в ландшафте. */
+  .overlay,.cheat-overlay{padding:max(8px,env(safe-area-inset-top,0px)) 8px
+    max(8px,env(safe-area-inset-bottom,0px));align-items:center;overflow-y:auto}
+  .overlay .panel,.cheat-box{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);
+    overflow-y:auto;padding:14px 18px;width:min(74vw,420px)}
+  .overlay .panel h2{font-size:19px}
+  .overlay .panel .earn{font-size:18px;margin:8px 0 10px}
+  .overlay .row{padding:6px 10px;font-size:13px;margin-bottom:5px}
+  .overlay .btns .btn{min-height:38px;padding:8px 12px;font-size:12px}
+  .help,body>.hint{display:none}
+}
+/* Очень низкие экраны (телефон в ландшафте с адресной строкой). */
+@media (orientation:landscape) and (max-height:420px){
+  body>.info{display:none}
+  body>.controls button{min-height:36px;height:36px}
+}
+</style>
+<script src="/assets/vg/js/game-kit.js" defer></script>
 </head>
 <body data-game="platformer">
 <div class="info">

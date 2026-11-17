@@ -380,12 +380,40 @@ tbody tr:hover td{background:rgba(255,255,255,.025)}
 .age{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--line-2);font-weight:800;font-size:11px}
 
 /* ---------- game play overlay ---------- */
-.play-overlay{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;background:#05060a}
+.play-overlay{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;background:#05060a;
+  width:100vw;height:100vh;height:100dvh;
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
 .play-overlay.open{display:flex}
-.play-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(10,12,18,.96)}
+.play-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(10,12,18,.96);
+  padding-top:calc(10px + env(safe-area-inset-top,0px));flex-shrink:0}
 .play-bar h3{font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.play-frame-wrap{flex:1;position:relative;background:#000}
-.play-frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+/* Рамка игры — ровно всё оставшееся место: ни чёрных полос, ни пересечения с шапкой. */
+.play-frame-wrap{flex:1 1 auto;position:relative;background:#000;min-height:0;min-width:0;overflow:hidden;
+  display:flex;align-items:stretch;justify-content:stretch}
+.play-frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000}
+body.vg-pseudo-full .site-header,body.vg-pseudo-full .site-footer{display:none!important}
+
+/* Телефон в ландшафте: игра на весь экран, панель плеера — тонкая полоса сверху,
+   кнопки «Назад/Экран» остаются под большим пальцем. */
+@media (orientation:landscape) and (max-height:560px){
+  .play-overlay.open{position:fixed;inset:0}
+  .play-bar{position:absolute;top:0;left:0;right:0;z-index:4;padding:2px 8px;gap:8px;
+    background:linear-gradient(180deg,rgba(5,6,10,.86),rgba(5,6,10,0));border:0;
+    opacity:.35;transition:opacity .2s ease}
+  .play-bar:hover,.play-bar:focus-within{opacity:1}
+  .play-bar h3,.play-bar .reward-chip{display:none}
+  .play-bar .btn{padding:5px 10px;font-size:11px}
+  .play-bar .balance-pill{font-size:11px;padding:4px 8px}
+  .play-frame-wrap{position:absolute;inset:0;flex:none;height:100%;width:100%;padding:0}
+  .play-frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%}
+  .play-focus-hint{top:auto;bottom:8px;font-size:11px;padding:5px 10px}
+}
+/* Полный экран (настоящий или псевдо): скрываем всё лишнее. */
+.play-overlay:fullscreen .play-bar,.play-overlay.pseudo-full .play-bar{opacity:.35}
+.play-overlay:fullscreen .play-bar:hover,.play-overlay.pseudo-full .play-bar:hover{opacity:1}
+.play-overlay:fullscreen,.play-overlay:-webkit-full-screen{background:#000}
+.play-overlay.pseudo-full{background:#000}
+.play-overlay.pseudo-full .play-frame-wrap{height:100dvh;width:100vw}
 /* Подсказка о фокусе: клавиатура работает без клика, но если браузер не отдал
    фокус iframe — мягко предлагаем один клик по игре. */
 .play-focus-hint{position:absolute;left:50%;top:14px;transform:translate(-50%,-6px);z-index:3;display:flex;align-items:center;gap:8px;max-width:calc(100% - 24px);padding:8px 14px;border-radius:999px;border:1px solid var(--line2,rgba(255,255,255,.16));background:rgba(10,12,18,.86);color:var(--text,#f3f7fb);font:600 12px/1.3 var(--font-body,'Lato',sans-serif);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease}

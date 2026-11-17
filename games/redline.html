@@ -128,7 +128,59 @@ body.embedded #topbar{right:72px}
 @media(max-width:360px){#storyLayer.driving #storyDialog{bottom:230px}#storyDialog{padding:13px}#storyWords{font-size:11px}#storyNext{min-width:120px}#storyActions{gap:2px}}
 #storyLayer.driving #storyActions{display:none}
 #cityList .grow{min-width:0}#cityList h3{overflow-wrap:anywhere;font-size:18px}@media(max-width:560px){#cityList .row{flex-direction:column;align-items:stretch}#cityList button{width:100%}}
-#assetCredits{margin-top:14px}#assetCredits summary,#assetCredits a{display:block;min-height:44px;padding:12px 0;cursor:pointer;color:var(--acid)}#assetCredits pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 Arial;color:#aeb9aa;max-width:100%}</style></head><body><canvas id="view" aria-label="Трёхмерный город и автомобиль" data-aria-label-en="A 3D city and a car" tabindex="0"></canvas>
+#assetCredits{margin-top:14px}#assetCredits summary,#assetCredits a{display:block;min-height:44px;padding:12px 0;cursor:pointer;color:var(--acid)}#assetCredits pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 Arial;color:#aeb9aa;max-width:100%}</style><style id="vg-landscape-fullscreen">
+/* ==========================================================================
+   Мобильный ландшафт: игра занимает весь экран, без чёрных полос и без
+   пересечения с шапкой платформы (в плеере шапка не показывается).
+   Блок добавляется ко всем играм, ничего не удаляя из существующего CSS.
+   ========================================================================== */
+@media (orientation:landscape) and (max-height:560px){
+  html,body{height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none;
+    width:100vw;max-width:100vw}
+  body{height:100vh;height:100dvh;padding:0;margin:0;display:flex;flex-direction:column;
+    padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  /* Верхняя панель со счётом — тонкая строка, кнопки не перекрывают поле. */
+  body>.info{flex:0 0 auto;min-height:0;padding:2px max(8px,env(safe-area-inset-right,0px)) 2px
+    max(4px,env(safe-area-inset-left,0px));gap:10px;background:rgba(12,16,24,.82)}
+  body>.info .stat{display:flex;align-items:baseline;gap:5px}
+  body>.info .stat .l{font-size:8px;letter-spacing:.5px;display:inline}
+  body>.info .stat .v{font-size:13px;line-height:1.1}
+  /* Игровое поле растягивается на всё оставшееся место: ни полос, ни обрезки. */
+  body>.board,body>.board-wrap,body>.stage,body>.game,main.game,body>main{flex:1 1 auto;
+    min-height:0;min-width:0;padding:0;margin:0;overflow:hidden;display:flex;
+    align-items:center;justify-content:center}
+  body>canvas{flex:1 1 auto;min-height:0;width:100%;height:100%;object-fit:contain}
+  .board>canvas,.board-wrap>canvas,.stage>canvas,.game canvas{max-width:100%;max-height:100%;
+    width:auto;height:auto;object-fit:contain}
+  /* Управление — у самых краёв, под большими пальцами (thumb zone). */
+  body>.controls{flex:0 0 auto;position:relative;z-index:3;justify-content:space-between;
+    gap:6px;padding:4px max(8px,env(safe-area-inset-right,0px)) max(6px,env(safe-area-inset-bottom,0px))
+    max(8px,env(safe-area-inset-left,0px));background:linear-gradient(0deg,rgba(8,11,17,.9),
+    rgba(8,11,17,.35));border-top:0}
+  body>.controls button{min-height:40px;height:40px;min-width:44px;padding:4px 12px;font-size:11px;
+    border-radius:11px;touch-action:manipulation}
+  body>.controls .dpad{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:4px}
+  body>.controls .dpad button{width:40px;height:40px;min-width:0;min-height:0;padding:6px}
+  body>.controls .dpad button svg{width:18px;height:18px}
+  /* Всплывающие окна (game over, пауза) не должны обрезаться в ландшафте. */
+  .overlay,.cheat-overlay{padding:max(8px,env(safe-area-inset-top,0px)) 8px
+    max(8px,env(safe-area-inset-bottom,0px));align-items:center;overflow-y:auto}
+  .overlay .panel,.cheat-box{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);
+    overflow-y:auto;padding:14px 18px;width:min(74vw,420px)}
+  .overlay .panel h2{font-size:19px}
+  .overlay .panel .earn{font-size:18px;margin:8px 0 10px}
+  .overlay .row{padding:6px 10px;font-size:13px;margin-bottom:5px}
+  .overlay .btns .btn{min-height:38px;padding:8px 12px;font-size:12px}
+  .help,body>.hint{display:none}
+}
+/* Очень низкие экраны (телефон в ландшафте с адресной строкой). */
+@media (orientation:landscape) and (max-height:420px){
+  body>.info{display:none}
+  body>.controls button{min-height:36px;height:36px}
+}
+</style>
+<script src="/assets/vg/js/game-kit.js" defer></script>
+</head><body><canvas id="view" aria-label="Трёхмерный город и автомобиль" data-aria-label-en="A 3D city and a car" tabindex="0"></canvas>
 <div id="loading"><b>REDLINE<span class="accent">/</span></b><div class="track"></div><span class="muted" id="loadText"><span data-ru="Загрузка встроенного 3D-движка…" data-en="Loading the built-in 3D engine…">Загрузка встроенного 3D-движка…</span></span></div>
 <header id="topbar"><div class="brand">REDLINE<small><span data-ru="NORTHPORT · РОЗЫСК" data-en="NORTHPORT · WANTED">NORTHPORT · РОЗЫСК</span></small></div><div class="row"><span id="money">₵ 0</span><button id="soundBtn" title="Включить звук" data-title-en="Turn sound on" aria-label="Включить звук" data-aria-label-en="Turn sound on"><span data-ru="♪ выкл" data-en="♪ off">♪ выкл</span></button><button id="menuBtn" aria-label="Меню" data-aria-label-en="Menu">☰</button></div></header><div id="saveWarn" hidden><span data-ru="Хранилище недоступно — прогресс только до закрытия" data-en="Storage unavailable — progress lasts until you close the page">Хранилище недоступно — прогресс только до закрытия</span></div>
 <section id="intro" hidden><div class="intro-copy"><div class="eyebrow"><span data-ru="ПРОЛОГ / ПЕРВЫЙ ВЪЕЗД" data-en="PROLOGUE / FIRST ARRIVAL">ПРОЛОГ / ПЕРВЫЙ ВЪЕЗД</span></div><h1>REDLINE<span class="accent">/</span></h1><div class="subtitle"><span data-ru="Р О З Ы С К" data-en="W A N T E D">Р О З Ы С К</span></div><p class="story"><span data-ru="Въезжай в Нортпорт на Spectre GTR. Впереди — встреча с Воссом, заезд на машины и чужие руки под капотом. Твоя история начинается здесь." data-en="Roll into Northport in the Spectre GTR. Ahead lies a meeting with the Boss, a pink-slip race and strange hands under the bonnet. Your story starts here.">Въезжай в Нортпорт на Spectre GTR. Впереди — встреча с Воссом, заезд на машины и чужие руки под капотом. Твоя история начинается здесь.</span></p><div class="intro-actions"><button class="primary" id="startBtn"><span data-ru="НАЧАТЬ ИСТОРИЮ ↗" data-en="START THE STORY ↗">НАЧАТЬ ИСТОРИЮ ↗</span></button><button id="introGarage"><span data-ru="Гараж / 10 машин" data-en="Garage / 10 cars">Гараж / 10 машин</span></button></div><p class="muted" id="introInput"><span data-ru="WASD — вождение · Shift — нитро" data-en="WASD drive · Shift nitro">WASD — вождение · Shift — нитро</span></p></div><div class="intro-car"><div class="eyebrow"><span data-ru="До того, как всё изменилось" data-en="Before everything changed">До того, как всё изменилось</span></div><b>SPECTRE GTR</b><span><span data-ru="510 л.с. · RWD · 1 315 кг" data-en="510 hp · RWD · 1 315 kg">510 л.с. · RWD · 1 315 кг</span></span></div><div class="intro-footer"><span><span data-ru="СВОБОДНЫЙ ГОРОД &nbsp; / &nbsp; ГОНКИ &nbsp; / &nbsp; ПОГОНИ" data-en="FREE ROAM &nbsp; / &nbsp; RACES &nbsp; / &nbsp; PURSUITS">СВОБОДНЫЙ ГОРОД &nbsp; / &nbsp; ГОНКИ &nbsp; / &nbsp; ПОГОНИ</span></span><span><span data-ru="Оригинальная браузерная игра" data-en="An original browser game">Оригинальная браузерная игра</span><br><span data-ru="Не связана с Electronic Arts" data-en="Not affiliated with Electronic Arts">Не связана с Electronic Arts</span></span></div></section>

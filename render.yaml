@@ -1,24 +1,32 @@
 # Blueprint для Render: web-сервис + PostgreSQL.
-# Значения секретов задаются в панели Render (sync: false).
+# Секреты задаются в панели Render (sync: false), в репозитории их нет.
+# Подробная инструкция — RENDER_DATABASE_SETUP.md.
 services:
   - type: web
     name: vertu-games
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
+    # Порт берётся из PORT (Render подставляет сам).
     startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60 server:app
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      # Internal Database URL созданной ниже базы.
       - key: DATABASE_URL
         fromDatabase:
           name: vertu-games-db
           property: connectionString
-      - key: ADMIN_PASSWORD
-        sync: false
+      # Пул соединений psycopg: free-план ограничивает число соединений.
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: SECRET_KEY
+        generateValue: true
       - key: ADMIN_USERNAME
         value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: TURNSTILE_SITE_KEY
         sync: false
       - key: TURNSTILE_SECRET_KEY
@@ -27,9 +35,13 @@ services:
         value: "1"
       - key: PUBLIC_URL
         sync: false
+      # Пакеты V за деньги отключены: магазин только предметный.
+      - key: SHOP_PROVIDER
+        value: ""
 
 databases:
   - name: vertu-games-db
     plan: free
     databaseName: vertu
     user: vertu
+    postgresMajorVersion: "16"

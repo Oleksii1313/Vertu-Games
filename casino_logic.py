@@ -21,6 +21,7 @@ from game_catalog import (CASINO_STAKES, SLOT_SYMBOLS, SLOT_TWO_PAY, WHEEL_SEGME
                           WHEEL_WEIGHTS, casino_rules)
 
 FREE_SPIN_KIND = 'wheel'
+FREE_SPIN_RECORD = 'wheel_free'
 FREE_SPIN_GAME = 'daily'
 # Суточные лимиты колеса: одно бесплатное вращение и не больше пяти платных.
 WHEEL_FREE_PER_DAY = 1
@@ -98,9 +99,10 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
     payout = int(round(stake * multiplier))
     ref = secrets.token_urlsafe(18)
     # Отдельный вид записи для бесплатного вращения: по нему считается дневной лимит.
-    kind = 'wheel_free' if use_free else FREE_SPIN_KIND
+    kind = FREE_SPIN_RECORD if use_free else FREE_SPIN_KIND
     result = data.casino_bet(user_id, kind, stake, f'x{multiplier:g}', ref,
-                             payout, ref, charge=0 if use_free else stake, free_key=free_key)
+                             payout, detail=f'x{multiplier:g}',
+                             charge=0 if use_free else stake, free_key=free_key)
     return {
         'game': 'wheel', 'segment': index, 'multiplier': multiplier, 'stake': stake,
         'payout': payout, 'win': payout > 0, 'free': bool(use_free and not result['repeated']),
@@ -114,11 +116,10 @@ def _daily_key(user_id: int) -> str:
 
 
 def free_spin_available(user_id: int) -> bool:
+    """Есть ли ещё бесплатное вращение сегодня (считаем по истории, не по флагу)."""
     data = store.get_store()
-    with data.driver.transaction() as c:
-        row = c.execute('SELECT 1 FROM platform_settings WHERE key=?',
-                        (_daily_key(user_id),)).fetchone()
-    return not bool(row)
+    state = data.casino_wheel_limits(user_id, WHEEL_FREE_PER_DAY, WHEEL_PAID_PER_DAY)
+    return state['free_left'] > 0
 
 
 def _limits():
@@ -149,8 +150,8 @@ def spin_slots(user_id: int, stake) -> dict:
     ids = [SLOT_SYMBOLS[i]['id'] for i in reels]
     payout, outcome = _slot_payout(ids, stake)
     ref = secrets.token_urlsafe(18)
-    result = data.casino_bet(user_id, 'slots', stake, outcome, f'{ref}',
-                             payout, ref)
+    result = data.casino_bet(user_id, 'slots', stake, outcome, ref, payout,
+                             detail=outcome)
     return {
         'game': 'slots', 'reels': ids, 'symbols': [SLOT_SYMBOLS[i] for i in reels],
         'stake': stake, 'payout': payout, 'win': payout > 0, 'outcome': outcome,
