@@ -28,47 +28,13 @@
       canvas.height = Math.round(size * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    var cx = size / 2, cy = size / 2, radius = size / 2 - 8;
-    ctx.clearRect(0, 0, size, size);
-    var segments = rules.wheel.segments || [];
-    var arc = (Math.PI * 2) / segments.length;
-    segments.forEach(function (mult, index) {
-      var start = current + index * arc;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, start, start + arc);
-      ctx.closePath();
-      var gradient = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
-      gradient.addColorStop(0, colors()[index % 7] + 'cc');
-      gradient.addColorStop(1, colors()[index % 7]);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(7,8,12,.85)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      var mid = start + arc / 2;
-      ctx.save();
-      ctx.translate(cx + Math.cos(mid) * radius * 0.64, cy + Math.sin(mid) * radius * 0.64);
-      ctx.rotate(mid + Math.PI / 2);
-      ctx.fillStyle = '#08110a';
-      ctx.font = '800 ' + Math.max(13, size * 0.052) + 'px Montserrat, Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('x' + (mult % 1 === 0 ? mult : mult.toFixed(2).replace(/0$/, '')), 0, 0);
-      ctx.restore();
+    // Секторы пропорциональны вероятностям (x0 — 48 %, x10 — 0.5 %);
+    // отрисовка живёт в wheel-math.js, чтобы обе страницы рисовали одинаково.
+    VGWheel.draw(ctx, {
+      size: size, rotation: current,
+      segments: rules.wheel.segments, weights: rules.wheel.weights,
+      colors: colors(), center: 'VERTU'
     });
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#0b0e15';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(198,255,61,.55)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = '#c6ff3d';
-    ctx.font = '900 ' + Math.max(11, size * 0.036) + 'px Montserrat, Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('VERTU', cx, cy);
   }
 
   function cacheLimits(data) {
@@ -208,24 +174,23 @@
     if (!free) VG.updateCoins(Math.max(0, VG.coins() - stake));
 
     VG.api('/api/casino/wheel', { body: { stake: stake, free: free } }).then(function (data) {
-      var segments = rules.wheel.segments || [];
+      var weights = rules.wheel.weights || [];
       // Геометрия — из единственной реализации (wheel-math.js): колесо обязано
-      // встать именно на сектор data.segment, иначе игрок видит «×2», а выплату
-      // получает за «×0.5» — 10 монет вместо 40. Инвариант проверяет
-      // tools/test_wheel_math.js.
-      var target = VGWheel.target(rotation, data.segment, segments.length, 6);
+      // встать именно на сектор data.segment, который оплатил сервер. Ширина
+      // сектора равна его вероятности, поэтому «дорога» до x10 короче, чем до x0.
+      var target = VGWheel.target(rotation, data.segment, weights, 6);
       var from = rotation;
       var start = performance.now();
-      var lastTick = 0;
-      var segmentSpan = (Math.PI * 2) / (segments.length || 1);
+      var lastIndex = VGWheel.segmentAt(from, weights);
       (function animate(now) {
         var elapsed = Math.min((now - start) / 3400, 1);
         var eased = 1 - Math.pow(1 - elapsed, 3.2);
         var current = from + (target - from) * eased;
         draw(current);
-        // Тик на каждый пройденный сектор: к остановке они звучат всё реже.
-        if (sfx && Math.abs(current - lastTick) >= segmentSpan) {
-          lastTick = current;
+        // Тик при переходе границы сектора — звук замедляется вместе с колесом.
+        var tickIndex = VGWheel.segmentAt(current, weights);
+        if (sfx && tickIndex !== lastIndex) {
+          lastIndex = tickIndex;
           sfx.tick(elapsed, 'wheel');
         }
         if (elapsed < 1) return requestAnimationFrame(animate);
@@ -293,7 +258,7 @@
         // Списывается ставка, зачисляется выплата; справа — итог за спин.
         var rowNet = Number(row.payout) - Number(row.stake);
         return '<div class="list-row"><span class="ico">' + VG.icon(row.payout > 0 ? 'trophy' : 'dice', 16) + '</span>' +
-          '<span class="meta"><b>' + escapeHtml(row.outcome) + '</b><small>' + VG.timeAgo(row.created) +
+          '<span class="meta"><b>' + escapeHtml(VG.casinoOutcome(row.outcome)) + '</b><small>' + VG.timeAgo(row.created) +
           ' · ' + T('ставка ', 'stake ') + '−' + fmt(row.stake) + ' V' +
           ' · ' + T('выплата ', 'payout ') + '+' + fmt(row.payout) + ' V</small></span>' +
           '<span style="font-weight:800;color:' + (rowNet > 0 ? '#dcff8a' : rowNet < 0 ? '#ff8fa3' : 'var(--muted)') + '">' +

@@ -540,17 +540,36 @@ class DataStore:
         self._seed()
 
     # ---------------------------------------------------------------- migrations
+    # Старые дробные множители колеса: x0.5 и x0.25. Их больше нет в игре.
+    LEGACY_WHEEL_LABELS = ('x0.5', 'x0.25')
+
     MIGRATIONS = (
-        ('0003_wallets_from_users', ()),
+        ('0003_wallets_from_users', ('_migrate_wallets',)),
+        ('0004_wheel_integer_multipliers', ('_migrate_wheel_outcomes',)),
     )
 
     def _migrations(self):
         with self.driver.transaction(isolation='read committed') as c:
             done = {row['name'] for row in c.execute('SELECT name FROM schema_migrations').fetchall()}
-        if '0003_wallets_from_users' not in done:
-            self._migrate_wallets()
+        for name, steps in self.MIGRATIONS:
+            if name in done:
+                continue
+            for step in steps:
+                getattr(self, step)()
             with self.driver.transaction(isolation='read committed') as c:
-                c.execute('INSERT INTO schema_migrations(name) VALUES(?)', ('0003_wallets_from_users',))
+                c.execute('INSERT INTO schema_migrations(name) VALUES(?)', (name,))
+
+    def _migrate_wheel_outcomes(self):
+        """Убрать из истории колеса множители, которых больше нет на колесе.
+
+        Выплаты (`reward`) — факт, они не меняются. Меняется только обозначение
+        результата: ``x0.5``/``x0.25`` → ``past`` (архив). Так ни интерфейс, ни
+        API не показывают множители, которых нет в текущей таблице выплат.
+        """
+        with self.driver.transaction() as c:
+            for label in self.LEGACY_WHEEL_LABELS:
+                c.execute('UPDATE casino_history SET result=? WHERE game_type IN (?,?) AND result=?',
+                          ('past', 'wheel', 'wheel_free', label))
 
     def _migrate_wallets(self):
         """Старые базы держали баланс в users.coins — переносим в wallets.
@@ -1330,6 +1349,8 @@ class DataStore:
                               outcome: str, detail: str, created: int = 0) -> bool:
         """Перенести историческую ставку **без** движения монет (импорт старых баз)."""
         ref = f'legacy:{detail or created}:{int(user_id)}'[:180]
+        if str(outcome) in self.LEGACY_WHEEL_LABELS:
+            outcome = 'past'
         try:
             with self.driver.transaction() as c:
                 if c.execute('SELECT 1 FROM casino_history WHERE reference_id=?',

@@ -171,48 +171,12 @@
       canvas.height = Math.round(size * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    var cx = size / 2, cy = size / 2, radius = size / 2 - 8;
-    ctx.clearRect(0, 0, size, size);
-    var segments = (rules.wheel.segments || []);
-    var colors = segmentColors();
-    var arc = (Math.PI * 2) / segments.length;
-    segments.forEach(function (multiplier, index) {
-      var start = rotation + index * arc;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, start, start + arc);
-      ctx.closePath();
-      var gradient = ctx.createRadialGradient(cx, cy, radius * 0.2, cx, cy, radius);
-      gradient.addColorStop(0, colors[index % colors.length] + 'cc');
-      gradient.addColorStop(1, colors[index % colors.length]);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(7,8,12,.85)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      var mid = start + arc / 2;
-      ctx.save();
-      ctx.translate(cx + Math.cos(mid) * radius * 0.66, cy + Math.sin(mid) * radius * 0.66);
-      ctx.rotate(mid + Math.PI / 2);
-      ctx.fillStyle = '#08110a';
-      ctx.font = '800 ' + Math.max(13, size * 0.052) + 'px Montserrat, Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('x' + (multiplier % 1 === 0 ? multiplier : multiplier.toFixed(2).replace(/0$/, '')), 0, 0);
-      ctx.restore();
+    // Та же отрисовка, что и на roulette.html: секторы по вероятностям.
+    VGWheel.draw(ctx, {
+      size: size, rotation: rotation,
+      segments: rules.wheel.segments, weights: rules.wheel.weights,
+      colors: segmentColors(), center: 'VERTU'
     });
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius * 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#0b0e15';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(198,255,61,.55)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = '#c6ff3d';
-    ctx.font = '900 ' + Math.max(11, size * 0.036) + 'px Montserrat, Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('VERTU', cx, cy);
   }
 
   function spinWheel() {
@@ -242,27 +206,25 @@
     if (!free) VG.updateCoins(Math.max(0, VG.coins() - wheelStake));
 
     VG.api('/api/casino/wheel', { body: { stake: wheelStake, free: free } }).then(function (data) {
-      var segments = (rules.wheel.segments || []);
+      var weights = (rules.wheel.weights || []);
       // Геометрия — из единственной реализации (wheel-math.js), см. roulette.js:
-      // колесо встаёт ровно на оплаченный сектор.
-      var target = VGWheel.target(wheelRotation, data.segment, segments.length, 6);
+      // колесо встаёт ровно на оплаченный сектор, ширина сектора = вероятность.
+      var target = VGWheel.target(wheelRotation, data.segment, weights, 6);
       var start = performance.now();
       var duration = 3600;
       var from = wheelRotation;
-      var lastTick = 0;
-      var tickCount = 0;
+      var lastIndex = VGWheel.segmentAt(from, weights);
       (function animate(now) {
         var elapsed = Math.min((now - start) / duration, 1);
         var eased = 1 - Math.pow(1 - elapsed, 3.2);
         var current = from + (target - from) * eased;
         drawWheel(current);
-        /* Тик на каждый сектор: поворот на сектор за N кадров — интервал растёт
-         * квадратично, поэтому звук естественно замедляется к остановке. */
-        var segmentSpan = (Math.PI * 2) / (segments.length || 1);
-        if (sfx && Math.abs(current - lastTick) >= segmentSpan) {
-          lastTick = current;
+        /* Тик при переходе границы сектора: интервал растёт к остановке, поэтому
+         * звук естественно замедляется. */
+        var tickIndex = VGWheel.segmentAt(current, weights);
+        if (sfx && tickIndex !== lastIndex) {
+          lastIndex = tickIndex;
           sfx.tick(elapsed, 'wheel');
-          tickCount++;
         }
         if (elapsed < 1) return requestAnimationFrame(animate);
         wheelRotation = VGWheel.normalize(target);
@@ -339,7 +301,7 @@
             '<td class="' + (row.payout > 0 ? 'pos' : 'muted') + '">' + '+' + fmt(row.payout) + ' V</td>' +
             '<td class="' + (rowNet > 0 ? 'pos' : rowNet < 0 ? 'neg' : 'muted') + '">'
               + (rowNet > 0 ? '+' : '') + fmt(rowNet) + ' V</td>' +
-            '<td class="muted">' + escapeHtml(row.outcome) + '</td>' +
+            '<td class="muted">' + escapeHtml(VG.casinoOutcome(row.outcome)) + '</td>' +
             '<td class="muted">' + VG.timeAgo(row.created) + '</td></tr>';
         }).join('') + '</tbody></table></div>';
     }).catch(function (error) {

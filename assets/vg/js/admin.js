@@ -177,7 +177,7 @@
         '<div class="table-wrap"><table><thead><tr><th>Игра</th><th>Ставка</th><th>Выигрыш</th><th>Результат</th><th>Время</th></tr></thead><tbody>' +
         ((data.casinoHistory || []).map(function (row) {
           return '<tr><td>' + esc(row.game) + '</td><td>' + fmt(row.stake) + '</td><td>' + fmt(row.payout) + '</td>' +
-            '<td class="muted">' + esc(row.outcome) + '</td><td class="muted">' + VG.timeAgo(row.created) + '</td></tr>';
+            '<td class="muted">' + esc(VG.casinoOutcome(row.outcome)) + '</td><td class="muted">' + VG.timeAgo(row.created) + '</td></tr>';
         }).join('') || '<tr><td colspan="5" class="muted">Ставок не было</td></tr>') + '</tbody></table></div>' +
         '<div class="divider"></div><h4 style="font-size:13px;margin-bottom:8px">Достижения и покупки</h4>' +
         '<div class="muted" style="font-size:12.5px">' + ((data.achievements || []).length) + ' достижений · ' +

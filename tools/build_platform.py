@@ -339,6 +339,10 @@ def build_shop() -> str:
 # --------------------------------------------------------------------------- #  casino
 def build_casino() -> str:
     rules = casino_rules()
+    # Множители берём из правил сервера — список не может разойтись с колесом.
+    wheel_segments_text = ', '.join(
+        'x%g' % row['multiplier'] for row in sorted(rules['wheel']['probabilities'],
+                                                    key=lambda row: row['multiplier'], reverse=True))
     wheel_rows = ''.join(
         f'<tr><td>x{row["multiplier"]:g}</td><td>{row["weight"]}</td><td>{row["chance"] * 100:.1f}%</td>'
         f'<td>{row["rtp"] * 100:.1f}%</td></tr>' for row in rules['wheel']['probabilities'])
@@ -394,7 +398,7 @@ def build_casino() -> str:
           <div class="machine-foot">
             <button class="btn btn-primary spin-btn" id="spinWheel"><span data-ico="wheel"></span> Крутить колесо</button>
             <div class="wheel-limits" id="wheelLimits" role="status" aria-live="polite">Бесплатно: 1/1 · Платных: 5/5</div>
-            <span class="potential">Секторы: x5, x3, x2, x1, x0.5, x0.25, x0 · <b id="freeSpinNote"></b></span>
+            <span class="potential">Секторы: {wheel_segments_text} · <b id="freeSpinNote"></b></span>
           </div>
           <div class="result-banner" id="wheelResult">Крутите колесо — результат придёт с сервера</div>
         </div>
@@ -919,7 +923,8 @@ def faq_html() -> str:
                                  'каждая записывается в историю операций.'),
         ('Как заработать V-монеты?', 'За игровые события (у каждой игры свой размер награды и суточный лимит), за достижения, '
                                      'а также в казино. Все суммы определяет сервер.'),
-        ('Почему казино не даёт стабильно выигрывать?', 'RTP слотов около 90.5%, колеса — около 84%. Математическое ожидание игры '
+        ('Почему казино не даёт стабильно выигрывать?', f'RTP слотов около {casino_rules()["slots"]["rtp"] * 100:.1f}%, '
+                                                        f'колеса — {casino_rules()["wheel"]["rtp"] * 100:.1f}%. Математическое ожидание игры '
                                                         'отрицательное, это развлекательный режим без реальных денег.'),
         ('Можно ли вывести V-монеты в деньги?', 'Нет. V-монеты не имеют денежной стоимости, их нельзя купить «на вывод» или обменять на деньги.'),
         ('Забыл пароль — что делать?', 'Восстановления по e-mail нет, потому что e-mail не используется. Обратитесь к владельцу '
