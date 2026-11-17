@@ -820,10 +820,19 @@
         if (data.coins != null) updateCoins(data.coins);
       }).catch(function () {});
       // Сумму награды задаёт сервер: клиент получает билет и лишь возвращает его.
-      api('/api/games/session?game=' + encodeURIComponent(game.id)).then(function (data) {
-        ticket = data;
-        VG.activeTicket = data;
-      }).catch(function () {});
+      // Билет запрашивается сразу и перезапрашивается сам, если истёк (TTL 30 мин)
+      // или пришёл отказ: игрок не должен видеть «сессия недействительна» из-за
+      // того, что игра открыта дольше срока билета.
+      function fetchTicket() {
+        return api('/api/games/session?game=' + encodeURIComponent(game.id))
+          .then(function (data) {
+            if (data && data.sig) { ticket = data; VG.activeTicket = data; }
+            return data;
+          })
+          .catch(function () { return null; });
+      }
+      VG.activeTicketRefresh = fetchTicket;
+      fetchTicket();
     }
     /*
      * Мост к играм. Игры по-прежнему шлют те же сообщения, что и раньше, но
@@ -833,12 +842,10 @@
     function acknowledge(source, payload) {
       try { source.postMessage(payload, location.origin); } catch (e) {}
     }
-    function payout(amount, receipt, label) {
+    function payout(amount, receipt, label, retry) {
       if (!VG.user() || !VG.activeGame) return Promise.resolve(null);
       if (!ticket) {   // билет ещё не пришёл (или не выдан) — награду не просим
-        api('/api/games/session?game=' + encodeURIComponent(VG.activeGame.id))
-          .then(function (data) { ticket = data; VG.activeTicket = data; })
-          .catch(function () {});
+        fetchTicket();
         return Promise.resolve(null);
       }
       return api('/api/games/reward', {
@@ -853,6 +860,13 @@
         return data;
       }).catch(function (error) {
         if (error.status === 429) toast(error.message, 'bad');
+        if (error.status === 403 && error.code === 'TICKET' && !retry) {
+          // Билет истёк или сменился ключ подписи: один раз молча обновляем и
+          // повторяем награду. Квитанция одна и та же, двойного начисления нет.
+          return fetchTicket().then(function (fresh) {
+            return fresh && fresh.sig ? payout(amount, receipt, label, true) : null;
+          });
+        }
         if (error.status === 403) toast(T('Сессия игры истекла — откройте игру заново.', 'Game session expired — reopen the game.'), 'bad');
         return null;
       });

@@ -250,6 +250,45 @@ ANOMALY_STRIKE_LIMIT=3          # третье срабатывание = 429
 
 ---
 
+### 1.8. Колесо: где реально была ошибка «×3 даёт 30»
+
+Выплата в `casino_logic.spin_wheel` всегда была верной:
+
+```python
+payout = int(round(stake * multiplier))     # stake=100, x3 -> 300
+```
+
+Ставка списывается до вращения (`charge=stake`), выплата начисляется в той же
+транзакции (`db.casino_bet`), поэтому **изменение баланса** за спин равно
+`payout - stake`:
+
+| сектор | ставка | списание | выплата | изменение баланса |
+| --- | --- | --- | --- | --- |
+| ×1 | 20 | −20 | 20 | **0** (ставка возвращается) |
+| ×3 | 100 | −100 | 300 | **+200** |
+| ×0.25 | 100 | −100 | 25 | −75 |
+| ×0 | 20 | −20 | 0 | −20 |
+
+Ошибка была в **анимации**: `target = rotation + 6·2π − (i·arc + arc/2) + 2π`
+не учитывала, что указатель висит сверху (угол `3π/2`). Колесо останавливалось
+на соседнем секторе, и игрок видел «×0.25» (ставка 100 → 25, то есть ровно
+«в 10 раз меньше»), а не «×3». Для ×1 визуально казалось, что монеты «сгорели»,
+потому что выплата 20 совпадала со списанием, но под указателем стоял ×0.25.
+
+Исправлено в `roulette.js` и `casino.js`:
+
+```js
+var pointer = Math.PI * 3 / 2;                    // указатель сверху
+var desired = pointer - (data.segment * arc + arc / 2);
+var delta = ((desired - rotation) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+var target = rotation + Math.PI * 2 * 6 + delta;  // 6 оборотов + доводка
+```
+
+Проверки: `tools/test_wheel.py` (payout для каждого сектора, x1 = возврат
+ставки, x3 = ×3, история и «Итог», бесплатный спин) и
+`WheelAnimationGeometry` — повторяет формулу JS и требует, чтобы при любом
+начальном повороте под указателем оказывался именно выпавший сектор.
+
 ## 2. Аутентификация и защита от ботов
 
 ### 2.1. Регистрация и вход
@@ -409,8 +448,9 @@ cookie (первый визит) и вебхуки магазина (подпи�
 | Заголовок | Значение | Зачем |
 | --- | --- | --- |
 | `Content-Security-Policy` | см. ниже | XSS, инъекции, сторонние скрипты |
-| `X-Frame-Options` | `DENY` | clickjacking (дубль для старых браузеров) |
-| `frame-ancestors` | `'none'` | clickjacking в CSP |
+| `X-Frame-Options` | `SAMEORIGIN` (`DENY` для админки) | clickjacking: свой origin не может вложить чужой сайт |
+| `frame-ancestors` | `'self'` (`'none'` для админки) | то же в CSP |
+| `frame-src` | `'self' https://challenges.cloudflare.com` | каталог вкладывает свои игры в `#playOverlay` |
 | `X-Content-Type-Options` | `nosniff` | MIME-sniffing |
 | `Referrer-Policy` | `same-origin` | утечка URL во внешние ресурсы |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` | только HTTPS |
@@ -428,7 +468,8 @@ img-src 'self' data: blob:;
 font-src 'self' data: https://fonts.gstatic.com;
 connect-src 'self' https://challenges.cloudflare.com;
 frame-src https://challenges.cloudflare.com;
-frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';
+frame-src 'self' https://challenges.cloudflare.com;
+frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none';
 worker-src 'self' blob:
 ```
 
@@ -503,6 +544,23 @@ column = SORT.get(request.args.get('sort'), 'created_at')
 Alembic-миграцией в деплое.
 
 ### 3.4. XSS ✅ / ⬜
+
+### Фрейминг: почему `SAMEORIGIN`, а не `DENY`
+
+Каталог (`top.html`) открывает игру во фрейме `#playOverlay`
+(`<iframe class="play-frame" src="games/*.html">`), поэтому `DENY` и
+`frame-ancestors 'none'` ломали запуск игр — браузер показывал серый экран с
+перечёркнутым значком. Правильная настройка:
+
+* страницы и игры — `X-Frame-Options: SAMEORIGIN`, `frame-ancestors 'self'`
+  (вкладывать платформу может только она сама, чужой сайт — нет);
+* `frame-src 'self'` — разрешает iframe на свой же origin;
+* **админка — исключение**: `DENY` + `frame-ancestors 'none'`
+  (`server.py::_is_admin_response`), чтобы её нельзя было вложить даже с
+  собственного домена (защита от UI-redress при XSS на игровых страницах).
+
+Регрессионные проверки: `test_own_games_can_be_framed_by_own_origin`,
+`test_admin_cannot_be_framed_at_all`, `test_csp_allows_only_expected_hosts`.
 
 ✅ Экранирование HTML на клиенте (`escapeHtml`, `textContent` вместо `innerHTML`
 для пользовательских строк), CSP запрещает сторонние скрипты и `object-src`.
@@ -609,8 +667,9 @@ if origin in ALLOWED:
    при `TURNSTILE_REQUIRED=1`.
 6. ✅ Сессии: HttpOnly/SameSite/Secure, в БД только хеш токена, ротация при
    смене пароля; CSRF double-submit на всех небезопасных запросах.
-7. ✅ Заголовки: CSP, HSTS (preload), `X-Frame-Options: DENY`,
-   `frame-ancestors 'none'`, nosniff, COOP/CORP, Permissions-Policy.
+7. ✅ Заголовки: CSP, HSTS (preload), `X-Frame-Options: SAMEORIGIN`
+   (`DENY` для админки), `frame-ancestors 'self'`, `frame-src 'self'`, nosniff,
+   COOP/CORP, Permissions-Policy.
 8. ✅ Секреты только в env; приложение не отдаёт `.env`/`.py`; отдельный
    `GAME_SIGNING_KEY`; удалён 17 МБ zip из git.
 9. ✅ Rate limiting в три уровня (память → БД → Cloudflare), лимиты на вход,
@@ -649,6 +708,9 @@ if origin in ALLOWED:
 python tools/check_platform.py
 DATABASE_URL=postgresql://… python tools/check_platform.py
 
+# колесо: payout = ставка × множитель, x1 возвращает ставку, остановка колеса
+python -m unittest tools.test_wheel -v          # 8 тестов
+
 # античит: подпись, повтор, просрочка, чужой билет, шквал, заголовки
 python -m unittest tools.test_anticheat -v      # 24 теста
 
@@ -674,7 +736,8 @@ python tools/smoke_deploy.py https://… --admin-password '…'
 | `test_anomaly_marks_machine_tempo` | 8 событий за 0.1 с | throttle/429 |
 | `test_csp_allows_only_expected_hosts` | инъекция внешнего скрипта | CSP блокирует |
 | `test_hsts_only_on_https` | заход по http | HSTS не ломает локальную разработку |
-| `test_frames_denied_everywhere` | clickjacking | `X-Frame-Options: DENY` |
+| `test_own_games_can_be_framed_by_own_origin` | игры не открываются в плеере | `SAMEORIGIN` + `frame-ancestors 'self'` |
+| `test_admin_cannot_be_framed_at_all` | clickjacking админки | `DENY` + `frame-ancestors 'none'` |
 
 ---
 

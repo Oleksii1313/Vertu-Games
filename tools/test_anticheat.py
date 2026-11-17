@@ -233,11 +233,12 @@ class RewardEndpoint(unittest.TestCase):
     def test_security_headers_present(self):
         client = self.app.test_client()
         headers = client.get('/').headers
-        self.assertEqual(headers.get('X-Frame-Options'), 'DENY')
+        self.assertEqual(headers.get('X-Frame-Options'), 'SAMEORIGIN')
         self.assertEqual(headers.get('X-Content-Type-Options'), 'nosniff')
         csp = headers.get('Content-Security-Policy') or ''
         self.assertIn("default-src 'self'", csp)
-        self.assertIn("frame-ancestors 'none'", csp)
+        self.assertIn("frame-ancestors 'self'", csp)
+        self.assertIn("frame-src 'self'", csp)
         self.assertIn("object-src 'none'", csp)
         self.assertNotIn('unsafe-eval', csp)
 
@@ -254,14 +255,27 @@ class HeadersAndClickjacking(unittest.TestCase):
     def setUp(self):
         self.client = server.app.test_client()
 
-    def test_frames_denied_everywhere(self):
-        for path in ('/', '/games/flappy.html', '/api/health'):
+    def test_own_games_can_be_framed_by_own_origin(self):
+        """Каталог открывает игры в iframe: same-origin фрейминг обязан работать."""
+        for path in ('/', '/top.html', '/games/flappy.html', '/games/pong.html',
+                     '/roulette.html', '/api/health', '/api/games'):
+            headers = self.client.get(path).headers
+            self.assertEqual(headers.get('X-Frame-Options'), 'SAMEORIGIN', path)
+            csp = headers.get('Content-Security-Policy') or ''
+            self.assertIn("frame-ancestors 'self'", csp, path)
+            self.assertIn("frame-src 'self'", csp, path)
+
+    def test_admin_cannot_be_framed_at_all(self):
+        for path in ('/admin.html', '/admin', '/api/admin/stats'):
             response = self.client.get(path)
             self.assertEqual(response.headers.get('X-Frame-Options'), 'DENY', path)
+            csp = response.headers.get('Content-Security-Policy') or ''
+            self.assertIn("frame-ancestors 'none'", csp, path)
 
     def test_csp_allows_only_expected_hosts(self):
         csp = self.client.get('/').headers.get('Content-Security-Policy') or ''
         self.assertIn('https://challenges.cloudflare.com', csp)
+        self.assertIn("frame-src 'self' https://challenges.cloudflare.com", csp)
         self.assertNotRegex(csp, r"default-src[^;]*\*")
         self.assertNotIn('unsafe-eval', csp)
         # Babylon.js нужен только 3D-играм, а не всем страницам.
