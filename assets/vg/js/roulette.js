@@ -197,7 +197,15 @@
     button.disabled = true;
     var banner = $('#wheelResult');
     banner.className = 'result-banner';
-    banner.textContent = T('Колесо вращается…', 'Spinning…');
+    // Явно показываем, что ставка уже списана, — а выплата будет в конце.
+    banner.textContent = free
+      ? T('Бесплатный спин · колесо вращается…', 'Free spin · spinning…')
+      : T('Ставка ' + fmt(stake) + ' V списана · колесо вращается…',
+          'Stake ' + fmt(stake) + ' V charged · spinning…');
+
+    // Ставка списывается в момент старта: показываем это сразу, не дожидаясь
+    // конца анимации. Итог (зачисление payout) придёт от сервера ниже.
+    if (!free) VG.updateCoins(Math.max(0, VG.coins() - stake));
 
     VG.api('/api/casino/wheel', { body: { stake: stake, free: free } }).then(function (data) {
       var segments = rules.wheel.segments || [];
@@ -233,14 +241,26 @@
         VG.updateCoins(data.balance);
         if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
         if (data.limits) renderLimits(data.limits); else button.disabled = false;
+        // Общая сумма выплаты и чистое изменение баланса — разные числа:
+        // x1 -> выплата равна ставке (баланс не изменился), x2 -> выплата
+        // двойная (чистый плюс равен ставке), x0 -> выплаты нет.
+        var net = (data.net != null) ? Number(data.net) : (Number(data.payout) - (data.free ? 0 : stake));
+        var detail = T('ставка ' + fmt(stake) + ' V · выплата ' + fmt(data.payout) + ' V',
+          'stake ' + fmt(stake) + ' V · payout ' + fmt(data.payout) + ' V');
         if (data.payout > 0) {
           banner.className = 'result-banner win';
           banner.textContent = (data.free ? T('Бесплатный спин! ', 'Free spin! ') : '') +
-            T('x' + data.multiplier + ' · +' + fmt(data.payout) + ' V', 'x' + data.multiplier + ' · +' + fmt(data.payout) + ' V');
+            'x' + data.multiplier + ' · ' + detail +
+            ' · ' + T('итог ' + (net >= 0 ? '+' : '') + fmt(net) + ' V',
+              'net ' + (net >= 0 ? '+' : '') + fmt(net) + ' V');
           VG.toast('+' + fmt(data.payout) + ' V');
         } else {
           banner.className = 'result-banner lose';
-          banner.textContent = T('Сектор x0 — без выигрыша', 'x0 — no win');
+          banner.textContent = data.free
+            ? T('Сектор x0 · бесплатный спин, выплаты нет',
+                'x0 · free spin, no payout')
+            : T('Сектор x0 · ставка ' + fmt(stake) + ' V списана, выплаты нет',
+                'x0 · stake ' + fmt(stake) + ' V charged, no payout');
         }
         loadFreeState();
         loadHistory();
@@ -248,6 +268,8 @@
       })(start);
     }).catch(function (error) {
       busy = false;
+      // Ставка не принята сервером — возвращаем показанный баланс к реальному.
+      VG.refreshCoins();
       if (error.limits) {
         // Сервер вернул состояние лимитов вместе с ошибкой — включаем отсчёт.
         renderLimits(error.limits);
@@ -273,11 +295,14 @@
         return;
       }
       box.innerHTML = data.items.map(function (row) {
+        // Списывается ставка, зачисляется выплата; справа — итог за спин.
+        var rowNet = Number(row.payout) - Number(row.stake);
         return '<div class="list-row"><span class="ico">' + VG.icon(row.payout > 0 ? 'trophy' : 'dice', 16) + '</span>' +
           '<span class="meta"><b>' + escapeHtml(row.outcome) + '</b><small>' + VG.timeAgo(row.created) +
-          ' · ' + T('ставка ', 'stake ') + fmt(row.stake) + ' V</small></span>' +
-          '<span style="font-weight:800;color:' + (row.payout > 0 ? '#dcff8a' : 'var(--muted)') + '">' +
-          (row.payout > 0 ? '+' : '') + fmt(row.payout) + ' V</span></div>';
+          ' · ' + T('ставка ', 'stake ') + '−' + fmt(row.stake) + ' V' +
+          ' · ' + T('выплата ', 'payout ') + '+' + fmt(row.payout) + ' V</small></span>' +
+          '<span style="font-weight:800;color:' + (rowNet > 0 ? '#dcff8a' : rowNet < 0 ? '#ff8fa3' : 'var(--muted)') + '">' +
+          (rowNet > 0 ? '+' : '') + fmt(rowNet) + ' V</span></div>';
       }).join('');
     }).catch(function () {});
   }

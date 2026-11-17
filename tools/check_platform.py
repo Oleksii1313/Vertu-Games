@@ -363,6 +363,10 @@ def main():
               str(game_headers.get('X-Frame-Options')))
         check('MIME-sniffing запрещён', hdrs.get('X-Content-Type-Options') == 'nosniff',
               str(hdrs.get('X-Content-Type-Options')))
+        alice.get('/assets/vg/js/casino.js')
+        js_cache = str(alice.last_headers.get('Cache-Control', ''))
+        check('JS казино кешируется не дольше минуты (правки доходят сразу)',
+              'max-age=60' in js_cache and 'must-revalidate' in js_cache, js_cache)
         flat_csp = csp
         alice.get('/games/minicraft.html')
         game_csp = str(alice.last_headers.get('Content-Security-Policy', ''))

@@ -96,16 +96,24 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
 
     index = _rng_choice_weighted(WHEEL_SEGMENTS, WHEEL_WEIGHTS)
     multiplier = WHEEL_SEGMENTS[index]
+    # Выплата — это ВСЯ сумма, которая возвращается на баланс: stake * multiplier.
+    # Ставка списана отдельно (charge), поэтому итоговое изменение баланса равно
+    # payout - charge: x1 -> 0 (ставка вернулась), x2 -> +stake (чистый выигрыш),
+    # x0 -> -stake (ставка потеряна). Никакого деления ставки пополам здесь нет.
     payout = int(round(stake * multiplier))
+    charge = 0 if use_free else stake
+    net = payout - charge
     ref = secrets.token_urlsafe(18)
     # Отдельный вид записи для бесплатного вращения: по нему считается дневной лимит.
     kind = FREE_SPIN_RECORD if use_free else FREE_SPIN_KIND
     result = data.casino_bet(user_id, kind, stake, f'x{multiplier:g}', ref,
                              payout, detail=f'x{multiplier:g}',
-                             charge=0 if use_free else stake, free_key=free_key)
+                             charge=charge, free_key=free_key)
     return {
         'game': 'wheel', 'segment': index, 'multiplier': multiplier, 'stake': stake,
         'payout': payout, 'win': payout > 0, 'free': bool(use_free and not result['repeated']),
+        # charge — списано на старте, payout — зачислено в конце, net — разница.
+        'charge': charge, 'credit': payout, 'net': net,
         'balance': result['balance'], 'ref': ref,
         'limits': wheel_limits(user_id),
     }
@@ -155,6 +163,8 @@ def spin_slots(user_id: int, stake) -> dict:
     return {
         'game': 'slots', 'reels': ids, 'symbols': [SLOT_SYMBOLS[i] for i in reels],
         'stake': stake, 'payout': payout, 'win': payout > 0, 'outcome': outcome,
+        # Списание на старте и зачисление в конце — разные величины.
+        'charge': stake, 'credit': payout, 'net': payout - stake,
         'balance': result['balance'], 'ref': ref, 'refId': ref,
     }
 
