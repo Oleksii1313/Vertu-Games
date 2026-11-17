@@ -414,6 +414,19 @@ def main():
         before = alice.get('/api/balance')[1]['coins']
         status, data = alice.post('/api/casino/wheel', {'stake': 10})
         check('колесо: платный спин', status == 200 and data.get('balance') == before - 10 + data.get('payout', 0), str(data))
+        # Главный инвариант рулетки: выплата = ставка × множитель, без делений.
+        expected_payout = round(float(data.get('stake') or 0) * float(data.get('multiplier') or 0))
+        check('колесо: выплата = ставка × множитель',
+              status == 200 and data.get('payout') == expected_payout,
+              str(data.get('payout')) + ' vs ' + str(data.get('stake')) + '×' + str(data.get('multiplier')))
+        check('колесо: зачисляется вся выплата (credit == payout)',
+              status == 200 and data.get('credit') == data.get('payout'), str(data.get('credit')))
+        check('колесо: списывается вся ставка (charge == stake)',
+              status == 200 and data.get('charge') == data.get('stake'), str(data.get('charge')))
+        segments = (alice.get('/api/casino/rules')[1].get('wheel') or {}).get('segments') or []
+        check('колесо: сектор из ответа даёт тот же множитель',
+              status == 200 and segments and segments[data.get('segment')] == data.get('multiplier'),
+              f"segment={data.get('segment')} mult={data.get('multiplier')} segments={segments}")
 
         # Суточные лимиты колеса: 1 бесплатное и не больше 5 платных вращений.
         status, data = alice.get('/api/casino/rules')

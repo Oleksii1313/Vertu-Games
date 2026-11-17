@@ -113,6 +113,12 @@ def footer() -> str:
 </footer>'''
 
 
+# Геометрия колеса — один файл на обе страницы (см. assets/vg/js/wheel-math.js).
+WHEEL_MATH = '<script src="assets/vg/js/wheel-math.js"></script>'
+CASINO_SCRIPTS = WHEEL_MATH + '\n<script src="assets/vg/js/casino.js"></script>'
+ROULETTE_SCRIPTS = WHEEL_MATH + '\n<script src="assets/vg/js/roulette.js"></script>'
+
+
 def scripts(extra: str = '') -> str:
     return ('<script src="assets/vg/js/catalog-data.js"></script>\n'
             '<script src="assets/vg/js/platform.js"></script>\n'
@@ -470,7 +476,7 @@ def build_casino() -> str:
     <button class="btn btn-ghost" data-close-limits>Отмена</button></div>
   <p class="msg" id="limitsMsg" role="status"></p>
 </div></div>
-{scripts('<script src="assets/vg/js/casino.js"></script>')}'''
+{scripts(CASINO_SCRIPTS)}'''
 
 
 # --------------------------------------------------------------------------- #  roulette
@@ -524,7 +530,7 @@ def build_roulette() -> str:
   </section>
 </main>
 {footer()}
-{scripts('<script src="assets/vg/js/roulette.js"></script>')}'''
+{scripts(ROULETTE_SCRIPTS)}'''
 
 
 # --------------------------------------------------------------------------- #  profile

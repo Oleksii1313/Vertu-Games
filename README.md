@@ -69,6 +69,10 @@ export DATABASE_URL="postgres://..."
 * Награда за игру: браузер присылает только `{game, receipt}`. Сумма берётся из
   `game_catalog.py`, суточный лимит проверяется на сервере, повторная квитанция
   не начисляет монеты второй раз.
+* Рулетка: выплата — ровно `ставка × множитель`, считает её одна функция
+  `casino_logic.wheel_payout`, а геометрия остановки — один файл
+  `assets/vg/js/wheel-math.js`; инвариант «под указателем тот же сектор, за
+  который заплатили» проверяют `tools/test_wheel_math.js` и `test_wheel_api.py`.
 * Казино: ставка списывается **до** вращения (`charge`), выплата начисляется
   **после** и целиком — `credit == payout == stake * multiplier` (×1 возвращает
   ставку, ×2 даёт двойную ставку, ×0 не даёт ничего); итог за спин —
@@ -156,11 +160,13 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 176 проверок
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 176 на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 180 проверок
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 180 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (25)
-python -m unittest tools.test_wheel                 # колесо: ставка × множитель, charge/credit/net (12)
+python -m unittest tools.test_wheel                 # колесо: ставка × множитель, charge/credit/net (17)
+python -m unittest tools.test_wheel_api             # выплата = ставка × множитель сквозь HTTP (4)
+node tools/test_wheel_math.js                       # колесо встаёт на оплаченный сектор
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```

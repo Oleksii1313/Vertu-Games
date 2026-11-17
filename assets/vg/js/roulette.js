@@ -209,18 +209,11 @@
 
     VG.api('/api/casino/wheel', { body: { stake: stake, free: free } }).then(function (data) {
       var segments = rules.wheel.segments || [];
-      var arc = (Math.PI * 2) / segments.length;
-      // Геометрия: сектор i занимает углы [rotation + i*arc, rotation + (i+1)*arc),
-      // указатель висит сверху — это угол 3*PI/2. Чтобы после остановки под
-      // указателем оказался именно сектор data.segment, итоговый поворот обязан
-      // давать 3*PI/2 - (segment*arc + arc/2) по модулю 2*PI. Раньше здесь не
-      // было слагаемого 3*PI/2, поэтому колесо останавливалось на соседнем
-      // секторе и выплата не совпадала с тем, что видит игрок.
-      var pointer = Math.PI * 3 / 2;
-      var desired = pointer - (data.segment * arc + arc / 2);
-      var delta = desired - rotation;
-      delta = ((delta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      var target = rotation + Math.PI * 2 * 6 + delta;
+      // Геометрия — из единственной реализации (wheel-math.js): колесо обязано
+      // встать именно на сектор data.segment, иначе игрок видит «×2», а выплату
+      // получает за «×0.5» — 10 монет вместо 40. Инвариант проверяет
+      // tools/test_wheel_math.js.
+      var target = VGWheel.target(rotation, data.segment, segments.length, 6);
       var from = rotation;
       var start = performance.now();
       var lastTick = 0;
@@ -236,7 +229,7 @@
           sfx.tick(elapsed, 'wheel');
         }
         if (elapsed < 1) return requestAnimationFrame(animate);
-        rotation = target % (Math.PI * 2);
+        rotation = VGWheel.normalize(target);
         busy = false;
         VG.updateCoins(data.balance);
         if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
@@ -245,15 +238,17 @@
         // x1 -> выплата равна ставке (баланс не изменился), x2 -> выплата
         // двойная (чистый плюс равен ставке), x0 -> выплаты нет.
         var net = (data.net != null) ? Number(data.net) : (Number(data.payout) - (data.free ? 0 : stake));
-        var detail = T('ставка ' + fmt(stake) + ' V · выплата ' + fmt(data.payout) + ' V',
-          'stake ' + fmt(stake) + ' V · payout ' + fmt(data.payout) + ' V');
+        // Показываем саму арифметику: ставка × множитель = выплата. Так игрок
+        // видит, что «×2 при ставке 20» — это ровно 40, а не 5 и не 10.
+        var rule = fmt(data.stake) + ' × ' + data.multiplier + ' = ' + fmt(data.payout) + ' V';
         if (data.payout > 0) {
-          banner.className = 'result-banner win';
+          banner.className = 'result-banner ' + (net > 0 ? 'win' : 'even');
           banner.textContent = (data.free ? T('Бесплатный спин! ', 'Free spin! ') : '') +
-            'x' + data.multiplier + ' · ' + detail +
+            'x' + data.multiplier + ' · ' + rule +
             ' · ' + T('итог ' + (net >= 0 ? '+' : '') + fmt(net) + ' V',
               'net ' + (net >= 0 ? '+' : '') + fmt(net) + ' V');
-          VG.toast('+' + fmt(data.payout) + ' V');
+          // Тост — только про чистый плюс: «+5 V» при потере 15 монет путал.
+          if (net > 0) VG.toast('+' + fmt(net) + ' V');
         } else {
           banner.className = 'result-banner lose';
           banner.textContent = data.free
