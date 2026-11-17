@@ -222,3 +222,52 @@ class WheelAnimationGeometry(unittest.TestCase):
         index = WHEEL_SEGMENTS.index(3)
         for start in (0.0, 1.2, 4.4, 6.1):
             self.assertEqual(self._landing_index(index, start), index)
+
+
+class WheelFormulaSingleSource(unittest.TestCase):
+    """Выплата и геометрия считаются в одном месте и это место проверено.
+
+    Раньше формула остановки была скопирована в `roulette.js` и `casino.js`, а
+    выплата — в `spin_wheel`. Достаточно было одной расходящейся копии, чтобы
+    игрок увидел «×2», а получил 20 × 0.5 = 10 (в 4 раза меньше). Теперь:
+
+    * выплата — ``casino_logic.wheel_payout`` (единственная точка умножения);
+    * геометрия — ``assets/vg/js/wheel-math.js`` (используется обеими страницами);
+    * ``tools/test_wheel_math.js`` гоняет настоящий JS и проверяет инвариант.
+    """
+
+    def test_payout_helper_is_stake_times_multiplier(self):
+        for multiplier in WHEEL_SEGMENTS:
+            for stake in (5, 20, 25, 100):
+                self.assertEqual(casino_logic.wheel_payout(stake, multiplier),
+                                 int(round(stake * multiplier)),
+                                 f'x{multiplier} при ставке {stake}')
+
+    def test_x2_is_forty_not_ten_or_five(self):
+        self.assertEqual(casino_logic.wheel_payout(20, 2), 40)
+        self.assertNotIn(casino_logic.wheel_payout(20, 2), (5, 10, 25))
+
+    def test_pages_load_the_shared_wheel_math(self):
+        for page, script in (('roulette.html', 'roulette.js'), ('casino.html', 'casino.js')):
+            html = (ROOT / page).read_text(encoding='utf-8')
+            self.assertIn('assets/vg/js/wheel-math.js', html, f'{page} без wheel-math.js')
+            self.assertLess(html.index('wheel-math.js'), html.index(script),
+                            f'{page}: wheel-math.js должен подключаться раньше {script}')
+
+    def test_client_does_not_duplicate_the_landing_formula(self):
+        """Формулы остановки не должно быть в страничных скриптах — только в модуле."""
+        for name in ('roulette.js', 'casino.js'):
+            source = (ROOT / 'assets' / 'vg' / 'js' / name).read_text(encoding='utf-8')
+            self.assertNotIn('Math.PI * 3 / 2', source, f'{name}: скопированная формула указателя')
+            self.assertIn('VGWheel.target(', source, f'{name}: должна использоваться VGWheel.target')
+
+    def test_node_geometry_suite_passes(self):
+        """Настоящий JS-модуль: сектор под указателем == оплаченный сектор."""
+        import shutil
+        import subprocess
+        node = shutil.which('node')
+        if not node:
+            self.skipTest('node недоступен')
+        result = subprocess.run([node, str(ROOT / 'tools' / 'test_wheel_math.js')],
+                                capture_output=True, text=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

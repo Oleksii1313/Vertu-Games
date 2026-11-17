@@ -47,6 +47,20 @@ def wheel_limits(user_id: int) -> dict:
     }
 
 
+def wheel_payout(stake: int, multiplier: float) -> int:
+    """Выплата за сектор: **строго** ``ставка × множитель``.
+
+    Единственное место, где ставка умножается. Никаких делений на 2/4/10 здесь
+    быть не может: «×2 при ставке 20» — это ровно 40, «×1» — ровно 20 (ставка
+    возвращается целиком), «×0» — 0. Ставка списывается отдельно (``charge``),
+    поэтому игрок видит и списание, и полную выплату.
+
+    Проверяется в ``tools/test_wheel.py`` (все секторы) и
+    ``tools/test_wheel_api.py`` (сквозь HTTP).
+    """
+    return int(round(int(stake) * multiplier))
+
+
 def _rng_choice_weighted(items, weights) -> int:
     total = sum(weights)
     roll = secrets.randbelow(total)          # [0, total)
@@ -100,7 +114,7 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
     # Ставка списана отдельно (charge), поэтому итоговое изменение баланса равно
     # payout - charge: x1 -> 0 (ставка вернулась), x2 -> +stake (чистый выигрыш),
     # x0 -> -stake (ставка потеряна). Никакого деления ставки пополам здесь нет.
-    payout = int(round(stake * multiplier))
+    payout = wheel_payout(stake, multiplier)
     charge = 0 if use_free else stake
     net = payout - charge
     ref = secrets.token_urlsafe(18)

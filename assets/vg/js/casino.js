@@ -139,12 +139,12 @@
     if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
     var slotNet = (data.net != null) ? Number(data.net) : (Number(data.payout) - Number(data.stake));
     if (data.payout > 0) {
-      banner.className = 'result-banner win';
+      banner.className = 'result-banner ' + (slotNet > 0 ? 'win' : 'even');
       banner.textContent = T('Выплата ' + fmt(data.payout) + ' V (ставка ' + fmt(data.stake) + ' V), итог '
         + (slotNet >= 0 ? '+' : '') + fmt(slotNet) + ' V',
         'Payout ' + fmt(data.payout) + ' V (stake ' + fmt(data.stake) + ' V), net '
         + (slotNet >= 0 ? '+' : '') + fmt(slotNet) + ' V');
-      VG.toast('+' + fmt(data.payout) + ' V');
+      if (slotNet > 0) VG.toast('+' + fmt(slotNet) + ' V');
     } else {
       banner.className = 'result-banner lose';
       banner.textContent = T('Без выигрыша. Попробуйте ещё раз.', 'No win this time.');
@@ -243,18 +243,9 @@
 
     VG.api('/api/casino/wheel', { body: { stake: wheelStake, free: free } }).then(function (data) {
       var segments = (rules.wheel.segments || []);
-      var arc = (Math.PI * 2) / segments.length;
-      // Геометрия: сектор i занимает углы [wheelRotation + i*arc, wheelRotation + (i+1)*arc),
-      // указатель висит сверху — это угол 3*PI/2. Чтобы после остановки под
-      // указателем оказался именно сектор data.segment, итоговый поворот обязан
-      // давать 3*PI/2 - (segment*arc + arc/2) по модулю 2*PI. Раньше здесь не
-      // было слагаемого 3*PI/2, поэтому колесо останавливалось на соседнем
-      // секторе и выплата не совпадала с тем, что видит игрок.
-      var pointer = Math.PI * 3 / 2;
-      var desired = pointer - (data.segment * arc + arc / 2);
-      var delta = desired - wheelRotation;
-      delta = ((delta % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      var target = wheelRotation + Math.PI * 2 * 6 + delta;
+      // Геометрия — из единственной реализации (wheel-math.js), см. roulette.js:
+      // колесо встаёт ровно на оплаченный сектор.
+      var target = VGWheel.target(wheelRotation, data.segment, segments.length, 6);
       var start = performance.now();
       var duration = 3600;
       var from = wheelRotation;
@@ -274,7 +265,7 @@
           tickCount++;
         }
         if (elapsed < 1) return requestAnimationFrame(animate);
-        wheelRotation = target % (Math.PI * 2);
+        wheelRotation = VGWheel.normalize(target);
         finishWheel(data);
       })(start);
     }).catch(function (error) {
@@ -296,13 +287,15 @@
     var prefix = data.free ? T('Бесплатный спин: ', 'Free spin: ') : '';
     if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
     var net = (data.net != null) ? Number(data.net) : (Number(data.payout) - (data.free ? 0 : Number(data.stake)));
+    // Ставка × множитель = выплата: игрок видит формулу, а не только итог.
+    var rule = fmt(data.stake) + ' × ' + data.multiplier + ' = ' + fmt(data.payout) + ' V';
     if (data.payout > 0) {
-      banner.className = 'result-banner win';
-      banner.textContent = prefix + T('сектор x' + data.multiplier + ' — выплата ' + fmt(data.payout) + ' V'
-        + ' (ставка ' + fmt(data.stake) + ' V), итог ' + (net >= 0 ? '+' : '') + fmt(net) + ' V',
-        'segment x' + data.multiplier + ' — payout ' + fmt(data.payout) + ' V (stake '
-        + fmt(data.stake) + ' V), net ' + (net >= 0 ? '+' : '') + fmt(net) + ' V');
-      VG.toast('+' + fmt(data.payout) + ' V');
+      banner.className = 'result-banner ' + (net > 0 ? 'win' : 'even');
+      banner.textContent = prefix + T('сектор x' + data.multiplier + ' — ' + rule
+        + ', итог ' + (net >= 0 ? '+' : '') + fmt(net) + ' V',
+        'segment x' + data.multiplier + ' — ' + rule
+        + ', net ' + (net >= 0 ? '+' : '') + fmt(net) + ' V');
+      if (net > 0) VG.toast('+' + fmt(net) + ' V');
     } else {
       banner.className = 'result-banner lose';
       banner.textContent = prefix + (data.free

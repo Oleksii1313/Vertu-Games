@@ -322,6 +322,61 @@ must-revalidate` (картинки — как раньше, на сутки). И
 ещё сутки видел бы старый `casino.js` — без списания на старте и без показа
 полной выплаты; `stale-while-revalidate` делал это окно ещё шире.
 
+### 1.8.2. «×2 принёс 5 монет»: где на самом деле ломалось
+
+Отчёт игрока: ставка 20, выпал сектор ×2, а на баланс пришло 5 монет. Ни в
+`casino_logic.py`, ни в JS нет деления ставки: выплата всегда считалась как
+`stake * multiplier`. Ломался **показ**: формула остановки колеса была скопирована
+в `roulette.js` и `casino.js`, и в обеих копиях отсутствовало слагаемое
+указателя (`3π/2`). Из-за этого колесо вставало на два сектора раньше
+оплаченного:
+
+| сервер заплатил за | под указателем оказалось | выплата при ставке 20 |
+| --- | --- | --- |
+| ×5 | ×1 | 100 → игрок видел «×1» |
+| ×2 | ×0.5 | **40 → игрок видел «×2» и получал 10** |
+| ×0.25 | ×1 | 5 |
+
+То есть «×2 → 5 монет» — это «×0.5 → 10 монет» на экране, где нарисовано «×2»:
+занижение ровно в 4 раза. Проверка «старая формула» против инварианта даёт
+7 расхождений из 7 (сдвиг на два сектора).
+
+Исправлено структурно, а не заплаткой:
+
+```python
+# casino_logic.py — единственное место, где ставка умножается
+def wheel_payout(stake: int, multiplier: float) -> int:
+    return int(round(int(stake) * multiplier))
+```
+
+```js
+// assets/vg/js/wheel-math.js — единственная реализация геометрии
+var POINTER = Math.PI * 3 / 2;                       // указатель сверху
+function target(rotation, segment, count, turns) {
+  var step = arc(count);
+  var desired = POINTER - (segment * step + step / 2);
+  var delta = ((desired - rotation) % TWO_PI + TWO_PI) % TWO_PI;
+  return rotation + turns * TWO_PI + delta;
+}
+```
+
+Обе страницы (`roulette.html`, `casino.html`) подключают `wheel-math.js` и
+вызывают `VGWheel.target(...)`; своих копий формулы в страничных скриптах больше
+нет (это проверяет `test_client_does_not_duplicate_the_landing_formula`).
+
+Инварианты, которые теперь ловят регресс автоматически:
+
+* `payout == round(stake * multiplier)` для всех 7 секторов и любой ставки —
+  `tools/test_wheel.py` и `tools/test_wheel_api.py`;
+* `credit == payout`, `charge == stake`, `net == payout - stake`, баланс после
+  запроса = `было − ставка + выплата` — `tools/test_wheel_api.py` (сквозь HTTP,
+  через настоящий Flask-роут, по одному игроку на спин из-за лимита 5/сутки);
+* «сектор под указателем == сектор, за который заплатили» — `tools/test_wheel_math.js`
+  (28 тыс. проверок: все секторы × любой начальный угол × разное число секторов)
+  и `WheelAnimationGeometry` в `tools/test_wheel.py`;
+* при подмене формулы на `/4` тесты падают с сообщением
+  `x2 при ставке 20: выплата 10, ждали 40` — проверено мутационно.
+
 Проверяется в `tools/test_wheel.py`: `test_api_reports_charge_credit_and_net`,
 `test_x2_half_is_return_and_half_is_win`,
 `test_ledger_has_separate_charge_and_credit_rows`.
@@ -337,7 +392,7 @@ var target = rotation + Math.PI * 2 * 6 + delta;  // 6 оборотов + дов
 
 Проверки: `tools/test_wheel.py` (payout для каждого сектора, x1 = возврат
 ставки, x3 = ×3, раздельные `charge`/`credit`/`net`, две проводки в журнале,
-история и «Итог», бесплатный спин) и
+история и «Итог», бесплатный спин, единая точка умножения) и
 `WheelAnimationGeometry` — повторяет формулу JS и требует, чтобы при любом
 начальном повороте под указателем оказывался именно выпавший сектор.
 
@@ -756,12 +811,14 @@ if origin in ALLOWED:
 ## 5. Проверки
 
 ```bash
-# сквозные: 176 проверок, включая подделку билета и отсутствие награды без билета
+# сквозные: 180 проверок, включая подделку билета и отсутствие награды без билета
 python tools/check_platform.py
 DATABASE_URL=postgresql://… python tools/check_platform.py
 
 # колесо: payout = ставка × множитель, x1 возвращает ставку, остановка колеса
-python -m unittest tools.test_wheel -v          # 12 тестов
+python -m unittest tools.test_wheel -v          # 17 тестов
+python -m unittest tools.test_wheel_api -v      # 4 теста: выплата = ставка × множитель сквозь HTTP
+node tools/test_wheel_math.js                   # геометрия: сектор под указателем == оплаченный
 
 # античит: подпись, повтор, просрочка, чужой билет, шквал, заголовки
 python -m unittest tools.test_anticheat -v      # 25 тестов
