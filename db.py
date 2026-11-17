@@ -1263,7 +1263,13 @@ class DataStore:
     def casino_bet(self, user_id: int, game: str, stake: int, outcome: str, ref: str,
                    payout: int, detail: str | None = None, charge: int | None = None,
                    free_key: str | None = None) -> dict:
-        """Ставка: списание, выигрыш, история — одна транзакция с блокировкой кошелька."""
+        """Ставка: списание, выигрыш, история — одна транзакция с блокировкой кошелька.
+
+        Ставка списывается на старте (``charge``), выплата ``payout`` зачисляется
+        в той же транзакции. Обе величины пишутся в разные строки журнала
+        (``bet:<ref>`` и ``win:<ref>``), поэтому по ``transactions`` всегда видно,
+        сколько списали и сколько вернули, а не только итог.
+        """
         stake, payout = int(stake), int(payout)
         charge = stake if charge is None else max(0, int(charge))
         with self.driver.transaction() as c:

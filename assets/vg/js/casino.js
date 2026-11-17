@@ -77,7 +77,10 @@
     button.disabled = true;
     var banner = $('#slotResult');
     banner.className = 'result-banner';
-    banner.textContent = T('Барабаны вращаются…', 'Reels are spinning…');
+    banner.textContent = T('Ставка ' + fmt(slotStake) + ' V списана · барабаны вращаются…',
+      'Stake ' + fmt(slotStake) + ' V charged · reels are spinning…');
+    // Ставка списана на старте; выплата придёт после остановки барабанов.
+    VG.updateCoins(Math.max(0, VG.coins() - slotStake));
     var cells = $$('.slot-cell');
     cells.forEach(function (cell) { cell.classList.add('spinning'); cell.classList.remove('hot'); });
     var rollStep = 0;
@@ -113,6 +116,7 @@
       }, 520);
     }).catch(function (error) {
       clearInterval(rollTimer);
+      VG.refreshCoins();
       cells.forEach(function (cell) { cell.classList.remove('spinning'); });
       banner.className = 'result-banner lose';
       banner.textContent = error.message;
@@ -133,10 +137,13 @@
     });
     var banner = $('#slotResult');
     if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
+    var slotNet = (data.net != null) ? Number(data.net) : (Number(data.payout) - Number(data.stake));
     if (data.payout > 0) {
       banner.className = 'result-banner win';
-      banner.textContent = T('Выигрыш ' + fmt(data.payout) + ' V (' + T('ставка ', 'stake ') + fmt(data.stake) + ' V)',
-        'You won ' + fmt(data.payout) + ' V (stake ' + fmt(data.stake) + ' V)');
+      banner.textContent = T('Выплата ' + fmt(data.payout) + ' V (ставка ' + fmt(data.stake) + ' V), итог '
+        + (slotNet >= 0 ? '+' : '') + fmt(slotNet) + ' V',
+        'Payout ' + fmt(data.payout) + ' V (stake ' + fmt(data.stake) + ' V), net '
+        + (slotNet >= 0 ? '+' : '') + fmt(slotNet) + ' V');
       VG.toast('+' + fmt(data.payout) + ' V');
     } else {
       banner.className = 'result-banner lose';
@@ -225,7 +232,14 @@
     button.disabled = true;
     var banner = $('#wheelResult');
     banner.className = 'result-banner';
-    banner.textContent = T('Колесо вращается…', 'The wheel is spinning…');
+    banner.textContent = free
+      ? T('Бесплатный спин · колесо вращается…', 'Free spin · the wheel is spinning…')
+      : T('Ставка ' + fmt(wheelStake) + ' V списана · колесо вращается…',
+          'Stake ' + fmt(wheelStake) + ' V charged · the wheel is spinning…');
+
+    // Ставка списывается сразу при старте вращения (сервер делает то же самое
+    // в начале своей транзакции); выплата зачислится после остановки колеса.
+    if (!free) VG.updateCoins(Math.max(0, VG.coins() - wheelStake));
 
     VG.api('/api/casino/wheel', { body: { stake: wheelStake, free: free } }).then(function (data) {
       var segments = (rules.wheel.segments || []);
@@ -264,6 +278,8 @@
         finishWheel(data);
       })(start);
     }).catch(function (error) {
+      // Сервер ставку не принял — возвращаем показанный баланс к реальному.
+      VG.refreshCoins();
       banner.className = 'result-banner lose';
       banner.textContent = error.message;
       button.disabled = false;
@@ -279,14 +295,20 @@
     var banner = $('#wheelResult');
     var prefix = data.free ? T('Бесплатный спин: ', 'Free spin: ') : '';
     if (sfx) { if (data.payout > 0) sfx.win(data.payout); else sfx.lose(); }
+    var net = (data.net != null) ? Number(data.net) : (Number(data.payout) - (data.free ? 0 : Number(data.stake)));
     if (data.payout > 0) {
       banner.className = 'result-banner win';
-      banner.textContent = prefix + T('сектор x' + data.multiplier + ' — выигрыш ' + fmt(data.payout) + ' V',
-        'segment x' + data.multiplier + ' — you won ' + fmt(data.payout) + ' V');
+      banner.textContent = prefix + T('сектор x' + data.multiplier + ' — выплата ' + fmt(data.payout) + ' V'
+        + ' (ставка ' + fmt(data.stake) + ' V), итог ' + (net >= 0 ? '+' : '') + fmt(net) + ' V',
+        'segment x' + data.multiplier + ' — payout ' + fmt(data.payout) + ' V (stake '
+        + fmt(data.stake) + ' V), net ' + (net >= 0 ? '+' : '') + fmt(net) + ' V');
       VG.toast('+' + fmt(data.payout) + ' V');
     } else {
       banner.className = 'result-banner lose';
-      banner.textContent = prefix + T('сектор x0 — без выигрыша', 'segment x0 — no win');
+      banner.textContent = prefix + (data.free
+        ? T('сектор x0 — бесплатный спин, выплаты нет', 'segment x0 — free spin, no payout')
+        : T('сектор x0 — ставка ' + fmt(data.stake) + ' V списана, выплаты нет',
+            'segment x0 — stake ' + fmt(data.stake) + ' V charged, no payout'));
     }
     (data.achievements || []).forEach(function (entry) {
       var ach = entry.achievement || entry;
@@ -314,11 +336,16 @@
         box.innerHTML = '<div class="empty">' + T('История пуста — сделайте первую ставку.', 'History is empty — place your first bet.') + '</div>';
         return;
       }
-      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Игра</th><th>Ставка</th><th>Выигрыш</th>'
-        + '<th>Результат</th><th>Время</th></tr></thead><tbody>' + data.items.map(function (row) {
+      // Ставка и выплата — разные колонки: видно, сколько списали на старте и
+      // сколько вернули в конце. «Итог» — их разница.
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Игра</th><th>Ставка</th><th>Выплата</th>'
+        + '<th>Итог</th><th>Результат</th><th>Время</th></tr></thead><tbody>' + data.items.map(function (row) {
+          var rowNet = Number(row.payout) - Number(row.stake);
           return '<tr><td>' + (row.game === 'slots' ? 'Слоты' : row.game === 'wheel' ? 'Колесо' : escapeHtml(row.game)) + '</td>' +
-            '<td>' + fmt(row.stake) + ' V</td>' +
-            '<td class="' + (row.payout > 0 ? 'pos' : 'muted') + '">' + (row.payout > 0 ? '+' : '') + fmt(row.payout) + ' V</td>' +
+            '<td>' + '−' + fmt(row.stake) + ' V</td>' +
+            '<td class="' + (row.payout > 0 ? 'pos' : 'muted') + '">' + '+' + fmt(row.payout) + ' V</td>' +
+            '<td class="' + (rowNet > 0 ? 'pos' : rowNet < 0 ? 'neg' : 'muted') + '">'
+              + (rowNet > 0 ? '+' : '') + fmt(rowNet) + ' V</td>' +
             '<td class="muted">' + escapeHtml(row.outcome) + '</td>' +
             '<td class="muted">' + VG.timeAgo(row.created) + '</td></tr>';
         }).join('') + '</tbody></table></div>';

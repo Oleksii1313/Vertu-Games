@@ -100,6 +100,34 @@ class WheelPayoutMath(unittest.TestCase):
             self.assertEqual(after, before - STAKE + expected,
                              f'x{multiplier}: баланс {before} -> {after}')
 
+    def test_api_reports_charge_credit_and_net(self):
+        """Списание на старте и зачисление в конце — разные поля, а не одно число."""
+        result, before, after = self._spin(2, stake=20)
+        self.assertEqual(result['charge'], 20, 'ставка списывается на старте')
+        self.assertEqual(result['credit'], 40, 'в конце зачисляется вся выплата')
+        self.assertEqual(result['payout'], 40, 'payout == credit == bet * multiplier')
+        self.assertEqual(result['net'], 20, 'чистый выигрыш = выплата - ставка')
+        self.assertEqual(after - before, result['net'])
+
+    def test_x2_half_is_return_and_half_is_win(self):
+        """×2: половина выплаты — возврат ставки, половина — чистый выигрыш."""
+        result, before, after = self._spin(2, stake=100)
+        self.assertEqual(result['payout'], 200)
+        self.assertEqual(result['net'], 100)          # 200 = 100 возврат + 100 выигрыш
+        self.assertEqual(after, before + 100)
+
+    def test_ledger_has_separate_charge_and_credit_rows(self):
+        """В журнале списание и зачисление — две строки, а не одна «итоговая»."""
+        self.uid = self._new_player()
+        result, _, _ = self._spin(3, stake=100, fresh=False)
+        ref = result['ref']
+        rows = self.st.transactions(limit=10, user_id=self.uid)
+        by_ref = {row['reference_id']: row for row in rows if row.get('reference_id')}
+        self.assertIn(f'bet:{ref}', by_ref, 'ставка должна быть отдельной проводкой')
+        self.assertIn(f'win:{ref}', by_ref, 'выплата должна быть отдельной проводкой')
+        self.assertEqual(int(by_ref[f'bet:{ref}']['amount']), -100)
+        self.assertEqual(int(by_ref[f'win:{ref}']['amount']), 300)
+
     def test_x1_returns_the_stake(self):
         result, before, after = self._spin(1)
         self.assertEqual(result['payout'], STAKE)
@@ -129,6 +157,23 @@ class WheelPayoutMath(unittest.TestCase):
         self.assertEqual(int(stats['staked']), 100)
         # «Итог» на странице = won - staked = +200, а не +300 и не -70.
         self.assertEqual(int(stats['won']) - int(stats['staked']), 200)
+
+    def test_slots_charge_and_credit_are_separate(self):
+        """Слоты: списание всей ставки на старте, зачисление всей выплаты в конце."""
+        import unittest.mock as mock
+        self.uid = self._new_player()
+        # «три в ряд» символа V: m3 = 12 → выплата 12× ставки
+        triple = ('v', 'v', 'v')
+        before = self.st.balance(self.uid)
+        with mock.patch.object(casino_logic, '_rng_choice_weighted', side_effect=[0, 0, 0]):
+            result = casino_logic.spin_slots(self.uid, 20)
+        after = self.st.balance(self.uid)
+        self.assertEqual(tuple(result['reels']), triple)
+        self.assertEqual(result['charge'], 20)
+        self.assertEqual(result['credit'], result['payout'])
+        self.assertEqual(result['payout'], 20 * result['symbols'][0]['m3'])
+        self.assertEqual(result['net'], result['payout'] - 20)
+        self.assertEqual(after, before - 20 + result['payout'])
 
     def test_free_spin_does_not_charge_but_pays(self):
         import unittest.mock as mock

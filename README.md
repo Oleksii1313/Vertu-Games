@@ -69,8 +69,11 @@ export DATABASE_URL="postgres://..."
 * Награда за игру: браузер присылает только `{game, receipt}`. Сумма берётся из
   `game_catalog.py`, суточный лимит проверяется на сервере, повторная квитанция
   не начисляет монеты второй раз.
-* Казино: ставка списывается до вращения, результат считает `casino_logic.py`,
-  выигрыш начисляется в той же транзакции. Клиент только проигрывает анимацию.
+* Казино: ставка списывается **до** вращения (`charge`), выплата начисляется
+  **после** и целиком — `credit == payout == stake * multiplier` (×1 возвращает
+  ставку, ×2 даёт двойную ставку, ×0 не даёт ничего); итог за спин —
+  `net = payout - charge`. Результат считает `casino_logic.py`, клиент только
+  проигрывает анимацию и показывает списание с зачислением по отдельности.
 * Магазин: цена и владение проверяются на сервере, повторная покупка не
   списывает деньги второй раз.
 * Ежедневные задания: прогресс (игры, ставки) пишет сервер, награду выдаёт
@@ -153,11 +156,11 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 175 проверок
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 175 на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 176 проверок
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 176 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (25)
-python -m unittest tools.test_wheel                 # колесо: ставка × множитель (8)
+python -m unittest tools.test_wheel                 # колесо: ставка × множитель, charge/credit/net (12)
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```

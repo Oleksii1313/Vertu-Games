@@ -288,9 +288,14 @@ def serve_file(rel: str):
     response.headers['Referrer-Policy'] = 'same-origin'
     if rel.endswith('.html'):
         response.headers['Cache-Control'] = 'no-cache'
+    elif rel.startswith('assets/vg/') and Path(rel).suffix.lower() in ('.js', '.css'):
+        # Код игры меняется: минута кеша, дальше браузер обязан перепроверить
+        # ETag. Иначе игрок сутки (и до 7 дней на stale-while-revalidate) видит
+        # старый JS — например, старые баннеры казино без списания/выплаты.
+        response.headers['Cache-Control'] = 'public, max-age=60, must-revalidate'
     elif rel.startswith(('assets/vg/', 'coin.svg')):
-        # Свои css/js/images кешируем надолго; при обновлении файла ETag/Last-Modified
-        # заставят браузер перепроверить содержимое.
+        # Картинки и шрифты кешируем надолго; ETag/Last-Modified всё равно
+        # заставят браузер перепроверить содержимое после истечения.
         response.headers['Cache-Control'] = 'public, max-age=86400, stale-while-revalidate=604800'
     else:
         response.headers['Cache-Control'] = 'public, max-age=3600'
