@@ -56,9 +56,11 @@ def tearDownModule():
         conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
 
 
+import math  # noqa: E402
+
 import casino_logic  # noqa: E402
 import server  # noqa: E402
-from game_catalog import WHEEL_SEGMENTS  # noqa: E402
+from game_catalog import CASINO_STAKES, WHEEL_SEGMENTS  # noqa: E402
 
 START_COINS = 150  # приветственный бонус
 
@@ -107,14 +109,14 @@ class WheelApiFormula(unittest.TestCase):
 
     def test_every_segment_pays_stake_times_multiplier(self):
         for index, multiplier in enumerate(WHEEL_SEGMENTS):
-            for stake in (20, 100):
+            for stake in CASINO_STAKES:
                 with self.subTest(segment=multiplier, stake=stake):
                     self._new_player()
                     before = self._balance()
                     response = self._spin(index, stake)
                     self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
                     data = response.get_json()
-                    expected = int(round(stake * multiplier))
+                    expected = math.floor(stake * multiplier)
 
                     self.assertEqual(data['segment'], index)
                     self.assertEqual(data['multiplier'], multiplier,
@@ -134,7 +136,7 @@ class WheelApiFormula(unittest.TestCase):
                                      f'{before - stake + expected}+бонусы {bonus}')
 
     def test_x2_with_stake_20_credits_forty_not_five(self):
-        """Ровно сценарий из баг-репорта: ×2, ставка 20."""
+        """x2 при ставке 20 — это ровно 40 V."""
         index = WHEEL_SEGMENTS.index(2)
         before = self._balance()
         data = self._spin(index, 20).get_json()

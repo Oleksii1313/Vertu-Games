@@ -322,7 +322,7 @@ tbody tr:hover td{background:rgba(255,255,255,.025)}
 .result-banner.win{background:linear-gradient(120deg,rgba(198,255,61,.2),rgba(46,230,200,.12));border-color:rgba(198,255,61,.45);color:#eaffb0;animation:winflash .9s ease}
 @keyframes winflash{0%{transform:scale(.96);filter:brightness(1.6)}100%{transform:scale(1);filter:brightness(1)}}
 .result-banner.lose{color:#ffb3c0;border-color:rgba(255,84,112,.3)}
-/* Выплата есть, но она меньше ставки (x0.25/x0.5): не «победа» и не «проигрыш». */
+/* Ставка вернулась целиком (x1, net = 0): не «победа» и не «проигрыш». */
 .result-banner.even{color:#cfe0f5;border-color:rgba(120,160,220,.35);background:rgba(120,160,220,.08)}
 .history-tabs{display:flex;gap:6px;margin-bottom:12px}
 .history-tabs button{padding:6px 12px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}

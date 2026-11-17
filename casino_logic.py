@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import math
 import secrets
 
 import db as store
@@ -47,18 +48,27 @@ def wheel_limits(user_id: int) -> dict:
     }
 
 
-def wheel_payout(stake: int, multiplier: float) -> int:
-    """Выплата за сектор: **строго** ``ставка × множитель``.
+def wheel_payout(stake: int, multiplier) -> int:
+    """Выплата за сектор: **строго** ``FLOOR(ставка × множитель)``.
 
-    Единственное место, где ставка умножается. Никаких делений на 2/4/10 здесь
-    быть не может: «×2 при ставке 20» — это ровно 40, «×1» — ровно 20 (ставка
-    возвращается целиком), «×0» — 0. Ставка списывается отдельно (``charge``),
-    поэтому игрок видит и списание, и полную выплату.
+    Единственное место, где ставка умножается. Множители целые (0, 1, 2, 3, 4,
+    5, 10), ставки тоже целые, поэтому выплата всегда целое число V и равна
+    ровно ``ставка × множитель``:
 
-    Проверяется в ``tools/test_wheel.py`` (все секторы) и
+    * ставка 20: x0 → 0, x1 → 20, x2 → 40, x3 → 60, x4 → 80, x5 → 100, x10 → 200;
+    * ставка 100: x0 → 0, x1 → 100, x2 → 200, x3 → 300, x4 → 400, x5 → 500, x10 → 1000.
+
+    Множитель — это **полная** выплата от ставки (возврат ставки + выигрыш), а не
+    чистая прибыль: при x1 игрок получает свою ставку назад. Ставка списывается
+    отдельно (``charge``), поэтому «итог» считаётся как ``payout - charge``.
+
+    ``math.floor`` оставлен намеренно: если когда-нибудь появится дробный
+    множитель, монеты всё равно останутся целыми (V — только целые).
+
+    Проверяется в ``tools/test_wheel.py`` (вся таблица 7 × 6) и
     ``tools/test_wheel_api.py`` (сквозь HTTP).
     """
-    return int(round(int(stake) * multiplier))
+    return int(math.floor(int(stake) * multiplier))
 
 
 def _rng_choice_weighted(items, weights) -> int:
@@ -111,9 +121,10 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
     index = _rng_choice_weighted(WHEEL_SEGMENTS, WHEEL_WEIGHTS)
     multiplier = WHEEL_SEGMENTS[index]
     # Выплата — это ВСЯ сумма, которая возвращается на баланс: stake * multiplier.
+    # Множители целые: x0, x1, x2, x3, x4, x5, x10 (см. game_catalog.WHEEL_SEGMENTS).
     # Ставка списана отдельно (charge), поэтому итоговое изменение баланса равно
     # payout - charge: x1 -> 0 (ставка вернулась), x2 -> +stake (чистый выигрыш),
-    # x0 -> -stake (ставка потеряна). Никакого деления ставки пополам здесь нет.
+    # x0 -> -stake (ставка потеряна).
     payout = wheel_payout(stake, multiplier)
     charge = 0 if use_free else stake
     net = payout - charge

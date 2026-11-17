@@ -396,6 +396,23 @@ def main():
         check('правила казино доступны', status == 200 and rules.get('stakes'), str(status))
         check('вероятности и RTP опубликованы', rules['slots']['rtp'] > 0 and rules['wheel']['rtp'] > 0,
               f"slots={rules['slots']['rtp']} wheel={rules['wheel']['rtp']}")
+        # Новая система множителей: только целые секторы и вероятности из ТЗ.
+        wheel_rules = rules['wheel']
+        chances = {item['multiplier']: item['chance'] for item in wheel_rules['probabilities']}
+        required = {0: 0.48, 1: 0.27, 2: 0.16, 3: 0.06, 4: 0.01, 5: 0.015, 10: 0.005}
+        check('колесо: множители только целые (0,1,2,3,4,5,10)',
+              sorted(chances) == sorted(required), str(sorted(chances)))
+        check('колесо: вероятности 48/27/16/6/1/1.5/0.5 %',
+              all(abs(chances.get(m, -1) - v) < 1e-9 for m, v in required.items()),
+              str(chances))
+        check('колесо: сумма вероятностей ровно 100 %',
+              abs(sum(chances.values()) - 1) < 1e-9, str(sum(chances.values())))
+        check('колесо: теоретический RTP 93.5 %',
+              abs(wheel_rules['rtp'] - 0.935) < 1e-6, str(wheel_rules['rtp']))
+        check('колесо: нет дробных множителей в правилах',
+              all(isinstance(m, int) for m in wheel_rules['segments']), str(wheel_rules['segments']))
+        check('колесо: веса пропорциональны вероятностям',
+              sum(wheel_rules['weights']) == 1000, str(wheel_rules['weights']))
         before = alice.get('/api/balance')[1]['coins']
         status, data = alice.post('/api/casino/slots', {'stake': 10})
         check('слоты: ставка и результат', status == 200 and data.get('reels') and len(data['reels']) == 3, str(data))
@@ -423,6 +440,10 @@ def main():
               status == 200 and data.get('credit') == data.get('payout'), str(data.get('credit')))
         check('колесо: списывается вся ставка (charge == stake)',
               status == 200 and data.get('charge') == data.get('stake'), str(data.get('charge')))
+        check('колесо: выплата = FLOOR(ставка × множитель)',
+              status == 200 and data.get('payout') == int(float(data.get('stake'))
+                                                         * float(data.get('multiplier'))),
+              f"{data.get('payout')} при {data.get('stake')}×{data.get('multiplier')}")
         segments = (alice.get('/api/casino/rules')[1].get('wheel') or {}).get('segments') or []
         check('колесо: сектор из ответа даёт тот же множитель',
               status == 200 and segments and segments[data.get('segment')] == data.get('multiplier'),
@@ -464,6 +485,28 @@ def main():
         status, data = alice.post('/api/casino/slots', {'stake': 10})
         check('во время самоисключения ставки запрещены', status == 403, str(data))
         alice.post('/api/casino/limits', {'excludeMinutes': 0, 'daily': 0})
+
+        print('== Колесо: страницы и локализация')
+        casino_page = (ROOT / 'casino.html').read_text(encoding='utf-8')
+        roulette_page = (ROOT / 'roulette.html').read_text(encoding='utf-8')
+        both = casino_page + roulette_page
+        check('колесо: секторы на странице только целые',
+              'x10, x5, x4, x3, x2, x1, x0' in casino_page
+              and not any(tag in both for tag in ('x0.5', 'x0.25', 'x0,5', 'x0,25')),
+              'casino.html')
+        check('колесо: старый RTP 84 % больше не публикуется',
+              '84%' not in both and '84 %' not in both, 'страницы казино')
+        check('колесо: английская подпись секторов есть',
+              'data-en="Segments: x10, x5, x4, x3, x2, x1, x0' in casino_page, 'data-en')
+        page_rows = []
+        for item in wheel_rules['probabilities']:
+            mult = item['multiplier']
+            page_rows.append(f'<td>x{int(mult)}</td><td>{item["weight"]}</td>'
+                             f'<td>{item["chance"] * 100:.1f}%</td>'
+                             f'<td>{mult * item["chance"] * 100:.1f}%</td>')
+        missing_rows = [row for row in page_rows if row not in casino_page]
+        check('колесо: таблица вероятностей на странице совпадает с правилами',
+              not missing_rows, str(missing_rows))
 
         print('== Ежедневные задания')
         status, data = alice.get('/api/tasks')

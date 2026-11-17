@@ -48,12 +48,12 @@
     if (!items) return '<div class="empty">' + T('Войдите, чтобы увидеть историю казино.', 'Sign in to see your casino history.') + '</div>';
     if (!items.length) return '<div class="empty">Ставок пока не было. <a href="casino.html" style="color:var(--lime)">В казино</a></div>';
     return '<div class="list">' + items.slice(0, 10).map(function (row) {
-      // Ставка и выплата — отдельно, справа чистый итог: «+5 V» за x0.25 при
-      // ставке 20 выглядел как выигрыш, хотя баланс уменьшился на 15.
+      // Ставка и выплата — отдельно, справа чистый итог: при x1 выплата равна
+      // ставке, и «+20 V» не должно выглядеть выигрышем (net = 0).
       var rowNet = Number(row.payout) - Number(row.stake);
       return '<div class="list-row"><span class="ico">' + VG.icon(rowNet > 0 ? 'trophy' : 'dice', 16) + '</span>' +
         '<span class="meta"><b>' + (row.game === 'slots' ? T('Слоты', 'Slots') : T('Колесо', 'Wheel')) +
-        ' · ' + escapeHtml(row.outcome) + '</b><small>' + VG.timeAgo(row.created) + ' · ' + T('ставка', 'stake') +
+        ' · ' + escapeHtml(VG.casinoOutcome(row.outcome)) + '</b><small>' + VG.timeAgo(row.created) + ' · ' + T('ставка', 'stake') +
         ' −' + fmt(row.stake) + ' V · ' + T('выплата', 'payout') + ' +' + fmt(row.payout) + ' V</small></span>' +
         '<span style="font-weight:800;color:' + (rowNet > 0 ? '#dcff8a' : rowNet < 0 ? '#ff8fa3' : 'var(--muted)') + '">' +
         (rowNet > 0 ? '+' : '') + fmt(rowNet) + ' V</span></div>';

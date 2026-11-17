@@ -25,6 +25,14 @@
     try { return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'ru'; } catch (e) { return 'ru'; }
   }
   function T(ru, en) { return lang() === 'en' ? en : ru; }
+  /* Результат ставки для истории. В старых базах остались дробные множители
+     (x0.5, x0.25), которых больше нет на колесе: помечаем такие ставки как
+     архив, чтобы в интерфейсе не было несуществующих секторов. */
+  function casinoOutcome(label) {
+    var text = label == null ? '' : String(label);
+    return text === 'past' ? T('архив', 'archived') : text;
+  }
+
   function fmt(n) {
     n = Number(n) || 0;
     return n.toLocaleString(lang() === 'en' ? 'en-US' : 'ru-RU');
@@ -1014,6 +1022,7 @@
   VG.escapeHtml = escapeHtml; VG.debounce = debounce; VG.storage = storage;
   VG.user = user; VG.coins = coins; VG.setUser = setUser; VG.refreshSession = refreshSession;
   VG.updateCoins = updateCoins; VG.refreshCoins = refreshCoins; VG.onChange = onChange;
+  VG.casinoOutcome = casinoOutcome;
   VG.onSessionChange = onSessionChange; VG.onLangChange = onLangChange;
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;
