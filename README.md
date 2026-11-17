@@ -78,6 +78,24 @@ export DATABASE_URL="postgres://..."
   `task:<uid>:<task>:<дата>`, сброс в 00:00 UTC.
 * Баланс никогда не уходит в минус и не приходит из localStorage.
 
+## Безопасность
+
+Полная архитектура, модель угроз, чек-лист внедрения и памятка на случай
+инцидента — **[SECURITY.md](SECURITY.md)**. Ниже — коротко о том, что уже
+включено.
+
+* Награда за игру выдаётся только по **подписанному сервером билету**
+  (`GET /api/games/session`, HMAC-SHA256): подделать сумму, переиграть или
+  использовать чужой билет нельзя. Повтор билета не платит второй раз.
+* Rate limiting в три уровня: токен-бакет в памяти → скользящее окно в БД →
+  Cloudflare. Поведенческие аномалии (частота, V/мин, «машинный» интервал)
+  сначала занижают выплату, потом блокируют и пишут в журнал админа.
+* CSP, HSTS preload, `X-Frame-Options: DENY`, COOP/CORP, nosniff,
+  Permissions-Policy — на каждом ответе; сторонние хосты (шрифты, Babylon.js
+  для 3D-игр) перечислены явно.
+* `TRUSTED_PROXY=1` — обязателен на Render/Cloudflare, иначе IP клиента
+  берётся из сокета, а не из подделываемого `X-Forwarded-For`.
+
 ## Безопасность входа
 
 * Только ник + пароль. Никаких email и подтверждений.
@@ -134,16 +152,18 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 162 проверки
-DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 162 на PostgreSQL
+.venv/bin/python tools/check_platform.py                      # SQLite, 172 проверки
+DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же 172 на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
+python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (24)
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```
 
 `check_platform.py` поднимает настоящий сервер на свободном порту и проходит
-162 проверки: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
-CSRF и сессия, награды и их повторы, ежедневные задания, магазин, слоты, колесо,
+172 проверки: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
+CSRF и сессия, подписанные билеты и попытки их подделать, ежедневные задания,
+магазин, слоты, колесо,
 лимиты и самоисключение, админ-панель и каталог, сохранение данных после
 перезапуска, защита статики и API, мобильная вёрстка игр, сборка плеера.
 С `DATABASE_URL` тот же набор выполняется в отдельной схеме PostgreSQL.

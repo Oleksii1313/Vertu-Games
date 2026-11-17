@@ -23,6 +23,12 @@ services:
         value: "5"
       - key: SECRET_KEY
         generateValue: true
+      # Отдельный ключ подписи игровых билетов (не совпадает с SECRET_KEY).
+      - key: GAME_SIGNING_KEY
+        generateValue: true
+      # Render стоит за прокси: реальный IP клиента в X-Forwarded-For.
+      - key: TRUSTED_PROXY
+        value: "1"
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_PASSWORD

@@ -7,6 +7,8 @@
 
 | Переменная | Зачем |
 | --- | --- |
+| `GAME_SIGNING_KEY` | отдельный HMAC-ключ билетов игровых сессий (не равен `SECRET_KEY`) |
+| `TRUSTED_PROXY` | `1` — доверять `X-Forwarded-For` от Render/Cloudflare |
 | `SECRET_KEY` | обязательна на проде (в `render.yaml` генерируется автоматически); используется как резервный пароль админки, если не задан `ADMIN_PASSWORD` |
 | `DATABASE_URL` | PostgreSQL; локально можно без неё (SQLite `data/vertu.sqlite3`) |
 | `PUBLIC_URL` | точный адрес сайта, включает `Secure`-куки и проверку Origin |
@@ -63,7 +65,8 @@
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py      # 162 проверки, включая CSRF и сессии
+.venv/bin/python tools/check_platform.py      # 172 проверки, включая CSRF и сессии
+.venv/bin/python -m unittest tools.test_anticheat    # билеты, лимиты, заголовки
 .venv/bin/python tools/smoke_deploy.py https://<адрес> --admin-password '…'
 ```
 

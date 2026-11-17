@@ -813,9 +813,18 @@
     if (focusTimer) clearTimeout(focusTimer);
     focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
     bindGameKeyBridge();
-    if (state.user) api('/api/games/play', { body: { game: game.id } }).then(function (data) {
-      if (data.coins != null) updateCoins(data.coins);
-    }).catch(function () {});
+    var ticket = null;   // подписанный сервером билет на эту игровую сессию
+    VG.activeTicket = null;
+    if (state.user) {
+      api('/api/games/play', { body: { game: game.id } }).then(function (data) {
+        if (data.coins != null) updateCoins(data.coins);
+      }).catch(function () {});
+      // Сумму награды задаёт сервер: клиент получает билет и лишь возвращает его.
+      api('/api/games/session?game=' + encodeURIComponent(game.id)).then(function (data) {
+        ticket = data;
+        VG.activeTicket = data;
+      }).catch(function () {});
+    }
     /*
      * Мост к играм. Игры по-прежнему шлют те же сообщения, что и раньше, но
      * монеты начисляет сервер: сумма берётся из каталога, а суточный лимит и
@@ -826,8 +835,14 @@
     }
     function payout(amount, receipt, label) {
       if (!VG.user() || !VG.activeGame) return Promise.resolve(null);
+      if (!ticket) {   // билет ещё не пришёл (или не выдан) — награду не просим
+        api('/api/games/session?game=' + encodeURIComponent(VG.activeGame.id))
+          .then(function (data) { ticket = data; VG.activeTicket = data; })
+          .catch(function () {});
+        return Promise.resolve(null);
+      }
       return api('/api/games/reward', {
-        body: { game: VG.activeGame.id, receipt: receipt, amount: amount }
+        body: { game: VG.activeGame.id, receipt: receipt, ticket: ticket }
       }).then(function (data) {
         if (data.coins != null) updateCoins(data.coins);
         if (data.awarded > 0) {
@@ -838,6 +853,7 @@
         return data;
       }).catch(function (error) {
         if (error.status === 429) toast(error.message, 'bad');
+        if (error.status === 403) toast(T('Сессия игры истекла — откройте игру заново.', 'Game session expired — reopen the game.'), 'bad');
         return null;
       });
     }
@@ -971,6 +987,7 @@
     if (frame) frame.src = 'about:blank';
     document.body.style.overflow = '';
     VG.activeGame = null;
+    VG.activeTicket = null;
     releaseGameFocus();
   }
   function refreshCoins() {

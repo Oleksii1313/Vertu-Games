@@ -51,6 +51,7 @@ class Client:
     def __init__(self, base):
         self.base = base
         self.cookies = {}
+        self.last_headers = {}      # заголовки последнего ответа (для проверок)
 
     def request(self, method, path, body=None, headers=None):
         data = None
@@ -67,9 +68,13 @@ class Client:
         req = urllib.request.Request(self.base + path, data=data, headers=head, method=method)
         try:
             with urllib.request.urlopen(req, timeout=15) as response:
-                status, raw, cookie_headers = response.status, response.read(), response.headers.get_all('Set-Cookie') or []
+                status, raw = response.status, response.read()
+                cookie_headers = response.headers.get_all('Set-Cookie') or []
+                headers_out = dict(response.headers.items())
         except urllib.error.HTTPError as exc:
-            status, raw, cookie_headers = exc.code, exc.read(), exc.headers.get_all('Set-Cookie') or []
+            status, raw = exc.code, exc.read()
+            cookie_headers = exc.headers.get_all('Set-Cookie') or []
+            headers_out = dict(exc.headers.items())
         for cookie in cookie_headers:
             pair = cookie.split(';')[0]
             if '=' in pair:
@@ -82,6 +87,7 @@ class Client:
             payload = json.loads(raw.decode() or '{}')
         except ValueError:
             payload = {}
+        self.last_headers = headers_out
         return status, payload
 
     def get(self, path):
@@ -302,15 +308,54 @@ def main():
         status, data = alice.get('/api/balance')
         check('баланс доступен владельцу', status == 200 and data.get('coins') == 150, str(data))
         status, data = alice.post('/api/games/reward', {'game': 'flappy', 'receipt': 'pipe-aaaaaaaa'})
-        check('награда за игру начислена сервером', status == 200 and data.get('awarded') == 2, str(data))
+        check('награда без подписанного билета отклонена', status == 403 and data.get('code') == 'TICKET', str(data))
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'flappy', 'receipt': 'nosig-bbbbbb', 'ticket': {'sid': 'x' * 24}})
+        check('билет без подписи отклонён', status == 403 and data.get('code') == 'TICKET', str(data))
+        status, ticket = alice.get('/api/games/session?game=flappy')
+        check('билет игровой сессии выдан', status == 200 and ticket.get('sig') and ticket.get('amount') == 2,
+              str({k: ticket.get(k) for k in ('game', 'amount', 'expiresAt')}))
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'flappy', 'receipt': 'pipe-aaaaaaaa', 'ticket': ticket, 'amount': 9999})
+        check('награда за игру начислена сервером (сумма из билета)',
+              status == 200 and data.get('awarded') == 2, str(data))
         balance_after_reward = data.get('coins')
-        status, data = alice.post('/api/games/reward', {'game': 'flappy', 'receipt': 'pipe-aaaaaaaa'})
-        check('повторная квитанция не начисляет дважды', data.get('repeated') is True and data.get('awarded') == 0
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'flappy', 'receipt': 'pipe-aaaaaaaa', 'ticket': ticket})
+        check('повторный билет не начисляет дважды', data.get('repeated') is True and data.get('awarded') == 0
               and data.get('coins') == balance_after_reward, str(data))
-        status, data = alice.post('/api/games/reward', {'game': 'flappy', 'receipt': 'x'})
+        forged = dict(ticket, amount=500)
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'flappy', 'receipt': 'forged-bbbbbb', 'ticket': forged})
+        check('подделанная сумма в билете отклонена', status == 403 and data.get('code') == 'TICKET', str(data))
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'flappy', 'receipt': 'x', 'ticket': ticket})
         check('некорректная квитанция отклонена', status == 400, str(data))
-        status, data = alice.post('/api/games/reward', {'game': 'unknown', 'receipt': 'pipe-bbbbbb'})
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'unknown', 'receipt': 'pipe-bbbbbb', 'ticket': ticket})
         check('неизвестная игра отклонена', status == 404, str(data))
+        signing = alice.get('/api/health')[1].get('signing') or {}
+        check('health не раскрывает ключ подписи',
+              set(signing) == {'enabled', 'ttl', 'version', 'explicitKey'}, str(signing))
+
+        print('== Безопасность: заголовки и прокси')
+        status, _ = alice.get('/')
+        hdrs = alice.last_headers
+        csp = str(hdrs.get('Content-Security-Policy', ''))
+        check('CSP запрещает внешние скрипты и framing',
+              'default-src' in csp and "frame-ancestors 'none'" in csp and "object-src 'none'" in csp,
+              csp[:140])
+        check('CSP без unsafe-eval', 'unsafe-eval' not in csp, 'ok')
+        check('клики по сайту запрещены (X-Frame-Options)',
+              hdrs.get('X-Frame-Options') == 'DENY', str(hdrs.get('X-Frame-Options')))
+        check('MIME-sniffing запрещён', hdrs.get('X-Content-Type-Options') == 'nosniff',
+              str(hdrs.get('X-Content-Type-Options')))
+        flat_csp = csp
+        alice.get('/games/minicraft.html')
+        game_csp = str(alice.last_headers.get('Content-Security-Policy', ''))
+        check('Babylon.js разрешён только 3D-играм',
+              'babylonjs' not in flat_csp and 'https://cdn.babylonjs.com' in game_csp,
+              f'page={flat_csp[:60]} game={game_csp[:60]}')
 
         print('== Магазин')
         status, data = alice.get('/api/shop')
@@ -405,7 +450,9 @@ def main():
                                                                 'reward': 25}})
         task_id = (data.get('task') or {}).get('id')
         check('задание создано для проверки', status == 200 and bool(task_id), str(data))
-        status, data = alice.post('/api/games/reward', {'game': 'pong', 'receipt': 'task-play-1'})
+        status, task_ticket = alice.get('/api/games/session?game=pong')
+        status, data = alice.post('/api/games/reward',
+                                  {'game': 'pong', 'receipt': 'task-play-1', 'ticket': task_ticket})
         check('игровое событие двигает задание', status == 200 and data.get('ok'), str(data)[:80])
         status, data = alice.get('/api/tasks')
         mine = [t for t in data.get('tasks', []) if t.get('id') == task_id]
