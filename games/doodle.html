@@ -16,7 +16,7 @@
     try {
       var saved = localStorage.getItem('vg_lang');
       if (saved === 'en' || saved === 'ru') return saved;
-      if (saved === 'lt') return 'ru';
+      if (saved === 'lt') return 'ru';   // литовский убран: переходим на русский
     } catch (e) {}
     return 'ru';
   }
@@ -37,14 +37,11 @@
     node.innerHTML = value;
   }
 
-  /* Литовских строк в играх пока нет: для LT берём английские, чтобы вместо
-     русского текста был хотя бы понятный английский. */
   function textFor(node, name) {
     function read(code) {
       return node.getAttribute(name ? 'data-' + name + '-' + code : 'data-' + code);
     }
-    var text = read(lang);
-    return text;
+    return read(lang);
   }
 
   function apply(next) {
