@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Тесты экономики и авторизации Vertu Games (PostgreSQL и SQLite).
+"""Тесты экономики и авторизации Vert Games (PostgreSQL и SQLite).
 
 Проверяется именно то, что важно для продакшена:
 
@@ -47,7 +47,7 @@ def _prepare_database() -> dict:
     else:
         import tempfile
         tmp = tempfile.mkdtemp(prefix='vg-econ-')
-        env['VERTU_DB'] = str(Path(tmp) / 'test.sqlite3')
+        env['VERT_DB'] = str(Path(tmp) / 'test.sqlite3')
     return env
 
 

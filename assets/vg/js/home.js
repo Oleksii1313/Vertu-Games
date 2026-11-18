@@ -34,7 +34,7 @@
   function renderLeaderboard(data) {
     var box = $('#leaderboard');
     if (!box) return;
-    $$('[data-stat="games"]').forEach(function (node) { node.textContent = data.totals.games || 11; });
+    $$('[data-stat="games"]').forEach(function (node) { node.textContent = Number(data.totals.games) || 0; });
     $$('[data-stat="players"]').forEach(function (node) { node.textContent = fmt(data.totals.players); });
     $$('[data-stat="coins"]').forEach(function (node) { node.textContent = fmt(data.totals.coins); });
     $$('[data-stat="plays"]').forEach(function (node) { node.textContent = fmt(data.totals.plays); });

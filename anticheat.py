@@ -59,7 +59,7 @@ def _key() -> bytes:
     raw = (os.environ.get('GAME_SIGNING_KEY') or '').strip()
     if not raw:
         # Локально/в тестах: отдельный домен вывода, чтобы не совпадать с SECRET_KEY.
-        raw = (os.environ.get('SECRET_KEY') or 'vertu-dev-signing-key').strip()
+        raw = (os.environ.get('SECRET_KEY') or 'vert-dev-signing-key').strip()
         raw = 'game-signing:' + raw
     return hashlib.sha256(raw.encode('utf-8')).digest()
 

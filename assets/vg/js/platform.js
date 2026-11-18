@@ -1,5 +1,5 @@
 /* ============================================================================
-   VERTU GAMES · общий клиент платформы
+   VERT GAMES · общий клиент платформы
    - единый API-хелпер (cookie-сессии, ошибки, CSRF-заголовок)
    - шапка: баланс, аккаунт, язык, мобильное меню
    - авторизация через сервер (ник + пароль + Cloudflare Turnstile)
@@ -44,12 +44,64 @@
     return d.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'ru-RU',
       { day: '2-digit', month: 'short', year: 'numeric' });
   }
+  /* Склонение русских единиц: 1 минуту, 2 минуты, 5 минут. */
+  function plural(n, one, few, many) {
+    var mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+  /* Относительное время: «Только что», «5 минут назад», «2 часа назад»,
+     «3 дня назад». Отсутствующая или испорченная метка — «Дата неизвестна»,
+     а не «20775 дней назад» из 1970 года. Метка из будущего (рассинхрон
+     часов клиента) тоже не превращается в отрицательное число. */
   function timeAgo(ts) {
-    var diff = Math.max(0, Math.floor(Date.now() / 1000) - Number(ts || 0));
-    if (diff < 60) return T('только что', 'just now');
-    if (diff < 3600) return T(Math.floor(diff / 60) + ' мин назад', Math.floor(diff / 60) + ' min ago');
-    if (diff < 86400) return T(Math.floor(diff / 3600) + ' ч назад', Math.floor(diff / 3600) + ' h ago');
-    return T(Math.floor(diff / 86400) + ' дн назад', Math.floor(diff / 86400) + ' d ago');
+    if (ts === null || ts === undefined || ts === '') return T('Дата неизвестна', 'Unknown date');
+    var value = Number(ts);
+    if (!isFinite(value) || value <= 0) return T('Дата неизвестна', 'Unknown date');
+    var diff = Date.now() / 1000 - value;
+    if (diff < -300) return T('Дата неизвестна', 'Unknown date');
+    if (diff < 0) diff = 0;
+    diff = Math.floor(diff);
+    if (diff < 45) return T('Только что', 'Just now');
+    if (diff < 60) return T('1 минуту назад', '1 minute ago');
+    if (diff < 3600) {
+      var m = Math.floor(diff / 60);
+      return T(m + ' ' + plural(m, 'минуту', 'минуты', 'минут') + ' назад',
+               m + (m === 1 ? ' minute ago' : ' minutes ago'));
+    }
+    if (diff < 86400) {
+      var h = Math.floor(diff / 3600);
+      return T(h + ' ' + plural(h, 'час', 'часа', 'часов') + ' назад',
+               h + (h === 1 ? ' hour ago' : ' hours ago'));
+    }
+    if (diff < 7 * 86400) {
+      var d = Math.floor(diff / 86400);
+      return T(d + ' ' + plural(d, 'день', 'дня', 'дней') + ' назад',
+               d + (d === 1 ? ' day ago' : ' days ago'));
+    }
+    if (diff < 30 * 86400) {
+      var w = Math.floor(diff / (7 * 86400));
+      return T(w + ' ' + plural(w, 'неделю', 'недели', 'недель') + ' назад',
+               w + (w === 1 ? ' week ago' : ' weeks ago'));
+    }
+    if (diff < 365 * 86400) {
+      var mo = Math.floor(diff / (30 * 86400));
+      return T(mo + ' ' + plural(mo, 'месяц', 'месяца', 'месяцев') + ' назад',
+               mo + (mo === 1 ? ' month ago' : ' months ago'));
+    }
+    var y = Math.floor(diff / (365 * 86400));
+    return T(y + ' ' + plural(y, 'год', 'года', 'лет') + ' назад',
+             y + (y === 1 ? ' year ago' : ' years ago'));
+  }
+  /* Абсолютная метка для подсказки: «11 нояб. 2026, 18:42» (локальное время). */
+  function stamp(ts) {
+    var value = Number(ts);
+    if (!isFinite(value) || value <= 0) return T('Дата неизвестна', 'Unknown date');
+    var d = new Date(value * 1000);
+    return d.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'ru-RU',
+      { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
+      d.toLocaleTimeString(lang() === 'en' ? 'en-GB' : 'ru-RU', { hour: '2-digit', minute: '2-digit' });
   }
   function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
@@ -362,7 +414,7 @@
     var langValue = lang();
     var u = state.user;
     header.innerHTML =
-      '<a href="index.html" class="brand" aria-label="Vertu Games">' + logoHtml() + '<span>VERT<b>GAMES</b></span></a>' +
+      '<a href="index.html" class="brand" aria-label="Vert Games">' + logoHtml() + '<span>VERT<b>GAMES</b></span></a>' +
       '<nav class="nav" aria-label="' + T('Навигация', 'Navigation') + '">' + links + adminLink + '</nav>' +
       '<div class="header-right">' +
       '<div class="lang" role="group" aria-label="Language">' +
@@ -1019,7 +1071,7 @@
   }
 
   /* ------------------------------------------------------------------ export */
-  VG.$ = $; VG.$$ = $$; VG.lookup = $; VG.lookupAll = $$; VG.el = el; VG.T = T; VG.fmt = fmt; VG.date = date; VG.timeAgo = timeAgo;
+  VG.$ = $; VG.$$ = $$; VG.lookup = $; VG.lookupAll = $$; VG.el = el; VG.T = T; VG.fmt = fmt; VG.date = date; VG.timeAgo = timeAgo; VG.stamp = stamp; VG.plural = plural;
   VG.escapeHtml = escapeHtml; VG.debounce = debounce; VG.storage = storage;
   VG.user = user; VG.coins = coins; VG.setUser = setUser; VG.refreshSession = refreshSession;
   VG.updateCoins = updateCoins; VG.refreshCoins = refreshCoins; VG.onChange = onChange;

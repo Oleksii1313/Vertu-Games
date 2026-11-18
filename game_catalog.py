@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Единый каталог Vertu Games: игры, награды, магазин, достижения, казино.
+"""Единый каталог Vert Games: игры, награды, магазин, достижения, казино.
 
 Этот модуль — единственный источник правды. Из него берут данные:
 
@@ -152,10 +152,10 @@ GAMES = [
         'controls_en': 'Arrows / A, D — move, Space — shoot',
     },
     {
-        # Скрыта с витрины по просьбе владельца. Файл игры и весь код на месте:
-        # достаточно убрать 'hidden': True (или поставить False), чтобы вернуть.
+        # Redline снова на витрине: игра полностью реализована и должна быть
+        # в каталоге (11 игр). Скрыть снова можно флагом 'hidden': True.
         'id': 'redline', 'name': 'Redline: Розыск', 'name_en': 'Redline: Wanted',
-        'file': 'games/redline.html', 'icon': 'racecar', 'tag': 'NEW', 'hidden': True,
+        'file': 'games/redline.html', 'icon': 'racecar', 'tag': 'NEW',
         'cat': ['Гонки', 'Популярное'], 'cat_en': ['Racing', 'Popular'],
         'desc': 'Городские гонки и погони', 'desc_en': 'City racing and police pursuits',
         'reward': 10, 'daily': 300, 'event': 'exchange',
@@ -224,11 +224,11 @@ CASINO_CARD = {
     'cat': ['Казино', 'Удача'], 'cat_en': ['Casino', 'Luck'],
     'desc': 'Испытай удачу и забери выигрыш до x5',
     'desc_en': 'Try your luck and win up to x5',
-    'long_ru': 'Колесо фортуны Vertu Games: 20 равных секторов по 18°, четыре множителя — x0, x1, x2 и x5, '
+    'long_ru': 'Колесо фортуны Vert Games: 20 равных секторов по 18°, четыре множителя — x0, x1, x2 и x5, '
                'теоретический возврат 95 %.\n\nСтавка списывается до вращения, а выплата — это полная сумма: '
                'ставка × множитель. Результат, начисление и история считает сервер в одной транзакции; '
                'клиент только показывает присланный сектор.',
-    'long_en': 'The Vertu Games wheel of fortune: 20 equal 18° sectors, four multipliers — x0, x1, x2 and x5, '
+    'long_en': 'The Vert Games wheel of fortune: 20 equal 18° sectors, four multipliers — x0, x1, x2 and x5, '
                'with a 95 % theoretical return.\n\nThe stake is charged before the spin and the payout is the '
                'full amount: stake × multiplier. The server computes the result, the credit and the history in a '
                'single transaction; the client only shows the returned sector.',
@@ -359,10 +359,10 @@ ACHIEVEMENTS = [
 # --------------------------------------------------------------------------- #
 #  Казино
 # --------------------------------------------------------------------------- #
-# Версия сборки: попадает в <meta name="vertu-build">, в заголовок X-Build и в
+# Версия сборки: попадает в <meta name="vert-build">, в заголовок X-Build и в
 # /api/version. По ней видно, какая именно версия страниц реально отдаётся
 # сервером (а не закеширована браузером). Меняется при правках казино/колеса.
-APP_VERSION = '2026-11-11-wheel-v3'
+APP_VERSION = '2026-11-18-vert-audit-v1'
 
 # Колесо «Рулетки Vert»: 20 одинаковых секторов по 18°, только целые множители.
 #

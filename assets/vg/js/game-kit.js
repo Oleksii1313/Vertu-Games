@@ -1,5 +1,5 @@
 /* ============================================================================
-   Vertu Games · общий помощник для игр
+   Vert Games · общий помощник для игр
    ----------------------------------------------------------------------------
    1) Резкость canvas на retina/телефонах: буфер canvas подгоняется под
       devicePixelRatio (до 2), чтобы картинка не была мыльной. Работает и для
@@ -99,7 +99,47 @@
     });
   }
 
-  /* ------------------------------------------------------- 3. Инициализация */
+  /* ---------------------------------- 3. Запрет выделения текста в игре */
+  /* Во время игры выделение мешает: долгий тап по полю подсвечивает текст,
+     свайп утаскивает выделение, iOS показывает меню «скопировать». Правило
+     ставится только на страницы игр (этот файл подключают только они) и НЕ
+     распространяется на поля ввода и contenteditable. */
+  var SELECTION_CSS = [
+    'html,body,canvas,.stage,.board,.board-wrap,.game{-webkit-user-select:none;user-select:none;',
+    '-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}',
+    // Ввод текста и редактируемые области остаются полностью рабочими.
+    'input,textarea,select,[contenteditable=""],[contenteditable="true"],.allow-select{',
+    '-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}'
+  ].join('');
+
+  function editable(target) {
+    if (!target || target.nodeType !== 1) return false;
+    if (target.isContentEditable) return true;
+    return !!target.closest('input,textarea,select,[contenteditable=""],[contenteditable="true"],.allow-select');
+  }
+
+  function bindSelectionGuard() {
+    var style = document.createElement('style');
+    style.id = 'vg-no-select';
+    style.textContent = SELECTION_CSS;
+    (document.head || document.documentElement).appendChild(style);
+    // Контекстное меню в игре не нужно, но в полях ввода и на ссылках — нужно.
+    document.addEventListener('contextmenu', function (event) {
+      if (editable(event.target)) return;
+      if (event.target && event.target.closest && event.target.closest('a[href]')) return;
+      event.preventDefault();
+    });
+    // Долгое нажатие на iOS/Android не должно запускать выделение и «лупу».
+    document.addEventListener('selectstart', function (event) {
+      if (!editable(event.target)) event.preventDefault();
+    });
+    // Двойной тап по канвасу не выделяет и не зумит страницу.
+    document.addEventListener('dblclick', function (event) {
+      if (!editable(event.target)) event.preventDefault();
+    }, { passive: false });
+  }
+
+  /* ------------------------------------------------------- 4. Инициализация */
   function init() {
     // Только CSS-качество отрисовки: без вмешательства в размеры буфера.
     Array.prototype.forEach.call(document.querySelectorAll('canvas'), function (canvas) {
@@ -110,6 +150,7 @@
       // Явно запрещаем браузеру сглаживать пиксель-арт «мылом» при апскейле.
       canvas.style.setProperty('-webkit-optimize-contrast', 'auto');
     });
+    bindSelectionGuard();
     bindFocus();
     setTimeout(focusGame, 60);
     setTimeout(focusGame, 400);
@@ -120,6 +161,7 @@
   window.VGGame.sharpenEngine = sharpenEngine;
   window.VGGame.focus = focusGame;
   window.VGGame.dpr = dpr;
+  window.VGGame.noSelect = bindSelectionGuard;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

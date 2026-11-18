@@ -15,7 +15,7 @@
 Запуск (нужен только стандартный Python, зависимостей нет):
 
 ```bash
-python tools/smoke_deploy.py https://vertu-games.onrender.com --admin-password '…'
+python tools/smoke_deploy.py https://vert-games.onrender.com --admin-password '…'
 ```
 
 Код выхода 0 — всё в порядке, 1 — есть провалы (печатаются списком).
@@ -80,8 +80,8 @@ class Browser:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Дымовая проверка задеплоенного Vertu Games')
-    parser.add_argument('base', help='адрес сайта, например https://vertu-games.onrender.com')
+    parser = argparse.ArgumentParser(description='Дымовая проверка задеплоенного Vert Games')
+    parser.add_argument('base', help='адрес сайта, например https://vert-games.onrender.com')
     parser.add_argument('--admin-password', default='', help='ADMIN_PASSWORD для проверки админки')
     parser.add_argument('--keep-user', action='store_true', help='оставить тестовый аккаунт')
     args = parser.parse_args()

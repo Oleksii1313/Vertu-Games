@@ -26,6 +26,9 @@ from games_en import GAMES_EN  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 GAMES = sorted((ROOT / 'games').glob('*.html'))
 CYRILLIC = re.compile(r'[А-Яа-яЁё]')
+TITLE_TAG = re.compile(r'<title>.*?</title>', re.S)
+# Уже испорченный заголовок: <title><span data-ru="ru" data-en="en">ru</span></title>
+TITLE_SPAN = re.compile(r'<title><span data-ru="[^"]*" data-en="[^"]*">([^<]*)</span></title>')
 ATTRS = ('aria-label', 'title', 'placeholder', 'alt')
 
 RUNTIME_ID = 'game-i18n-runtime'
@@ -83,7 +86,18 @@ RUNTIME = r'''<script id="game-i18n-runtime">
       if (record.node.tagName === 'OPTION') record.node.textContent = lang === 'en' ? record.en : record.ru;
       else record.node.innerHTML = lang === 'en' ? record.en : record.ru;
     }
-    var attrNodes = document.querySelectorAll('[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]');
+    /* Заголовок вкладки: переводим document.title, а не атрибут title у <html>. */
+    var root = document.documentElement;
+    var titleEn = root.getAttribute('data-title-en');
+    if (titleEn) {
+      if (lang === 'en') {
+        if (!root.hasAttribute('data-title-ru')) root.setAttribute('data-title-ru', document.title);
+        document.title = titleEn;
+      } else if (root.hasAttribute('data-title-ru')) {
+        document.title = root.getAttribute('data-title-ru');
+      }
+    }
+    var attrNodes = (document.body || document).querySelectorAll('[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]');
     for (var j = 0; j < attrNodes.length; j++) {
       var el = attrNodes[j];
       for (var k = 0; k < ATTRS.length; k++) {
@@ -272,6 +286,17 @@ def _localize_markup(chunk: str, missing: list[str]) -> str:
         tail = chunk[credit.end():]
         chunk = chunk[:credit.start()]
 
+    # Заголовок вкладки — простой текст: span внутри <title> браузер показал бы
+    # как разметку. Английский вариант живёт в атрибуте data-title-en у <html>.
+    chunk = TITLE_SPAN.sub(lambda m: "<title>%s</title>" % m.group(1), chunk)
+    titles: list[str] = []
+
+    def stash_title(match: re.Match) -> str:
+        titles.append(match.group(0))
+        return '\x00title%d\x00' % (len(titles) - 1)
+
+    chunk = TITLE_TAG.sub(stash_title, chunk)
+
     text_re = re.compile(r'>([^<>]+)<')
     # Уже размеченный текст не трогаем повторно: инструмент идемпотентен.
     done = [(m.start(1), m.end(1)) for m in
@@ -291,7 +316,33 @@ def _localize_markup(chunk: str, missing: list[str]) -> str:
         en_attr = en.replace('"', '&quot;')
         return f'><span data-ru="{ru_attr}" data-en="{en_attr}">{inner}</span><'
 
-    return text_re.sub(fix_text, chunk) + tail
+    chunk = text_re.sub(fix_text, chunk)
+    for index, tag in enumerate(titles):
+        chunk = chunk.replace('\x00title%d\x00' % index, tag)
+    return chunk + tail
+
+
+def _ensure_title_en(markup: str) -> str:
+    """Английский заголовок вкладки — в атрибуте data-title-en у <html>.
+
+    Внутри <title> разметки быть не может, поэтому язык заголовка хранится
+    атрибутом, а рантайм переключает document.title.
+    """
+    title = re.search(r'<title>([^<]*)</title>', markup)
+    if not title or not CYRILLIC.search(title.group(1)):
+        return markup
+    ru = ' '.join(title.group(1).split())
+    en = GAMES_EN.get(ru) or english(ru)
+    if not en:
+        return markup
+    root = re.search(r'<html\b([^>]*)>', markup)
+    if not root:
+        return markup
+    attrs = root.group(1)
+    if 'data-title-en=' in attrs:
+        attrs = re.sub(r'\s*data-title-en="[^"]*"', '', attrs)
+    en_attr = en.replace('"', '&quot;')
+    return markup[:root.start()] + f'<html{attrs} data-title-en="{en_attr}">' + markup[root.end():]
 
 
 def localize_file(path: Path, check_only: bool = False) -> list[str]:
@@ -308,6 +359,7 @@ def localize_file(path: Path, check_only: bool = False) -> list[str]:
         else:
             out.append(_localize_markup(part, missing))
     result = ''.join(out)
+    result = _ensure_title_en(result)
 
     # Рантайм и словарь всегда пересобираются: они обновляются вместе с переводом.
     result = re.sub(r'<script id="(?:game-i18n-strings|game-i18n-runtime)">.*?</script>\n?',

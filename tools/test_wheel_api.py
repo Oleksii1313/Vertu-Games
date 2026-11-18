@@ -33,7 +33,7 @@ if str(ROOT) not in sys.path:
 def _prepare_database() -> dict:
     url = (os.environ.get('DATABASE_URL') or '').strip()
     if not url:
-        os.environ['VERTU_DB'] = '/tmp/wheel-api-%d.sqlite3' % os.getpid()
+        os.environ['VERT_DB'] = '/tmp/wheel-api-%d.sqlite3' % os.getpid()
         return {}
     schema = 'test_wheel_api_' + uuid.uuid4().hex[:10]
     sep = '&' if '?' in url else '?'

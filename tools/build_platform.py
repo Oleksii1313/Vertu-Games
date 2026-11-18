@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Сборщик страниц Vertu Games.
+"""Сборщик страниц Vert Games.
 
 Все страницы собираются из одного шаблона, поэтому шапка, подвал, дизайн-система и
 скрипты всегда согласованы. Данные (игры, магазин, достижения, правила казино)
@@ -51,15 +51,15 @@ TITLES_EN = {'Рулетка Vert': 'Vert Roulette'}
 def head(title: str, description: str, page: str, extra_css: str = '') -> str:
     title_en = TITLES_EN.get(title, title)
     return f'''<!doctype html>
-<html lang="ru" data-title-en="{E(title_en)} — Vertu Games">
+<html lang="ru" data-title-en="{E(title_en)} — Vert Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="{E(description)}">
-<meta name="vertu-build" content="{E(APP_VERSION)}">
-<title>{E(title)} — Vertu Games</title>
+<meta name="vert-build" content="{E(APP_VERSION)}">
+<title>{E(title)} — Vert Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -108,7 +108,7 @@ def footer() -> str:
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Vertu Games · Все права защищены</span>
+      <span>© 2026 Vert Games · Все права защищены</span>
       <span>V-монеты не имеют денежной стоимости и не подлежат обмену</span>
     </div>
   </div>
@@ -187,7 +187,7 @@ def build_index() -> str:
   <div class="feature-body"><span class="badge badge-new">NEW</span><h3>{E(g['name'])}</h3><p>{E(g['desc'])}</p>
   <span class="btn btn-sm btn-ghost">Играть {VG_ARROW}</span></div>
 </a>''' for i, g in enumerate(featured))
-    return f'''{head('Главная', 'Vertu Games — премиальная игровая платформа: {games_count_ru()}, социальное казино, магазин и серверный баланс V-монет.', 'home')}
+    return f'''{head('Главная', f'Vert Games — премиальная игровая платформа: {games_count_ru()}, социальное казино, магазин и серверный баланс V-монет.', 'home')}
 {header('home')}
 <main class="wrap">
   <section class="hero">
@@ -202,7 +202,7 @@ def build_index() -> str:
           <a class="btn btn-lime btn-lg" href="casino.html"><span data-ico="wheel"></span> Открыть казино</a>
         </div>
         <div class="hero-stats">
-          <div><b data-stat="games">11</b><span>игр</span></div>
+          <div><b data-stat="games">{len(visible_games())}</b><span>игр</span></div>
           <div><b data-stat="players">—</b><span>игроков</span></div>
           <div><b data-stat="coins">—</b><span>V в обороте</span></div>
           <div><b data-stat="plays">—</b><span>запусков</span></div>
@@ -283,7 +283,7 @@ def build_index() -> str:
 # --------------------------------------------------------------------------- #  top (catalog)
 def build_catalog() -> str:
     cards = casino_card() + '\n' + '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
-    return f'''{head('Каталог игр', 'Все игры Vertu Games: аркады, головоломки, гонки и 3D-приключения с серверными наградами V-монет.', 'catalog')}
+    return f'''{head('Каталог игр', 'Все игры Vert Games: аркады, головоломки, гонки и 3D-приключения с серверными наградами V-монет.', 'catalog')}
 {header('catalog')}
 <main class="wrap">
   <section class="cat-hero">
@@ -334,7 +334,7 @@ def build_shop() -> str:
   <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">{E(en)}</span><h2 style="font-size:20px">{E(ru)}</h2></div></div>
   <div class="shop-grid">{cards}</div>
 </div>''')
-    return f'''{head('Магазин', 'Магазин Vertu Games: аватары, цвета профиля, титулы и пакеты V-монет. Покупки на сервере.', 'shop')}
+    return f'''{head('Магазин', 'Магазин Vert Games: аватары, цвета профиля, титулы и пакеты V-монет. Покупки на сервере.', 'shop')}
 {header('shop')}
 <main class="wrap">
   <section class="section" style="margin-top:24px">
@@ -383,12 +383,12 @@ def build_casino() -> str:
         f'<tr><td>{E(s["name"])}</td><td>x{s["m3"]}</td><td>{(s["w"] / sum(x["w"] for x in rules["slots"]["symbols"])) ** 3 * 100:.2f}%</td></tr>'
         for s in rules['slots']['symbols'])
     stakes = ''.join(f'<button class="stake{" on" if s == 25 else ""}" data-stake="{s}">{s} V</button>' for s in CASINO_STAKES)
-    return f'''{head('Казино', 'Социальное казино Vertu Games: слоты и колесо фортуны на виртуальные V-монеты. Вся логика и выплаты — на сервере.', 'casino')}
+    return f'''{head('Казино', 'Социальное казино Vert Games: слоты и колесо фортуны на виртуальные V-монеты. Вся логика и выплаты — на сервере.', 'casino')}
 {header('casino')}
 <main class="wrap">
   <section class="section" style="margin-top:22px">
     <div class="section-head">
-      <div><span class="eyebrow"><span data-ico="wheel"></span> Vertu Casino</span>
+      <div><span class="eyebrow"><span data-ico="wheel"></span> Vert Casino</span>
         <h1 style="font-size:clamp(26px,3.4vw,40px);margin-top:8px">Социальное казино</h1>
         <p>Только виртуальные V-монеты. Результаты, ставки и выплаты рассчитывает сервер.</p></div>
       <div class="balance-pill" style="cursor:default"><span data-ico="coin"></span><span data-coins>0</span> V</div>
@@ -530,7 +530,7 @@ def build_roulette() -> str:
         f'<tr><td>x{r["multiplier"]:g}</td><td>{r["sectors"]}</td>'
         f'<td>{r["chance"] * 100:.1f}%</td><td>{r["rtp"] * 100:.1f}%</td></tr>'
         for r in wheel['probabilities'])
-    return f'''{head('Рулетка Vert', 'Рулетка Vert — колесо фортуны Vertu Games: 20 равных секторов, выплата ровно ставка × множитель, честные серверные вероятности.', 'roulette')}
+    return f'''{head('Рулетка Vert', 'Рулетка Vert — колесо фортуны Vert Games: 20 равных секторов, выплата ровно ставка × множитель, честные серверные вероятности.', 'roulette')}
 {header('roulette')}
 <main class="wrap">
   <section class="rl-hero">
@@ -600,7 +600,7 @@ def build_roulette() -> str:
 
 # --------------------------------------------------------------------------- #  profile
 def build_profile() -> str:
-    return f'''{head('Профиль', 'Профиль игрока Vertu Games: баланс, статистика, достижения, история операций и настройки аккаунта.', 'profile')}
+    return f'''{head('Профиль', 'Профиль игрока Vert Games: баланс, статистика, достижения, история операций и настройки аккаунта.', 'profile')}
 {header('profile')}
 <main class="wrap">
   <section class="section" style="margin-top:22px" id="profileRoot">
@@ -716,11 +716,11 @@ def build_login() -> str:
   <section class="auth-art">
     <div class="glow"></div>
     <div style="position:relative;z-index:2;max-width:520px">
-      <span class="eyebrow"><span data-ico="spark"></span> Vertu Games</span>
+      <span class="eyebrow"><span data-ico="spark"></span> Vert Games</span>
       <h2 class="grad" style="margin:14px 0 0">Один аккаунт — вся платформа</h2>
       <ul>
         <li><span data-ico="check"></span><span>Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется.</span></li>
-        <li><span data-ico="check"></span><span>Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов).</span></li>
+        <li><span data-ico="check"></span><span>Пароль хранится только как Argon2id-хеш с индивидуальной солью (старые хеши PBKDF2 обновляются при входе).</span></li>
         <li><span data-ico="check"></span><span>Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа.</span></li>
         <li><span data-ico="check"></span><span>Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве.</span></li>
       </ul>
@@ -774,7 +774,7 @@ def build_login() -> str:
 
 # --------------------------------------------------------------------------- #  admin
 def build_admin() -> str:
-    return f'''{head('Админ-панель', 'Админ-панель Vertu Games: пользователи, балансы, статистика, игры и журнал действий.', 'admin',
+    return f'''{head('Админ-панель', 'Админ-панель Vert Games: пользователи, балансы, статистика, игры и журнал действий.', 'admin',
                   '<style>.admin-grid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:start}.admin-side{position:sticky;top:calc(var(--header-h) + 16px)}.admin-side button{display:flex;align-items:center;gap:9px;width:100%;padding:10px 13px;border:0;border-radius:10px;background:transparent;color:var(--text-2);font-weight:700;font-size:13.5px;cursor:pointer;text-align:left}.admin-side button:hover{{background:rgba(255,255,255,.06)}}.admin-side button.on{{background:linear-gradient(120deg,rgba(139,92,246,.3),rgba(255,45,149,.18));color:#fff}}@media(max-width:900px){{.admin-grid{{grid-template-columns:1fr}}.admin-side{{position:static;display:grid;grid-template-columns:repeat(2,1fr);gap:6px}}.admin-side .divider{{display:none}}}}</style>')}
 {header('admin')}
 <main class="wrap">
@@ -887,21 +887,21 @@ def build_admin() -> str:
 
 # --------------------------------------------------------------------------- #  info pages
 def build_about() -> str:
-    return f'''{head('О проекте', 'Vertu Games — браузерная игровая платформа: {games_count_ru()}, социальное казино и серверная экономика V-монет.', 'about')}
+    return f'''{head('О проекте', f'Vert Games — браузерная игровая платформа: {games_count_ru()}, социальное казино и серверная экономика V-монет.', 'about')}
 {header('about')}
 <main class="wrap">
   <section class="section" style="margin-top:22px">
     <div class="card panel">
       <span class="eyebrow"><span data-ico="info"></span> О проекте</span>
-      <h1 style="font-size:clamp(26px,3.6vw,42px);margin:12px 0 14px">Верту Games — игровая платформа</h1>
-      <p class="muted" style="max-width:78ch">Vertu Games — развивающийся браузерный игровой проект. Здесь собраны аркады,
+      <h1 style="font-size:clamp(26px,3.6vw,42px);margin:12px 0 14px">Верт Games — игровая платформа</h1>
+      <p class="muted" style="max-width:78ch">Vert Games — развивающийся браузерный игровой проект. Здесь собраны аркады,
         головоломки и полноценные 3D-приключения, а V-монеты зарабатываются и тратятся внутри платформы.
         Регистрация — только по нику и паролю; прогресс, баланс и покупки хранятся на сервере.</p>
     </div>
     <div class="grid grid-2" style="margin-top:16px">
       <div class="card panel"><h2 style="font-size:18px;margin-bottom:8px">Один аккаунт</h2>
         <p class="muted" style="font-size:13.5px;margin:0">Ник, пароль и серверная сессия. E-mail не запрашивается, подтверждение почты
-        не требуется. Пароль хранится как хеш PBKDF2-SHA256 с солью.</p></div>
+        не требуется. Пароль хранится как хеш Argon2id с индивидуальной солью.</p></div>
       <div class="card panel"><h2 style="font-size:18px;margin-bottom:8px">Один баланс</h2>
         <p class="muted" style="font-size:13.5px;margin:0">V-монеты начисляются только сервером: за игровые события,
         достижения, магазин и казино. Суммы и суточные лимиты заданы на сервере.</p></div>
@@ -934,7 +934,7 @@ def build_about() -> str:
 
 
 def build_support() -> str:
-    return f'''{head('Поддержка', 'Поддержка Vertu Games: ответы на вопросы об аккаунте, балансе, играх и казино.', 'support')}
+    return f'''{head('Поддержка', 'Поддержка Vert Games: ответы на вопросы об аккаунте, балансе, играх и казино.', 'support')}
 {header('support')}
 <main class="wrap">
   <section class="section" style="margin-top:22px">
@@ -1030,7 +1030,7 @@ def build_api() -> str:
     rows = ''.join(f'<tr><td><span class="badge {"badge-line" if m == "GET" else "badge-new"}">{m}</span></td>'
                    f'<td><code>{E(path)}</code></td><td class="muted" style="white-space:normal">{E(desc)}</td></tr>'
                    for m, path, desc in endpoints)
-    return f'''{head('API', 'Публичное API Vertu Games: аккаунты, баланс, магазин и казино. Все денежные операции на сервере.', 'api',
+    return f'''{head('API', 'Публичное API Vert Games: аккаунты, баланс, магазин и казино. Все денежные операции на сервере.', 'api',
                   '<style>code{font-family:ui-monospace,monospace;font-size:12px;color:#c9f7e8;background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px}</style>')}
 {header('api')}
 <main class="wrap">
@@ -1064,7 +1064,7 @@ def build_api() -> str:
 
 def build_privacy() -> str:
     sections = [
-        ('Какие данные мы храним', 'Ник, PBKDF2-хеш пароля с солью, время регистрации, баланс V-монет, история операций, '
+        ('Какие данные мы храним', 'Ник, Argon2id-хеш пароля с солью, время регистрации, баланс V-монет, история операций, '
                                    'покупки, статистика игр, достижения, настройки профиля и история ставок в казино. '
                                    'E-mail не запрашивается и не хранится (кроме перенесённых старых аккаунтов).'),
         ('Что не хранится', 'Пароли в открытом виде, коды подтверждения, платёжные данные карт. Braintree/Stripe/ЮKassa '
@@ -1075,7 +1075,7 @@ def build_privacy() -> str:
                            'Игровые библиотеки встроены в файлы игр.'),
         ('Локальное хранилище', 'В браузере сохраняются только: язык интерфейса и сохранения самих игр (позиция, прогресс). '
                                  'Баланс и покупки в браузере не хранятся.'),
-        ('Безопасность', 'Пароли хешируются PBKDF2-SHA256 (310 000 раундов) с индивидуальной солью. Сессии хранятся как хеши, '
+        ('Безопасность', 'Пароли хешируются Argon2id с индивидуальной солью (старые хеши PBKDF2-SHA256 обновляются при входе). Сессии хранятся как хеши, '
                          'все денежные операции выполняются в транзакциях и проверяются на сервере.'),
         ('Ваши права', 'Вы можете сменить пароль, выйти из всех сессий и запросить удаление аккаунта у владельца платформы. '
                        'Удаление аккаунта удаляет связанные данные (историю операций, покупки, ставки).'),
@@ -1083,7 +1083,7 @@ def build_privacy() -> str:
     ]
     body = ''.join(f'<div class="card panel" style="margin-bottom:12px"><h2 style="font-size:17px;margin-bottom:8px">{E(title)}</h2>'
                    f'<p class="muted" style="font-size:13.5px;margin:0">{text}</p></div>' for title, text in sections)
-    return f'''{head('Конфиденциальность', 'Политика конфиденциальности Vertu Games: какие данные хранятся и как они защищены.', 'privacy',
+    return f'''{head('Конфиденциальность', 'Политика конфиденциальности Vert Games: какие данные хранятся и как они защищены.', 'privacy',
                   '<style>code{font-family:ui-monospace,monospace;font-size:12px;color:#c9f7e8;background:rgba(255,255,255,.05);padding:2px 6px;border-radius:5px}</style>')}
 {header('privacy')}
 <main class="wrap">

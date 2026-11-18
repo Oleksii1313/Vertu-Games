@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Магазин Vertu Games: каталог предметов, покупки, экипировка.
+"""Магазин Vert Games: каталог предметов, покупки, экипировка.
 
 Покупка — одна серверная транзакция: списание V и запись в ``inventory``.
 Повторная покупка того же предмета отклоняется, экипировать можно только
@@ -185,7 +185,7 @@ def yookassa_create(order, return_url):
         'amount': {'value': f"{order['amount_minor'] / 100:.2f}", 'currency': 'RUB'},
         'capture': True,
         'confirmation': {'type': 'redirect', 'return_url': return_url},
-        'description': f"Vertu Games: {SHOP_PACKS[order['pack']]['title_ru']}",
+        'description': f"Vert Games: {SHOP_PACKS[order['pack']]['title_ru']}",
         'metadata': {'order_id': order['id']},
     }, headers={'Authorization': 'Basic ' + auth, 'Idempotence-Key': order['id']})
     data = _json(status, raw)
@@ -218,7 +218,7 @@ def stripe_create(order, success_url, cancel_url):
         'line_items[0][quantity]': '1',
         'line_items[0][price_data][currency]': 'usd',
         'line_items[0][price_data][unit_amount]': str(order['amount_minor']),
-        'line_items[0][price_data][product_data][name]': f'{pack["coins"]} V — Vertu Games',
+        'line_items[0][price_data][product_data][name]': f'{pack["coins"]} V — Vert Games',
     }, headers={'Authorization': 'Bearer ' + key}, form=True)
     data = _json(status, raw)
     url = data.get('url')
@@ -230,7 +230,7 @@ def stripe_create(order, success_url, cancel_url):
 def cryptobot_create(order, return_url):
     status, raw = _request('POST', 'https://pay.crypt.bot/api/createInvoice', {
         'currency_type': 'fiat', 'fiat': 'RUB', 'amount': f"{order['amount_minor'] / 100:.2f}",
-        'description': f"Vertu Games: {SHOP_PACKS[order['pack']]['title_ru']}",
+        'description': f"Vert Games: {SHOP_PACKS[order['pack']]['title_ru']}",
         'payload': order['id'], 'paid_btn_name': 'callback', 'paid_btn_url': return_url,
     }, headers={'Crypto-Pay-API-Token': env('CRYPTOBOT_TOKEN')})
     data = _json(status, raw).get('result') or {}

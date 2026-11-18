@@ -37,9 +37,14 @@
   function achievementRows(items) {
     if (!items || !items.length) return '<div class="empty">' + T('Достижений пока нет.', 'No achievements yet.') + '</div>';
     return '<div class="list">' + items.map(function (item) {
-      return '<div class="list-row"><span class="ico">' + VG.icon(item.icon || 'trophy', 17) + '</span>' +
+      // Дата открытия приходит с сервера (unix-секунды, UTC). Показываем
+      // относительное время, полную дату — в подсказке.
+      var when = item.unlocked ? VG.timeAgo(item.unlocked) : T('Дата неизвестна', 'Unknown date');
+      return '<div class="list-row" title="' + escapeHtml(VG.stamp(item.unlocked)) + '">' +
+        '<span class="ico">' + VG.icon(item.icon || 'trophy', 17) + '</span>' +
         '<span class="meta"><b>' + escapeHtml(VG.lang() === 'en' ? item.name_en : item.name_ru) + '</b>' +
-        '<small>' + escapeHtml(VG.lang() === 'en' ? item.desc_en : item.desc_ru) + '</small></span>' +
+        '<small>' + escapeHtml(VG.lang() === 'en' ? item.desc_en : item.desc_ru) +
+        ' · ' + escapeHtml(when) + '</small></span>' +
         '<span style="font-weight:800;color:#dcff8a;font-size:12px">+' + fmt(item.coins) + ' V</span></div>';
     }).join('') + '</div>';
   }
@@ -97,7 +102,7 @@
 
   function render(data, areMine) {
     var user = data.user;
-    document.title = user.username + ' — Vertu Games';
+    document.title = user.username + ' — Vert Games';
     $('#profAvatar').innerHTML = VG.avatarHtml(user, 52);
     $('#profAvatar').style.color = VG.colorHex(user.color);
     $('#profName').innerHTML = escapeHtml(user.username) +

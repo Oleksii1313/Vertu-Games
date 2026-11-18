@@ -1,4 +1,4 @@
-"""Английские переводы статической разметки Vertu Games.
+"""Английские переводы статической разметки Vert Games.
 
 Сборщик страниц помечает каждый блок разметки атрибутами ``data-ru``/``data-en``,
 рубрики (заголовки, подсказки, aria-label, title) переводятся здесь. Если строка
@@ -22,7 +22,7 @@ UI_EN = {
     "Поддержка": "Support",
     "Конфиденциальность": "Privacy",
     "Платформа": "Platform",
-    "Главная — Vertu Games": "Vertu Games — premium gaming platform",
+    "Главная — Vert Games": "Vert Games — premium gaming platform",
     "Каталог": "Catalog",
     "Все игры": "All games",
     "Играть": "Play",
@@ -41,8 +41,8 @@ UI_EN = {
     "Назад": "Back",
     "Все": "All",
     "На сайт": "Back to site",
-    "© 2026 Vertu Games · Все права защищены":
-        "© 2026 Vertu Games · All rights reserved",
+    "© 2026 Vert Games · Все права защищены":
+        "© 2026 Vert Games · All rights reserved",
     "V-монеты не имеют денежной стоимости и не подлежат обмену":
         "V-coins have no monetary value and cannot be exchanged",
 
@@ -93,7 +93,7 @@ UI_EN = {
         "Ready to claim your first bonus?",
 
     # --- каталог ---
-    "Каталог игр — Vertu Games": "Game catalog — Vertu Games",
+    "Каталог игр — Vert Games": "Game catalog — Vert Games",
     "Все игры платформы": "Every game on the platform",
     "Аркады": "Arcade",
     "Головоломки": "Puzzles",
@@ -119,7 +119,7 @@ UI_EN = {
     "Фудтрак-вездеход по дорогам Аурелии": "A food-truck rover across Aurelia's roads",
 
     # --- казино ---
-    "Казино — Vertu Games": "Casino — Vertu Games",
+    "Казино — Vert Games": "Casino — Vert Games",
     "Социальное казино": "Social casino",
     "Только виртуальные V-монеты. Результаты, ставки и выплаты рассчитывает сервер.":
         "Virtual V-coins only. Results, stakes and payouts are calculated by the server.",
@@ -185,18 +185,18 @@ UI_EN = {
         "Virtual V-coins. No real money is used.",
     "Последние вращения": "Recent spins",
     "Множители": "Multipliers",
-    "Рулетка — Vertu Games": "Roulette — Vertu Games",
-    "Рулетка Vertu": "Vertu Roulette",
+    "Рулетка — Vert Games": "Roulette — Vert Games",
+    "Рулетка Vert": "Vert Roulette",
     "Крутить": "Spin",
     "Использовать бесплатный спин, если доступен":
         "Use the free spin when available",
     "Готово к вращению": "Ready to spin",
     "Бесплатно: 1/1 · Платных: 5/5": "Free: 1/1 · Paid: 5/5",
-    "Колесо фортуны Vertu Games: бесплатный спин каждый день и честные серверные вероятности.":
-        "Vertu Games wheel of fortune: a free spin every day and fair server-side odds.",
+    "Колесо фортуны Vert Games: бесплатный спин каждый день и честные серверные вероятности.":
+        "Vert Games wheel of fortune: a free spin every day and fair server-side odds.",
 
     # --- магазин ---
-    "Магазин — Vertu Games": "Shop — Vertu Games",
+    "Магазин — Vert Games": "Shop — Vert Games",
     "Призы за V-монеты": "Rewards for V-coins",
     "Все покупки выполняются на сервере: списание и предмет записываются в одной транзакции.":
         "Every purchase happens on the server: the debit and the item are written in one transaction.",
@@ -224,11 +224,11 @@ UI_EN = {
     "Пакет 5 000 V": "5 000 V pack",
     "V-коины": "V-coins",
     "Покупка монет за деньги": "Buying coins with real money",
-    "Магазин Vertu Games: аватары, цвета профиля, титулы и пакеты V-монет. Покупки на сервере.":
-        "Vertu Games shop: avatars, profile colours, titles and V-coin packs. Purchases happen on the server.",
+    "Магазин Vert Games: аватары, цвета профиля, титулы и пакеты V-монет. Покупки на сервере.":
+        "Vert Games shop: avatars, profile colours, titles and V-coin packs. Purchases happen on the server.",
 
     # --- профиль ---
-    "Профиль — Vertu Games": "Profile — Vertu Games",
+    "Профиль — Vert Games": "Profile — Vert Games",
     "Войдите в аккаунт": "Sign in to your account",
     "Профиль, баланс, достижения и история операций доступны после входа.":
         "Your profile, balance, achievements and transaction history are available after signing in.",
@@ -258,11 +258,11 @@ UI_EN = {
     "Выйти из аккаунта": "Sign out",
     "В магазин": "Go to the shop",
     "Оформление профиля": "Profile appearance",
-    "Профиль игрока Vertu Games: баланс, статистика, достижения, история операций и настройки аккаунта.":
-        "Vertu Games player profile: balance, stats, achievements, transaction history and account settings.",
+    "Профиль игрока Vert Games: баланс, статистика, достижения, история операций и настройки аккаунта.":
+        "Vert Games player profile: balance, stats, achievements, transaction history and account settings.",
 
     # --- поддержка ---
-    "Поддержка — Vertu Games": "Support — Vertu Games",
+    "Поддержка — Vert Games": "Support — Vert Games",
     "Чем помочь?": "How can we help?",
     "Как зарегистрироваться?": "How do I sign up?",
     "Почему не проходит капча?": "Why does the captcha fail?",
@@ -286,12 +286,12 @@ UI_EN = {
     "Без пароля": "No password",
     "никогда не присылайте пароль или код": "never send a password or a code",
     "Поиск по вопросам": "Search the questions",
-    "Поддержка Vertu Games: ответы на вопросы об аккаунте, балансе, играх и казино.":
-        "Vertu Games support: answers about the account, balance, games and casino.",
+    "Поддержка Vert Games: ответы на вопросы об аккаунте, балансе, играх и казино.":
+        "Vert Games support: answers about the account, balance, games and casino.",
 
     # --- о проекте ---
-    "О проекте — Vertu Games": "About — Vertu Games",
-    "Верту Games — игровая платформа": "Vertu Games — a gaming platform",
+    "О проекте — Vert Games": "About — Vert Games",
+    "Верт Games — игровая платформа": "Vert Games — a gaming platform",
     "Один аккаунт": "One account",
     "Один баланс": "One balance",
     "Игры не меняются": "Games stay the same",
@@ -344,16 +344,16 @@ UI_EN = {
         "per IP and per nickname; separate limits for sign in and sign up",
     "квитанции и уникальные ref не позволяют начислить дважды":
         "receipts and unique refs prevent double crediting",
-    "Публичное API Vertu Games: аккаунты, баланс, магазин и казино. Все денежные операции на сервере.":
-        "Vertu Games public API: accounts, balance, shop and casino. Every money operation happens on the server.",
+    "Публичное API Vert Games: аккаунты, баланс, магазин и казино. Все денежные операции на сервере.":
+        "Vert Games public API: accounts, balance, shop and casino. Every money operation happens on the server.",
 
     # --- вход ---
-    "Вход и регистрация — Vertu Games": "Sign in and sign up — Vertu Games",
+    "Вход и регистрация — Vert Games": "Sign in and sign up — Vert Games",
     "Один аккаунт — вся платформа": "One account — the whole platform",
     "Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется.":
         "Sign up with a nickname and a password. No e-mail, no address confirmation.",
-    "Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов).":
-        "The password is stored only as a salted PBKDF2 hash (310 000 rounds).",
+    "Пароль хранится только как Argon2id-хеш с индивидуальной солью (старые хеши PBKDF2 обновляются при входе).":
+        "The password is stored only as a salted Argon2id hash (older PBKDF2 hashes are upgraded on sign-in).",
     "Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа.":
         "Cloudflare Turnstile is verified on the server, plus rate limits on sign-in attempts.",
     "Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве.":
@@ -376,7 +376,7 @@ UI_EN = {
     "Например, NeoPlayer": "For example, NeoPlayer",
 
     # --- конфиденциальность ---
-    "Конфиденциальность — Vertu Games": "Privacy — Vertu Games",
+    "Конфиденциальность — Vert Games": "Privacy — Vert Games",
     "Политика конфиденциальности": "Privacy policy",
     "Данные и приватность": "Data and privacy",
     "Какие данные мы храним": "What data we store",
@@ -386,11 +386,11 @@ UI_EN = {
     "Ваши права": "Your rights",
     "Дети": "Children",
     "Контакты": "Contacts",
-    "Политика конфиденциальности Vertu Games: какие данные хранятся и как они защищены.":
-        "Vertu Games privacy policy: what data is stored and how it is protected.",
+    "Политика конфиденциальности Vert Games: какие данные хранятся и как они защищены.":
+        "Vert Games privacy policy: what data is stored and how it is protected.",
 
     # --- админка ---
-    "Админ-панель — Vertu Games": "Admin panel — Vertu Games",
+    "Админ-панель — Vert Games": "Admin panel — Vert Games",
     "Админ-панель": "Admin panel",
     "Права проверяются на сервере. Пароль администратора не хранится в браузере.":
         "Permissions are checked on the server. The admin password is never stored in the browser.",
@@ -409,8 +409,8 @@ UI_EN = {
         "Disabling hides the game's rewards; game files are not deleted.",
     "Настройки казино": "Casino settings",
     "Журнал действий администраторов": "Admin action log",
-    "Админ-панель Vertu Games: пользователи, балансы, статистика, игры и журнал действий.":
-        "Vertu Games admin panel: users, balances, stats, games and the action log.",
+    "Админ-панель Vert Games: пользователи, балансы, статистика, игры и журнал действий.":
+        "Vert Games admin panel: users, balances, stats, games and the action log.",
     "Поиск по нику": "Search by nickname",
     "Поиск пользователей": "Search users",
 }
@@ -431,7 +431,7 @@ UI_EN.update({
     'RTP слотов около 92.4%, колеса — 95.0%. Математическое ожидание игры отрицательное, это развлекательный режим без реальных денег.': 'Slots RTP is around 92.4% and the wheel 95.0%. The expected value is negative: this is entertainment without real money.',
     'V-монеты зарабатываются в играх и казино и не имеют денежной стоимости. Пакеты за реальные деньги отключены владельцем платформы и не влияют на игровой баланс.': 'V-coins are earned in games and the casino and have no monetary value. Real-money packs are disabled by the platform owner and do not affect the game balance.',
     'V-монеты начисляются только сервером: за игровые события, достижения, магазин и казино. Суммы и суточные лимиты заданы на сервере.': 'V-coins are credited only by the server: for game events, achievements, the shop and the casino. Amounts and daily caps are set on the server.',
-    'Vertu Games — развивающийся браузерный игровой проект. Здесь собраны аркады, головоломки и полноценные 3D-приключения, а V-монеты зарабатываются и тратятся внутри платформы. Регистрация — только по нику и паролю; прогресс, баланс и покупки хранятся на сервере.': 'Vertu Games is a growing browser gaming project. It brings together arcades, puzzles and full 3D adventures, while V-coins are earned and spent inside the platform. Sign-up needs only a nickname and a password; progress, balance and purchases live on the server.',
+    'Vert Games — развивающийся браузерный игровой проект. Здесь собраны аркады, головоломки и полноценные 3D-приключения, а V-монеты зарабатываются и тратятся внутри платформы. Регистрация — только по нику и паролю; прогресс, баланс и покупки хранятся на сервере.': 'Vert Games is a growing browser gaming project. It brings together arcades, puzzles and full 3D adventures, while V-coins are earned and spent inside the platform. Sign-up needs only a nickname and a password; progress, balance and purchases live on the server.',
     '}. Все другие сессии закрываются.': '}. All other sessions are closed.',
     '}. Результат считает сервер.': '}. The server resolves the result.',
     '}. Сумму и лимит задаёт сервер.': '}. The server sets the amount and the cap.',
@@ -446,7 +446,7 @@ UI_EN.update({
     'Рулетка Vert': 'Vert Roulette',
     'Испытай удачу и забери выигрыш до x5': 'Try your luck and win up to x5',
     'до x5': 'up to x5',
-    'Рулетка Vert — Vertu Games': 'Vert Roulette — Vertu Games',
+    'Рулетка Vert — Vert Games': 'Vert Roulette — Vert Games',
     'Секторов': 'Sectors',
     'Ставка': 'Stake',
     'Версия сборки:': 'Build version:',
@@ -472,8 +472,8 @@ UI_EN.update({
     'Награда за событие: {': 'Event reward: {',
     'Надеть предмет: {': 'Equip an item: {',
     'Нет. V-монеты не имеют денежной стоимости, их нельзя купить «на вывод» или обменять на деньги.': 'No. V-coins have no monetary value; they cannot be bought for cash-out or exchanged for money.',
-    'Ник, PBKDF2-хеш пароля с солью, время регистрации, баланс V-монет, история операций, покупки, статистика игр, достижения, настройки профиля и история ставок в казино. E-mail не запрашивается и не хранится (кроме перенесённых старых аккаунтов).': 'Nickname, salted PBKDF2 password hash, sign-up time, V-coin balance, transaction history, purchases, game stats, achievements, profile settings and casino bet history. E-mail is never requested or stored (except for migrated legacy accounts).',
-    'Ник, пароль и серверная сессия. E-mail не запрашивается, подтверждение почты не требуется. Пароль хранится как хеш PBKDF2-SHA256 с солью.': 'A nickname, a password and a server session. No e-mail is requested and no address confirmation is needed. The password is stored as a salted PBKDF2-SHA256 hash.',
+    'Ник, Argon2id-хеш пароля с солью, время регистрации, баланс V-монет, история операций, покупки, статистика игр, достижения, настройки профиля и история ставок в казино. E-mail не запрашивается и не хранится (кроме перенесённых старых аккаунтов).': 'Nickname, salted Argon2id password hash, sign-up time, V-coin balance, transaction history, purchases, game stats, achievements, profile settings and casino bet history. E-mail is never requested or stored (except for migrated legacy accounts).',
+    'Ник, пароль и серверная сессия. E-mail не запрашивается, подтверждение почты не требуется. Пароль хранится как хеш Argon2id с индивидуальной солью.': 'A nickname, a password and a server session. No e-mail is requested and no address confirmation is needed. The password is stored as a salted Argon2id hash.',
     'Нужны только ник и пароль (8–128 символов). E-mail не запрашивается, подтверждение почты не требуется. После регистрации вы сразу попадаете в аккаунт с приветственным бонусом 100 V.': 'You only need a nickname and a password (8–128 characters). No e-mail is requested and no address confirmation is needed. Right after signing up you land in your account with a 100 V welcome bonus.',
     'Ограничения: {': 'Limits: {',
     'Один аккаунт, один серверный баланс и один вкус на всех страницах: аркады, 3D-приключения, социальное казино и магазин призов. Монеты начисляются за игру и тратятся внутри платформы.': 'One account, one server balance and one look across every page: arcades, 3D adventures, the social casino and the reward shop. Coins are earned by playing and spent inside the platform.',
@@ -481,7 +481,7 @@ UI_EN.update({
     'Ответы на частые вопросы. Если нужного ответа нет — подготовьте отчёт об ошибке и передайте его владельцу платформы. Пароли и коды подтверждения никуда отправлять не нужно.': 'Answers to common questions. If yours is missing, prepare a bug report and pass it to the platform owner. Never send your password or verification codes anywhere.',
     'Отметить запуск игры: {': 'Record a game launch: {',
     'Пароли в открытом виде, коды подтверждения, платёжные данные карт. Braintree/Stripe/ЮKassa обрабатывают платежи сами; платформа хранит только идентификатор заказа.': 'Plain-text passwords, verification codes and card payment data. Braintree/Stripe/YooKassa process payments themselves; the platform stores only the order identifier.',
-    'Пароли хешируются PBKDF2-SHA256 (310 000 раундов) с индивидуальной солью. Сессии хранятся как хеши, все денежные операции выполняются в транзакциях и проверяются на сервере.': 'Passwords are hashed with PBKDF2-SHA256 (310 000 rounds) and an individual salt. Sessions are stored as hashes, and every money operation runs in a transaction and is verified on the server.',
+    'Пароли хешируются Argon2id с индивидуальной солью (старые хеши PBKDF2-SHA256 обновляются при входе). Сессии хранятся как хеши, все денежные операции выполняются в транзакциях и проверяются на сервере.': 'Passwords are hashed with Argon2id and an individual salt (older PBKDF2-SHA256 hashes are upgraded on sign-in). Sessions are stored as hashes, and every money operation runs in a transaction and is verified on the server.',
     'Платформа предназначена для пользователей 18+. Регистрация несовершеннолетних не допускается.': 'The platform is intended for users aged 18+. Minors may not sign up.',
     'Покупка предмета: {': 'Buy an item: {',
     "Последнее обновление: 13 ноября 2026. Коротко: мы храним минимум данных, ' необходимых для аккаунта и игровой экономики, и не продаём их.": 'Last updated: 13 November 2026. In short: we keep the minimum data needed for the account and the game economy, and we never sell it.',
@@ -506,5 +506,5 @@ UI_EN.update({
     'с HTTP-статусом 4xx/5xx. Коды:': 'with an HTTP status of 4xx/5xx. Codes:',
     'серверные достижения с наградами и рейтинг игроков': 'server-side achievements with rewards and a player leaderboard',
     'слоты «Vert Slots», колесо фортуны, история ставок и добровольные лимиты': 'Vert Slots reels, the wheel of fortune, bet history and voluntary limits',
-    'API — Vertu Games': 'API — Vertu Games',
+    'API — Vert Games': 'API — Vert Games',
 })

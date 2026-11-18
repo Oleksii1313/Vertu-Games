@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertu Games — каноническая схема PostgreSQL.
+"""Vert Games — каноническая схема PostgreSQL.
 
 Единственное описание структуры базы. Из него берут данные:
 

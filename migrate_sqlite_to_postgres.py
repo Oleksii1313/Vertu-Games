@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Перенос базы Vertu Games из SQLite в PostgreSQL.
+"""Перенос базы Vert Games из SQLite в PostgreSQL.
 
 Что переносится:
 
@@ -26,7 +26,7 @@
 export DATABASE_URL=postgresql://…          # Internal Database URL с Render
 python migrate_sqlite_to_postgres.py                      # проверка, без записи
 python migrate_sqlite_to_postgres.py --apply              # перенос
-python migrate_sqlite_to_postgres.py --source data/vertu.sqlite3 --apply
+python migrate_sqlite_to_postgres.py --source data/vert.sqlite3 --apply
 python migrate_sqlite_to_postgres.py --report migration-report.json --apply
 ```
 """
@@ -44,9 +44,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
+# Старые переменные окружения (VERTU_DB/VERTGAMES_DB) читаются тоже: обновление
+# кода не должно «потерять» базу, если переменная на сервере осталась прежней.
 DEFAULT_SOURCES = (
-    os.environ.get('VERTU_DB') or '',
-    os.environ.get('VERTGAMES_DB') or '',
+    os.environ.get('VERT_DB') or os.environ.get('VERTU_DB') or '',
+    os.environ.get('VERT_GAMES_DB') or os.environ.get('VERTGAMES_DB') or '',
+    str(ROOT / 'data' / 'vert.sqlite3'),
     str(ROOT / 'data' / 'vertu.sqlite3'),
     str(ROOT / 'data' / 'accounts.sqlite3'),
     str(ROOT / 'data' / 'platform.sqlite3'),
@@ -272,7 +275,7 @@ def print_report(report: dict) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description='Перенос SQLite → PostgreSQL (Vertu Games)')
+    parser = argparse.ArgumentParser(description='Перенос SQLite → PostgreSQL (Vert Games)')
     parser.add_argument('--source', default=None, help='путь к SQLite-файлу')
     parser.add_argument('--apply', action='store_true', help='записать данные в PostgreSQL')
     parser.add_argument('--report', default='', help='сохранить JSON-отчёт по пути')
