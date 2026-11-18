@@ -125,7 +125,7 @@ class SessionClaimTest(unittest.TestCase):
 
     def test_only_minicraft_has_session_reward(self):
         response = self.client.post('/api/games/session/claim', {
-            'game': 'flappy', 'coins': 10, 'time': 60, 'ticket': self.client.ticket('flappy')})
+            'game': 'skyisle', 'coins': 10, 'time': 60, 'ticket': self.client.ticket('skyisle')})
         self.assertEqual(response.status_code, 404, response.get_json())
         self.assertTrue(MINICRAFT.get('session_claim'))
 
@@ -245,7 +245,7 @@ class SessionClaimTest(unittest.TestCase):
         broken = {'sid': 'x', 'sig': 'deadbeef', 'amount': 500, 'game': 'minicraft'}
         response = self.client.claim(coins=10, time=60, ticket=broken)
         self.assertEqual(response.status_code, 403, response.get_json())
-        foreign = self.client.claim(coins=10, time=60, ticket=self.client.ticket('flappy'))
+        foreign = self.client.claim(coins=10, time=60, ticket=self.client.ticket('skyisle'))
         self.assertEqual(foreign.status_code, 403, foreign.get_json())
         self.assertEqual(store.balance(self.uid), before)
 

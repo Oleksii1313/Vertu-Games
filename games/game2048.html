@@ -383,6 +383,23 @@ let board=[],size=4,over=false,prevScore=0;
 const c=document.getElementById('c'),ctx=c.getContext('2d');
 document.getElementById('bestVal').textContent=best;
 const coinsEl=document.getElementById('coinsVal');
+/* Награда: клиент считает только «единицы» (Math.floor(score/100)), сумму V считает сервер. */
+const COIN_RATE=3;
+if(window.VGReward){VGReward.init('2048',COIN_RATE);}
+let shownV=-1,overShown=false;
+function rewardUnits(){return Math.floor(score/100)}
+function syncV(){
+  if(window.VGReward)VGReward.set(rewardUnits());
+  coins=window.VGReward?VGReward.v():coins;
+  if(typeof coinsEl!=='undefined'&&coinsEl&&coins!==shownV){shownV=coins;coinsEl.textContent=coins+' V'}
+  return coins;
+}
+VGReward.on&&VGReward.on(function(st){
+  if(st.state!=='done')return;
+  var el=document.getElementById('fEarn');
+  if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
+});
+
 function resize(){c.width=c.height=560;VGInput.fitSquare(c)}
 window.addEventListener('resize',resize);
 function emptyCells(){let e=[];for(let r=0;r<size;r++)for(let k=0;k<size;k++)if(!board[r][k])e.push([r,k]);return e}
@@ -479,7 +496,7 @@ function render(){
 function loop(ts){if(!lastTs)lastTs=ts;const dt=(ts-lastTs)/1000;lastTs=ts;
   if(animActive){animTime+=dt;if(animTiles.every(t=>animTime>=t.delay+t.dur))animActive=false}
   render();requestAnimationFrame(loop)}
-function addCoin(n){coins+=n;coinsEl.textContent=coins+' V';if(window.parent!==window)try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}
+function addCoin(n){syncV()}
 function checkOver(){
   if(emptyCells().length)return;
   for(let r=0;r<size;r++)for(let k=0;k<size;k++){if(r<size-1 && board[r][k]===board[r+1][k])return;if(k<size-1&&board[r][k]===board[r][k+1])return;}
@@ -487,10 +504,12 @@ function checkOver(){
   document.getElementById('fScore').textContent=score;document.getElementById('fMax').textContent=mx;
   document.getElementById('fEarn').textContent='+'+coins+' V';document.getElementById('fEarn').style.display='block';
   document.getElementById('sub').textContent=(mx>=2048?((window.VGT&&window.VGT('Невероятно! Ты собрал 2048!','Incredible! You reached 2048!'))||'Невероятно! Ты собрал 2048!'):((window.VGT&&window.VGT('Ходов нет — поле заполнено','No moves left — the board is full'))||'Ходов нет — поле заполнено'));
-  document.getElementById('overlay').classList.add('show');try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
+  syncV();overShown=true;document.getElementById('fEarn').textContent='+'+coins+' V';
+  document.getElementById('overlay').classList.add('show');
+  if(window.VGReward)VGReward.finish('over');else try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
 }
 function updateUI(){document.getElementById('scoreVal').textContent=score;document.getElementById('bestVal').textContent=best;coinsEl.textContent=coins+' V'}
-function newGame(){over=false;coins=0;prevScore=0;score=0;animActive=false;animTiles=[];board=Array.from({length:size},()=>Array(size).fill(0));addTile();addTile();resize();document.getElementById('overlay').classList.remove('show');document.getElementById('fEarn').style.display='none';updateUI();render()}
+function newGame(){over=false;coins=0;prevScore=0;shownV=-1;overShown=false;if(window.VGReward)VGReward.reset();score=0;animActive=false;animTiles=[];board=Array.from({length:size},()=>Array(size).fill(0));addTile();addTile();resize();document.getElementById('overlay').classList.remove('show');document.getElementById('fEarn').style.display='none';updateUI();render()}
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
 function round(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 window.addEventListener('keydown',e=>{const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};if(map[e.key]){e.preventDefault();move(map[e.key])}});

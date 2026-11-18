@@ -393,6 +393,23 @@ const scoreEl=document.getElementById('scoreVal'),coinsEl=document.getElementByI
 const overlay=document.getElementById('overlay');
 
 let score=0,coins=0,lives=3,wave=1,running=true,invulnerable=0,frame=0,kills=0;
+/* Награда: клиент считает только «единицы» (Math.max(0,wave-1)), сумму V считает сервер. */
+const COIN_RATE=5;
+if(window.VGReward){VGReward.init('shooter',COIN_RATE);}
+let shownV=-1,overShown=false;
+function rewardUnits(){return Math.max(0,wave-1)}
+function syncV(){
+  if(window.VGReward)VGReward.set(rewardUnits());
+  coins=window.VGReward?VGReward.v():coins;
+  if(typeof coinsEl!=='undefined'&&coinsEl&&coins!==shownV){shownV=coins;coinsEl.textContent=coins+' V'}
+  return coins;
+}
+VGReward.on&&VGReward.on(function(st){
+  if(st.state!=='done')return;
+  var el=document.getElementById('fEarn');
+  if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
+});
+
 let maxCombo=0,currentCombo=0,comboTimer=0,shake=0,flash=0,over=false,started=false,autoFire=true;
 let player,bullets,enemies,ebullets,pickups,stars,particles,floaters,scorePopups,nextWaveIn=0;
 let keys={left:false,right:false,firing:false},fireCd=0,power=null;
@@ -400,7 +417,7 @@ let keys={left:false,right:false,firing:false},fireCd=0,power=null;
 function resize(){const oldWidth=c.width;c.width=Math.max(320,window.innerWidth);c.height=Math.max(320,c.clientHeight);if(player){player.x=Math.max(20,Math.min(c.width-20,player.x*c.width/oldWidth));player.y=c.height-70}}
 window.addEventListener('resize',resize);
 
-function addCoin(n){coins+=n;coinsEl.textContent=coins+' V';if(window.parent!==window)try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}
+function addCoin(n){syncV()}
 function fmt(n){return n}
 let ac=null,muted=false;
 function beep(f,dur,type,vol,slide){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;if(slide)o.frequency.linearRampToValueAtTime(slide,ac.currentTime+dur);g.gain.value=0;g.gain.linearRampToValueAtTime(vol||.12,ac.currentTime+.01);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur);}catch(e){}}
@@ -412,7 +429,7 @@ function initBoard(){
   bullets=[];enemies=[];ebullets=[];pickups=[];particles=[];floaters=[];scorePopups=[];
   score=0;coins=0;lives=3;wave=0;kills=0;maxCombo=0;currentCombo=0;comboTimer=0;fireCd=0;power=null;over=false;running=false;started=false;nextWaveIn=0;
   stars=Array.from({length:80},()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.8+.4,s:Math.random()*1.8+.5}));
-  scoreEl.textContent=0;coinsEl.textContent=0+' V';livesEl.textContent='❤️❤️❤️';waveEl.textContent=1;comboEl.textContent='0x';
+  shownV=-1;overShown=false;if(window.VGReward)VGReward.reset();scoreEl.textContent=0;coinsEl.textContent=0+' V';livesEl.textContent='❤️❤️❤️';waveEl.textContent=1;comboEl.textContent='0x';
 }
 function updateLives(){livesEl.textContent='❤️'.repeat(Math.max(0,lives))}
 
@@ -629,11 +646,11 @@ function gameOver(){over=true;running=false;
   document.getElementById('ovTitle').textContent='GAME OVER';
   document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Враги одолели твой корабль','The enemies got your ship'))||'Враги одолели твой корабль');
   document.getElementById('fScore').textContent=score;document.getElementById('fWave').textContent=wave;document.getElementById('fKills').textContent=kills;document.getElementById('fCombo').textContent=maxCombo;
-  document.getElementById('fEarn').textContent='+'+coins+' V';
+  syncV();overShown=true;document.getElementById('fEarn').textContent='+'+coins+' V';
   document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова');
   overlay.classList.add('show');
   burst(player.x,player.y,'#3730a0',40,7);
-  try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
+  if(window.VGReward)VGReward.finish('over');else try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
 }
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
 document.getElementById('ovBtn').onclick=()=>{initBoard();startGame();};

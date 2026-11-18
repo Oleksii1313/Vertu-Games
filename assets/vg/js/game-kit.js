@@ -156,6 +156,185 @@
     setTimeout(focusGame, 400);
   }
 
+  /* ============================================================================
+     5. VGReward — единый контракт награды с сервером для всех 2D-игр.
+     ----------------------------------------------------------------------------
+     Игра считает только «единицы» события (труба, волна, 100 очков, заказ) и
+     никогда не присылает сумму V. Платформа получает список единиц, сервер сам
+     умножает их на ставку каталога, проверяет правдоподобность по времени,
+     суточный лимит и одноразовость сессии и присылает подтверждённую сумму.
+     Благодаря этому карточка каталога, счётчик в игре и баланс совпадают.
+     ========================================================================== */
+  var rewardState = {
+    game: '', rate: 1, units: 0, state: 'idle', asked: 0, awarded: null,
+    clamped: false, capped: false, zero: false, repeated: false, left: null,
+    sessionId: '', reason: 'over', startedAt: 0, listeners: []
+  };
+
+  function vip() { return window.parent !== window; }
+  function emit() {
+    for (var i = 0; i < rewardState.listeners.length; i++) {
+      try { rewardState.listeners[i](publicState()); } catch (e) {}
+    }
+  }
+  function publicState() {
+    return {
+      game: rewardState.game, rate: rewardState.rate, units: rewardState.units,
+      v: rewardState.units * rewardState.rate, state: rewardState.state,
+      asked: rewardState.asked, awarded: rewardState.awarded, clamped: rewardState.clamped,
+      capped: rewardState.capped, zero: rewardState.zero, repeated: rewardState.repeated,
+      left: rewardState.left, sessionId: rewardState.sessionId
+    };
+  }
+  function newSessionId(game) {
+    return 'run-' + game + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  }
+  function pendingKey() { return 'vg_pending_' + rewardState.game; }
+  function savePending(payload) {
+    try { localStorage.setItem(pendingKey(), JSON.stringify(payload)); } catch (e) {}
+  }
+  function clearPending() {
+    try { localStorage.removeItem(pendingKey()); } catch (e) {}
+  }
+
+  var VGReward = {
+    /* Игра сообщает свои параметры: id и ставку за единицу (из каталога). */
+    init: function (game, rate) {
+      rewardState.game = String(game || '');
+      rewardState.rate = Math.max(1, Math.floor(rate || 1));
+      rewardState.units = 0;
+      rewardState.state = 'idle';
+      rewardState.awarded = null;
+      rewardState.sessionId = newSessionId(rewardState.game);
+      rewardState.startedAt = Date.now();
+      return this;
+    },
+    /* Одна единица события: труба, волна, блок очков, заказ, доставка… */
+    add: function (n) {
+      rewardState.units += Math.max(0, Math.floor(n == null ? 1 : n));
+      emit();
+      return rewardState.units;
+    },
+    units: function () { return rewardState.units; },
+    /* Абсолютное число единиц: игра сама выводит его из своего счёта
+       (высота, дистанция, волны), поэтому вызовы идемпотентны. */
+    set: function (n) {
+      var next = Math.max(0, Math.floor(Number(n) || 0));
+      if (next === rewardState.units) return rewardState.units;
+      rewardState.units = next;
+      emit();
+      return next;
+    },
+    /* Сколько V игрок видит в интерфейсе — всегда units × ставка каталога. */
+    v: function () { return rewardState.units * rewardState.rate; },
+    rate: function () { return rewardState.rate; },
+    state: publicState,
+    /* Итог забега: отправляем единицы платформе, ждём подтверждение сервера. */
+    finish: function (reason) {
+      if (rewardState.state === 'pending' || rewardState.state === 'done') return false;
+      if (!vip()) {                     // автономный запуск — баланса нет
+        rewardState.state = 'local';
+        emit();
+        return false;
+      }
+      var payload = {
+        type: 'gameSession', game: rewardState.game, units: rewardState.units,
+        time: Math.round((Date.now() - rewardState.startedAt) / 1000),
+        sessionId: rewardState.sessionId, reason: reason || 'over'
+      };
+      rewardState.reason = payload.reason;
+      if (!rewardState.units) {         // нечего начислять — сервер не тревожим
+        rewardState.state = 'done';
+        rewardState.awarded = 0;
+        emit();
+        return false;
+      }
+      rewardState.state = 'pending';
+      rewardState.asked = rewardState.units;
+      savePending(payload);
+      VGReward.post(payload);
+      return true;
+    },
+    /* Повторная отправка того же итога (иконка повтора / возврат на вкладку). */
+    post: function (payload) {
+      try { window.parent.postMessage(payload, location.origin); } catch (e) {}
+      clearTimeout(VGReward._timer);
+      VGReward._timer = setTimeout(function () {
+        if (rewardState.state === 'pending') { rewardState.state = 'failed'; emit(); }
+      }, 9000);
+    },
+    retry: function () {
+      if (rewardState.state !== 'failed' && rewardState.state !== 'pending') return;
+      rewardState.state = 'pending';
+      emit();
+      VGReward.post({
+        type: 'gameSession', game: rewardState.game, units: rewardState.units,
+        time: Math.round((Date.now() - rewardState.startedAt) / 1000),
+        sessionId: rewardState.sessionId, reason: rewardState.reason
+      });
+    },
+    on: function (cb) {
+      if (typeof cb === 'function') rewardState.listeners.push(cb);
+    },
+    /* Новый забег в той же странице: счётчики сбрасываются, id новый. */
+    reset: function () {
+      clearTimeout(VGReward._timer);
+      rewardState.units = 0;
+      rewardState.state = 'idle';
+      rewardState.awarded = null;
+      rewardState.clamped = rewardState.capped = rewardState.zero = rewardState.repeated = false;
+      rewardState.left = null;
+      rewardState.sessionId = newSessionId(rewardState.game);
+      rewardState.startedAt = Date.now();
+      emit();
+    }
+  };
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== location.origin) return;
+    var data = event.data;
+    if (!data || data.type !== 'gameSessionResult') return;
+    if (data.game !== rewardState.game) return;
+    clearTimeout(VGReward._timer);
+    rewardState.state = 'done';
+    rewardState.awarded = Number(data.awarded) || 0;
+    rewardState.clamped = !!data.clamped;
+    rewardState.capped = !!data.capped;
+    rewardState.zero = !!data.zero;
+    rewardState.repeated = !!data.repeated;
+    rewardState.left = (data.dailyLeft === 0 || data.dailyLeft) ? Number(data.dailyLeft) : null;
+    if (data.units != null) rewardState.asked = Number(data.units) || 0;
+    clearPending();
+    emit();
+  });
+
+  /* Платформа просит зафиксировать итог перед закрытием окна игры. */
+  window.addEventListener('message', function (event) {
+    if (event.origin !== location.origin) return;
+    if (event.data && event.data.type === 'vg:flush' && rewardState.state === 'idle') {
+      VGReward.finish('flush');
+    }
+  });
+
+  /* Итог, не подтверждённый в прошлый раз, безопасно повторяем: сервер
+     дедуплицирует по sessionId, двойного начисления не будет. */
+  (function retryPending() {
+    if (!vip()) return;
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(pendingKey()) || 'null'); } catch (e) {}
+    if (!saved || !saved.sessionId || !saved.units || !saved.game) return;
+    setTimeout(function () {
+      rewardState.sessionId = saved.sessionId;
+      rewardState.units = Number(saved.units) || 0;
+      rewardState.asked = rewardState.units;
+      rewardState.state = 'pending';
+      emit();
+      VGReward.post(saved);
+    }, 1800);
+  })();
+
+  window.VGReward = VGReward;
+
   window.VGGame = window.VGGame || {};
   window.VGGame.sharpCanvas = sharpCanvas;
   window.VGGame.sharpenEngine = sharpenEngine;

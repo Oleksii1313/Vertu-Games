@@ -113,6 +113,8 @@ UI_EN = {
     "Космический шутер с волнами врагов": "A space shooter with waves of enemies",
     "Легендарная змейка": "The legendary snake",
     "Кубический мир 256 × 256": "A 256 × 256 blocky world",
+    "Деревни, жители и монстры в мире 256 × 256":
+        "Villages, villagers and monsters in a 256 × 256 world",
     "Прыжки по платформам вверх": "Jump your way up the platforms",
     "Доставка почты дроном между островами": "Drone mail delivery between the isles",
     "Космокухня": "Cosmic Kitchen",

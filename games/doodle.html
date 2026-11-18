@@ -243,7 +243,7 @@ function hero(g,x,y,facing=1,squash=0){g.save();g.translate(x,y);g.scale(facing,
 const mascot=surface(110,120,g=>{g.scale(2,2);hero(g,24,7,1,.25)});$('mascot').src=mascot.toDataURL('image/png');
 const monsterTexture=surface(48,48,g=>{g.fillStyle='#b19aba';g.fillRect(0,0,48,48);const r=rng(88);for(let i=0;i<120;i++){g.fillStyle=i%2?'#81688988':'#dacadd88';g.beginPath();g.arc(r()*48,r()*48,r()*2+.4,0,7);g.fill()}});
 function send(type,amount){if(parent!==window)parent.postMessage({type,amount,game:'doodle'},location.origin==='null'?'*':location.origin)}
-function coin(amount){earned+=amount;send('addCoins',amount);updateHUD()}
+function coin(amount){earned+=amount;updateHUD()}
 function beep(freq,length=.06){if(!soundOn)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume();const o=audio.createOscillator(),v=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*.65,audio.currentTime+length);v.gain.setValueAtTime(.045,audio.currentTime);v.gain.exponentialRampToValueAtTime(.001,audio.currentTime+length);o.connect(v);v.connect(audio.destination);o.start();o.stop(audio.currentTime+length)}catch(e){}}
 function clearInput(){for(const k in keyboard)keyboard[k]=false;for(const k in touchInput)touchInput[k]=false;owners.clear();document.querySelectorAll('.control').forEach(b=>b.classList.remove('pressed'))}
 // Altitude-based difficulty; the main chain always remains physically reachable.
@@ -273,12 +273,27 @@ function addPlatform(y,first=false){
 }
 function generate(){while(topY>camera-220){const gap=91+13*difficultyAt(topY)+Math.random()*8;topY-=gap;addPlatform(topY)}}
 function reset(){clearInput();time=0;height=earned=rewardTier=0;camera=0;sequence=0;chainX=W/2-49;platforms=[];enemies=[];shots=[];particles=[];shotCooldown=0;shake=0;const y=H-62;addPlatform(y,true);player={x:W/2,y:y-42,vx:0,vy:-650,w:32,h:42,facing:1,squash:0};startY=minY=player.y;topY=y;generate();updateHUD()}
-function updateHUD(){$('score').textContent=height;$('best').textContent=best;$('coins').textContent=earned}
+/* Награда: клиент считает только «сотни метров», сумму V считает сервер. */
+const COIN_RATE=2;
+if(window.VGReward){VGReward.init('doodle',COIN_RATE);}
+let shownV=-1,rewardOpen=false;
+function rewardUnits(){return Math.floor(height/100)}
+function syncV(){
+  if(window.VGReward)VGReward.set(rewardUnits());
+  if(window.VGReward)earned=VGReward.v();
+  return earned;
+}
+if(window.VGReward)VGReward.on(function(st){
+  if(st.state!=='done')return;
+  var el=$('resultCoins');
+  if(el&&rewardOpen)el.textContent='+'+st.awarded+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
+});
+function updateHUD(){syncV();$('score').textContent=height;$('best').textContent=best;$('coins').textContent=earned}
 function showOverlay(title,description,label,action,summary=false){$('title').textContent=title;$('description').textContent=description;$('start').textContent=label;$('start').onclick=action;$('tips').hidden=true;$('mascot').hidden=summary;$('summary').hidden=!summary;$('rewardNote').hidden=true;$('resultHeight').textContent=height+' '+tr(((window.VGT&&window.VGT('м','m'))||'м'),'m');$('resultCoins').textContent='+'+earned;$('overlay').hidden=false;clearInput()}
-function play(){reset();mode='playing';$('overlay').hidden=true;$('restart').hidden=true;last=performance.now();accumulator=0;beep(630)}
+function play(){if(window.VGReward)VGReward.reset();reset();rewardOpen=false;mode='playing';$('overlay').hidden=true;$('restart').hidden=true;last=performance.now();accumulator=0;beep(630)}
 function resume(){mode='playing';$('overlay').hidden=true;clearInput();last=performance.now();accumulator=0}
 function pause(){if(mode!=='playing')return;mode='paused';showOverlay(tr(((window.VGT&&window.VGT('Передышка','Take a breather'))||'Передышка'),'Take a breather'),tr(((window.VGT&&window.VGT('Прыгун подождёт. Продолжим с той же платформы?','The jumper can wait. Continue from the same platform?'))||'Прыгун подождёт. Продолжим с той же платформы?'),'Your jumper can wait. Ready to keep going?'),tr(((window.VGT&&window.VGT('Продолжить','Resume'))||'Продолжить'),'Continue'),resume);$('restart').hidden=false}
-function die(){if(mode!=='playing')return;mode='over';best=Math.max(best,height);try{localStorage.setItem('vg_best_doodle',String(best))}catch(e){}updateHUD();showOverlay(tr(((window.VGT&&window.VGT('Ещё один прыжок?','One more jump?'))||'Ещё один прыжок?'),'One more jump?'),tr(((window.VGT&&window.VGT('Неплохой полёт! Попробуй забраться ещё выше.','A decent flight! Try to climb even higher.'))||'Неплохой полёт! Попробуй забраться ещё выше.'),'Nice flight! Try climbing even higher.'),tr(((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова'),'Play again'),play,true);$('restart').hidden=true;send('gameOver');beep(170,.22)}
+function die(){if(mode!=='playing')return;mode='over';best=Math.max(best,height);try{localStorage.setItem('vg_best_doodle',String(best))}catch(e){}updateHUD();showOverlay(tr(((window.VGT&&window.VGT('Ещё один прыжок?','One more jump?'))||'Ещё один прыжок?'),'One more jump?'),tr(((window.VGT&&window.VGT('Неплохой полёт! Попробуй забраться ещё выше.','A decent flight! Try to climb even higher.'))||'Неплохой полёт! Попробуй забраться ещё выше.'),'Nice flight! Try climbing even higher.'),tr(((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова'),'Play again'),play,true);$('restart').hidden=true;rewardOpen=true;syncV();$('resultCoins').textContent='+'+earned;if(window.VGReward)VGReward.finish('crash');else send('gameOver');beep(170,.22)}
 function shoot(){if(mode!=='playing'||shotCooldown>0)return;shots.push({x:player.x,y:player.y+4,vy:-800});shotCooldown=.36;beep(960,.04)}
 function burst(x,y,color,n=8){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*120,vy:-40-Math.random()*100,life:.45+Math.random()*.25,color})}
 function update(dt){if(mode!=='playing')return;time+=dt;shotCooldown=Math.max(0,shotCooldown-dt);shake=Math.max(0,shake-dt*20);player.squash=Math.max(0,player.squash-dt*6);bounceFlash=Math.max(0,bounceFlash-dt);

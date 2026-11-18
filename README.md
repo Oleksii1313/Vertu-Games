@@ -165,19 +165,26 @@ python migrate_sqlite_to_postgres.py --source /path/to/accounts.sqlite3 --apply
 ## Проверки
 
 ```bash
-.venv/bin/python tools/check_platform.py                      # SQLite, 207 проверок
+.venv/bin/python tools/check_platform.py                      # SQLite, 229 проверок
 DATABASE_URL=postgresql://... .venv/bin/python tools/check_platform.py   # те же проверки на PostgreSQL
 .venv/bin/python -m unittest tools.test_economy               # экономика, идемпотентность, гонки
 python -m unittest tools.test_anticheat             # билеты, аномалии, заголовки (25)
 python -m unittest tools.test_wheel                 # колесо: 4 множителя × 6 ставок, 20 секторов по 18° (37)
 python -m unittest tools.test_wheel_api             # выплата = ставка × множитель сквозь HTTP (4)
 node tools/test_wheel_math.js                       # 20 равных секторов, колесо встаёт на оплаченный сектор
+python -m unittest tools.test_session_claim         # итог MiniCraft: сервер сам считает V (14)
+python -m unittest tools.test_snake_claim           # итог Snake: яблоки, золото, лимиты (17)
+python -m unittest tools.test_units_claim           # итог 2D-игр по «единицам» (13)
+VERT_BASE=http://127.0.0.1:8000 python tools/test_rewards_e2e.py   # HTTP-E2E по всем играм (27)
+node tools/test_minicraft.js                        # MiniCraft: монеты, сундуки, жители (60)
+node tools/test_minicraft_world.js                  # вода, мосты, постройки, руки, нос (42)
+node tools/test_music.js                            # музыка: петля, кнопка, преференс (24)
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
 ```
 
 `check_platform.py` поднимает настоящий сервер на свободном порту и проходит
-207 проверок: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
+229 проверок: регистрация, уникальность ника, вход/выход, смена пароля, CAPTCHA,
 CSRF и сессия, подписанные билеты и попытки их подделать, ежедневные задания,
 магазин, слоты, колесо,
 лимиты и самоисключение, админ-панель и каталог, сохранение данных после

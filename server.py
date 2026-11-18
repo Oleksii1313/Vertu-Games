@@ -477,7 +477,9 @@ def session_info():
         'user': public_user(user),
         'level': level_info(user) if user else None,
         'captcha': captcha.public_config(),
-        'games': [{'id': g['id'], 'reward': g['reward'], 'daily': g['daily']} for g in public_games()],
+        'games': [{'id': g['id'], 'reward': g['reward'], 'daily': g['daily'],
+                   'event': g['event'], 'sessionClaim': bool(g.get('sessionClaim'))}
+                  for g in public_games()],
         'achievements': len(data.achievements()),
         'payments': shop.configured(),
         'role': (user or {}).get('role') or 'guest',
@@ -795,7 +797,7 @@ def game_session():
         return api_error(404, 'GAME', 'Неизвестная игра')
     if not game_available(game):
         return api_error(404, 'GAME', 'Игра временно недоступна')
-    if not guard.allow('ticket:%s' % user['id'], rate=1.0, burst=12):
+    if not guard.allow('ticket:%s' % user['id'], rate=2.0, burst=30):
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Откройте игру заново.')
     ticket = anticheat.issue(user['id'], game, spec['reward'], kind='game')
     ticket['ok'] = True
@@ -819,7 +821,7 @@ def game_reward():
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
     # Дешёвый предохранитель до любых обращений к БД: шквал сообщений из
     # подделанного клиента гасится на входе.
-    if not guard.allow('reward:%s' % user['id'], rate=2.0, burst=8):
+    if not guard.allow('reward:%s' % user['id'], rate=3.0, burst=20):
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
     receipt = data.get('receipt') or data.get('ref')
     if not isinstance(receipt, str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{6,120}', receipt):
@@ -852,9 +854,12 @@ def game_reward():
         return jsonify({'ok': True, 'awarded': 0, 'repeated': False, 'coins': db.balance(user['id']),
                         'dailyLeft': None, 'ceiling': False, 'throttled': True})
 
+    # Ключ идемпотентности — квитанция конкретного события, а не билет:
+    # повтор того же события (двойная отправка, повтор после обрыва связи)
+    # не платит второй раз, даже если клиент взял новый билет.
+    ref = 'ev:%s:%s' % (user['id'], receipt)
     try:
-        result = db.game_reward(user['id'], game, reward,
-                                anticheat.receipt_for(user['id'], checked),
+        result = db.game_reward(user['id'], game, reward, ref,
                                 f'Игра: {spec["name"]}', spec['daily'])
     except StoreError as exc:
         return api_error(400, 'REWARD', str(exc))
@@ -864,6 +869,64 @@ def game_reward():
     return jsonify({'ok': True, 'awarded': result.get('awarded', 0), 'repeated': result['repeated'],
                     'coins': result['balance'], 'dailyLeft': result.get('daily_left'),
                     'ceiling': result.get('capped', False)})
+
+
+def _units_session_reward(data, user, spec, played, checked):
+    """Итог забега для игр, которые считают «единицы» события.
+
+    Клиент присылает только число единиц (пройденные трубы, волны, блоки по
+    100 очков, заказы), но не сумму V. Сервер сам умножает единицы на ставку
+    каталога (``reward``), проверяет, что столько единиц можно было набрать за
+    указанное время, ограничивает суточным лимитом игры и пишет одну
+    транзакцию с ключом ``uss:<uid>:<sessionId>``. Повтор того же итога (в том
+    числе после перезагрузки) второй раз не платит — поэтому клиенту разрешено
+    безопасно повторять запрос, если ответ потерялся.
+    """
+    try:
+        units = int(data.get('units') or 0)
+    except (TypeError, ValueError):
+        return api_error(400, 'UNITS', 'Некорректный итог сессии')
+    if units < 0:
+        return api_error(400, 'UNITS', 'Некорректное число единиц')
+
+    rate_v = int(spec['reward'])
+    limit = int(spec.get('session_max_units') or 50)
+    per_sec = float(spec.get('session_units_per_sec') or 1.0)
+    zero = False
+    clamped = False
+    if played < 5:                       # мгновенный заход не оплачиваем
+        units = 0
+        zero = True
+    else:
+        ceiling = min(limit, max(3, int(played * per_sec) + 1))
+        if units > ceiling:
+            clamped = True
+            units = ceiling
+    amount = units * rate_v
+
+    session = re.sub(r'[^A-Za-z0-9_.-]', '', str(data.get('sessionId') or ''))[:48]
+    ref = 'uss:%s:%s' % (user['id'], session or checked['sid'])
+    data_store = get_store()
+    common = {'ok': True, 'unitsCount': units, 'rate': rate_v, 'unitReward': rate_v,
+              'clamped': clamped, 'zero': zero}
+    if amount <= 0:
+        common.update({'awarded': 0, 'coins': data_store.balance(user['id']), 'claimed': False,
+                       'capped': False, 'dailyLeft': None, 'repeated': False})
+        return jsonify(common)
+    try:
+        result = data_store.game_reward(
+            user['id'], str(spec['id']), amount, ref,
+            '%s: %d ед. × %d V' % (spec['name'], units, rate_v), spec['daily'])
+    except StoreError as exc:
+        return api_error(400, 'REWARD', str(exc))
+    if result.get('awarded'):
+        data_store.record_play(user['id'], str(spec['id']))
+        data_store.progress_task(user['id'], 'play', 1)
+    common.update({'awarded': result.get('awarded', 0), 'coins': result['balance'],
+                   'claimed': True, 'capped': result.get('capped', False),
+                   'repeated': result.get('repeated', False),
+                   'dailyLeft': result.get('daily_left')})
+    return jsonify(common)
 
 
 def _snake_session_reward(data, user, spec, played, checked):
@@ -951,9 +1014,9 @@ def game_session_claim():
         return api_error(404, 'GAME', 'Игра временно недоступна')
     # Лимит считаем на игрока (плюс грубый потолок по сокету): за одним NAT
     # может сидеть несколько человек, а сессия игры длится три минуты.
-    if not rate('session_claim', 12, 60, extra=str(user['id'])):
+    if not rate('session_claim', 40, 60, extra=str(user['id'])):
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
-    if not guard.allow('sessionclaim:%s' % user['id'], rate=0.5, burst=4):
+    if not guard.allow('sessionclaim:%s' % user['id'], rate=1.5, burst=20):
         return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
 
     ticket = data.get('ticket') or {}
@@ -973,6 +1036,8 @@ def game_session_claim():
     # ---- Snake: обычные и золотые яблоки считаются раздельно ----------------
     if spec.get('session_award') == 'snake':
         return _snake_session_reward(data, user, spec, played, checked)
+    if spec.get('session_award') == 'units':
+        return _units_session_reward(data, user, spec, played, checked)
     try:
         coins = int(data.get('coins') or 0)
     except (TypeError, ValueError):

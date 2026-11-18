@@ -387,6 +387,23 @@ let keys={up:false,down:false},shake=0,frame=0,particles=[],trail=[];
 const ball={x:0,y:0,vx:4,vy:4,r:9};
 const player={y:0,h:80,w:10},ai={y:0,h:80,w:10};
 let spdFactor=1,coins=0;
+/* Награда: клиент считает только «единицы» (Math.floor(score/5)), сумму V считает сервер. */
+const COIN_RATE=2;
+if(window.VGReward){VGReward.init('pong',COIN_RATE);}
+let shownV=-1,overShown=false;
+function rewardUnits(){return Math.floor(score/5)}
+function syncV(){
+  if(window.VGReward)VGReward.set(rewardUnits());
+  coins=window.VGReward?VGReward.v():coins;
+  if(typeof coinsEl!=='undefined'&&coinsEl&&coins!==shownV){shownV=coins;coinsEl.textContent=coins+' V'}
+  return coins;
+}
+VGReward.on&&VGReward.on(function(st){
+  if(st.state!=='done')return;
+  var el=document.getElementById('fEarn');
+  if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
+});
+
 const scoreEl=document.getElementById('scoreVal'),levelEl=document.getElementById('levelVal'),healthEl=document.getElementById('healthVal'),comboEl=document.getElementById('comboVal');
 let ac=null,muted=false;
 function beep(f,dur,type,vol,slide){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;if(slide)o.frequency.linearRampToValueAtTime(slide,ac.currentTime+dur);g.gain.value=0;g.gain.linearRampToValueAtTime(vol||.14,ac.currentTime+.01);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur);}catch(e){}}
@@ -403,12 +420,13 @@ function endGame(){active=false;
   document.getElementById('fScore').textContent=score;document.getElementById('fLevel').textContent=level;document.getElementById('fCombo').textContent=maxCombo;
   document.getElementById('fSpeed').textContent=Math.round(maxSpeed*10)/10;
   document.getElementById('sub').textContent=level>=8?((window.VGT&&window.VGT('ЖЕСТОКИЙ РЕЖИМ — невероятно!','HARD MODE — incredible!'))||'ЖЕСТОКИЙ РЕЖИМ — невероятно!'):level>=4?((window.VGT&&window.VGT('Напряжённо, но стойко','Tense but steady'))||'Напряжённо, но стойко'):((window.VGT&&window.VGT('Ты только разогревался','You were just warming up'))||'Ты только разогревался');
-  document.getElementById('fEarn').textContent='+'+coins+' ✦';document.getElementById('overlay').classList.add('show');
-  beep(160,.6,'sawtooth',.2,60);try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}}
-function restart(){coins=0;score=0;level=1;health=3;maxCombo=0;currentCombo=0;maxSpeed=0;spdFactor=1;active=true;
+  syncV();overShown=true;document.getElementById('fEarn').textContent='+'+coins+' V';document.getElementById('overlay').classList.add('show');
+  beep(160,.6,'sawtooth',.2,60);
+  if(window.VGReward)VGReward.finish('over');else try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}}
+function restart(){coins=0;score=0;level=1;health=3;maxCombo=0;currentCombo=0;maxSpeed=0;spdFactor=1;active=true;shownV=-1;overShown=false;if(window.VGReward)VGReward.reset();
   scoreEl.textContent=0;levelEl.textContent=1;healthEl.textContent=3;comboEl.textContent='0x';document.getElementById('overlay').classList.remove('show');resize()}
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
-function addCoin(n){coins+=n}
+function addCoin(n){syncV()}
 function update(){
   if(window.cheatPaused)return;
   if(!active)return;
