@@ -866,6 +866,78 @@ def game_reward():
                     'ceiling': result.get('capped', False)})
 
 
+@app.post('/api/games/session/claim')
+@login_required
+def game_session_claim():
+    """Итоговая награда за игровую сессию (только игры с флагом ``session_claim``).
+
+    Клиент присылает число собранных монет, сервер сам считает выплату
+    (``coins × reward``), ограничивает её лимитами каталога и пишет одну
+    транзакцию с ключом ``mcs:<sid билета>``. Повтор того же билета не платит
+    второй раз; суточный лимит остаётся общим для игры.
+    """
+    data = json_body()
+    user = current_user()
+    game = str(data.get('game', ''))
+    spec = GAMES_BY_ID.get(game)
+    if not spec or not spec.get('session_claim'):
+        return api_error(404, 'GAME', 'Игра не поддерживает итоговую награду сессии')
+    if not game_available(game):
+        return api_error(404, 'GAME', 'Игра временно недоступна')
+    # Лимит считаем на игрока (плюс грубый потолок по сокету): за одним NAT
+    # может сидеть несколько человек, а сессия игры длится три минуты.
+    if not rate('session_claim', 12, 60, extra=str(user['id'])):
+        return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
+    if not guard.allow('sessionclaim:%s' % user['id'], rate=0.5, burst=4):
+        return api_error(429, 'RATE_LIMIT', 'Слишком часто. Подождите немного.')
+
+    ticket = data.get('ticket') or {}
+    try:
+        checked = anticheat.verify(ticket, user['id'], game=game, kind='game')
+    except anticheat.TicketError:
+        get_store().admin_log(user['username'], 'bad_ticket', game, 'итог сессии: подпись/срок',
+                              store.digest(client_ip()))
+        return api_error(403, 'TICKET', 'Игровая сессия недействительна. Откройте игру заново.')
+
+    try:
+        coins = int(data.get('coins') or 0)
+        played = int(data.get('time') or 0)
+    except (TypeError, ValueError):
+        return api_error(400, 'COINS', 'Некорректный итог сессии')
+    limit = int(spec.get('session_max_coins') or 150)
+    if coins < 0:
+        return api_error(400, 'COINS', 'Некорректное число монет')
+    # Сумма не отклоняется целиком, а обрезается: игрок не должен терять всё
+    # заработанное из-за лишней монеты. Потолок — лимит каталога и реальная
+    # скорость сбора (две монеты в секунду, минимум три для коротких сессий).
+    if played < 5:                     # совсем короткий заход не оплачиваем
+        coins = 0
+    ceiling = min(limit, max(3, played * 2))
+    clamped = coins > ceiling
+    coins = min(coins, ceiling)
+
+    amount = coins * int(spec['reward'])
+    data_store = get_store()
+    if amount <= 0:
+        return jsonify({'ok': True, 'awarded': 0, 'coins': data_store.balance(user['id']),
+                        'coinsCount': 0, 'rate': int(spec['reward']), 'claimed': False,
+                        'capped': False, 'dailyLeft': None, 'repeated': False})
+    try:
+        result = data_store.game_reward(user['id'], game, amount,
+                                        'mcs:%s' % checked['sid'],
+                                        f'С MiniCraft: {coins} монет', spec['daily'])
+    except StoreError as exc:
+        return api_error(400, 'REWARD', str(exc))
+    if result.get('awarded'):
+        data_store.record_play(user['id'], game)
+        data_store.progress_task(user['id'], 'play', 1)
+    return jsonify({'ok': True, 'awarded': result.get('awarded', 0), 'coins': result['balance'],
+                    'coinsCount': coins, 'rate': int(spec['reward']), 'claimed': True,
+                    'clamped': clamped,
+                    'capped': result.get('capped', False), 'repeated': result.get('repeated', False),
+                    'dailyLeft': result.get('daily_left')})
+
+
 # --------------------------------------------------------------------------- shop
 @app.get('/api/shop')
 def shop_catalog():

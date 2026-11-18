@@ -981,6 +981,64 @@
         acknowledge(event.source, { type: 'roverPenaltyResult', charged: 0 });
         return;
       }
+      if (data.type === 'minicraftSession' && data.game === 'minicraft') {
+        /*
+         * Итог сессии MiniCraft. Клиент присылает только число собранных
+         * зелёных монет: сумму (монеты × награда каталога) считает сервер, он же
+         * проверяет лимит каталога, суточный лимит и одноразовость билета.
+         */
+        var sessionCoins = Math.max(0, Math.min(400, Math.floor(Number(data.coins) || 0)));
+        var sessionTime = Math.max(0, Math.min(600, Math.floor(Number(data.time) || 0)));
+        var sessionKills = Math.max(0, Math.min(999, Math.floor(Number(data.kills) || 0)));
+        var sessionChests = Math.max(0, Math.min(999, Math.floor(Number(data.chests) || 0)));
+        var sessionId = String(data.sessionId || '').slice(0, 60);
+        var answer = function (result, error) {
+          acknowledge(event.source, {
+            type: 'minicraftSessionResult', game: 'minicraft', sessionId: sessionId,
+            ok: !!(result && (result.awarded > 0 || result.claimed)),
+            asked: sessionCoins,
+            awarded: (result && result.awarded) || 0,
+            coinsCount: (result && result.coinsCount != null) ? result.coinsCount : sessionCoins,
+            rate: (result && result.rate) || known.reward || 3,
+            capped: !!(result && result.capped),
+            clamped: !!(result && result.clamped),
+            balance: result && result.coins,
+            dailyLeft: result && result.dailyLeft,
+            error: error ? String(error.message || '').slice(0, 120) : ''
+          });
+        };
+        var claimSession = function (retry) {
+          if (!VG.user() || !VG.activeGame) { answer(null); return; }
+          if (!ticket) {   // билет ещё не пришёл — повторно просим и отвечаем позже
+            fetchTicket().then(function (fresh) { fresh && fresh.sig && claimSession(false); });
+            answer(null);
+            return;
+          }
+          api('/api/games/session/claim', {
+            body: {
+              game: 'minicraft', coins: sessionCoins, time: sessionTime,
+              kills: sessionKills, chests: sessionChests, sessionId: sessionId, ticket: ticket
+            }
+          }).then(function (result) {
+            if (result.coins != null) updateCoins(result.coins);
+            if (result.awarded > 0) {
+              toast(T('+' + fmt(result.awarded) + ' V · итог MiniCraft', '+' + fmt(result.awarded) + ' V · MiniCraft session'));
+            } else if (result.capped) {
+              toast(T('Суточный лимит наград по этой игре исчерпан.', 'The daily reward cap for this game is reached.'), 'bad');
+            }
+            answer(result);
+            return result;
+          }).catch(function (error) {
+            if (error.status === 429) toast(error.message, 'bad');
+            if (error.status === 403 && error.code === 'TICKET' && !retry) {
+              return fetchTicket().then(function (fresh) { fresh && fresh.sig && claimSession(true); });
+            }
+            answer(null, error);
+          });
+        };
+        claimSession(false);
+        return;
+      }
       if (data.type === 'addCoins' || data.type === 'gameOver') {
         // Событие без собственной квитанции: начисляем одну награду за серию.
         if (data.type === 'gameOver') { toast(T('Игра окончена', 'Game over')); return; }
@@ -1055,6 +1113,27 @@
   }
 
   function closeGame() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var frame = overlay.querySelector('.play-frame');
+    /*
+     * MiniCraft начисляет итог сессии в момент закрытия. Раньше кадр сразу
+     * получал about:blank, и собранные монеты терялись — теперь игре даётся
+     * короткий миг на отправку результата. Остальные игры закрываются как
+     * прежде, без задержки.
+     */
+    if (frame && VG.activeGame && VG.activeGame.id === 'minicraft' && !VG._closingFlush) {
+      VG._closingFlush = true;
+      try { frame.contentWindow.postMessage({ type: 'vg:flush' }, location.origin); } catch (e) {}
+      setTimeout(function () {
+        VG._closingFlush = false;
+        finishCloseGame();
+      }, 600);
+      return;
+    }
+    finishCloseGame();
+  }
+  function finishCloseGame() {
     var overlay = $('#playOverlay');
     if (!overlay) return;
     overlay.classList.remove('open');
