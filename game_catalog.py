@@ -165,8 +165,9 @@ GAMES = [
                    'в лесах, у деревень и в опасных окраинах мира; сундуки открываются один '
                    'раз за сессию. Каждую минуту врагов становится больше, а в конце — экран '
                    'результатов с числом монет, V, побед, сундуков и временем.\n\n'
-                   'WASD — движение, мышь — обзор, пробел — прыжок, ЛКМ — ломать / атаковать, '
-                   'ПКМ — строить, 1–6 — выбор блока. Раунд длится 3 минуты, Esc — пауза.',
+                   'WASD — движение, ПКМ (зажать) — обзор, пробел — прыжок, ЛКМ — ломать / '
+                   'атаковать, короткий клик ПКМ — поставить блок, 1–6 — выбор блока. '
+                   'Раунд длится 3 минуты, Esc — пауза.',
         'long_en': 'Green lakes and rivers with sandy shores, an island with a hidden chest, '
                    'wooden and stone bridges, docks, watchtowers, a windmill, a market, a small '
                    'castle, ruins and caves. Six villages with houses, roads, farms, wells and '
@@ -177,11 +178,11 @@ GAMES = [
                    'forests, around villages and in the dangerous edges of the map; chests can '
                    'be opened once per session. Every minute brings more enemies, and at the '
                    'end a results screen shows coins, V, kills, chests and time.\n\n'
-                   'WASD to move, mouse to look, Space to jump, left click to break / attack, '
-                   'right click to build, 1–6 to select a block. Each round lasts 3 minutes, '
-                   'Esc pauses.',
-        'controls_ru': 'WASD, мышь, ЛКМ / ПКМ, 1–6',
-        'controls_en': 'WASD, mouse, LMB / RMB, 1–6',
+                   'WASD to move, hold the right button to look around, Space to jump, left '
+                   'click to break / attack, a short right click places a block, 1–6 selects a '
+                   'block. Each round lasts 3 minutes, Esc pauses.',
+        'controls_ru': 'WASD · ПКМ — обзор · ЛКМ — действие · 1–6 — блок',
+        'controls_en': 'WASD · RMB — look · LMB — action · 1–6 — block',
     },
     {
         'id': 'doodle', 'name': 'Doodle Jump', 'name_en': 'Doodle Jump',
@@ -360,7 +361,7 @@ SHOP_ITEMS = [
     {'id': 'col:cyan', 'kind': 'color', 'name_ru': 'Кибер-циан', 'name_en': 'Cyber cyan', 'price': 200,
      'icon': '', 'payload': '#22d3ee', 'order': 25},
     # Титулы
-    {'id': 't:new', 'kind': 'title', 'name_ru': 'Новичок', 'name_en': 'Rookie', 'price': 0,
+    {'id': 't:new', 'kind': 'title', 'name_ru': 'Новичок', 'name_en': 'Beginner', 'price': 0,
      'icon': '', 'payload': 'Новичок', 'order': 30},
     {'id': 't:vet', 'kind': 'title', 'name_ru': 'Ветеран', 'name_en': 'Veteran', 'price': 80,
      'icon': '', 'payload': 'Ветеран', 'order': 31},

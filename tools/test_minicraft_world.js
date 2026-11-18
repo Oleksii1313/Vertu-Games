@@ -111,7 +111,8 @@ window.__world = () => ({
   /* Блоки и вода: меши по id, водопады и шаг физики — чтобы проверить
      непрозрачность новых блоков и подъём по водопаду. */
   blocks: is, falls: mcxFalls, fallAt: mcxFallAt, fallMesh: () => mcxFallMesh,
-  step: $g, keys: Vn,
+  step: $g, keys: Vn, look: Qh, camera: Wt, syncCam: fo,
+  camDir: () => { const v = new B(); Wt.getWorldDirection(v); return [v.x, v.y, v.z]; },
   CT: ct, DN: dn
 });
 ` + runtime.slice(idx);

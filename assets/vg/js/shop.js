@@ -52,14 +52,17 @@
     var box = $('#ownedList');
     if (!box) return;
     if (!VG.user()) {
-      box.innerHTML = '<div class="empty">Войдите, чтобы увидеть покупки. <a href="login.html" style="color:var(--lime)">Войти</a></div>';
+      box.innerHTML = '<div class="empty">' +
+        T('Войдите, чтобы увидеть покупки.', 'Sign in to see your purchases.',
+          'Prisijunkite, kad matytumėte pirkinius.') +
+        ' <a href="login.html" style="color:var(--lime)">' + T('Войти', 'Sign in', 'Prisijungti') + '</a></div>';
       return;
     }
     VG.api('/api/me').then(function (data) {
       var rows = [];
       (data.achievements || []).forEach(function (ach) {
         rows.push('<div class="list-row"><span class="ico">' + VG.icon(ach.icon || 'trophy', 17) + '</span>' +
-          '<span class="meta"><b>' + escapeHtml(VG.lang() === 'en' ? ach.name_en : ach.name_ru) + '</b>' +
+          '<span class="meta"><b>' + escapeHtml(VG.achievementName(ach)) + '</b>' +
           '<small>' + T('Достижение', 'Achievement') + ' · ' + VG.date(ach.unlocked) + '</small></span>' +
           '<span style="color:#dcff8a;font-weight:800;font-size:12px">+' + fmt(ach.coins) + ' V</span></div>');
       });
