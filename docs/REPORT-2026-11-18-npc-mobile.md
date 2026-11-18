@@ -121,9 +121,10 @@ Chefs-Rover и Redline раскладываются сами и не затра�
 | Набор | Результат |
 | --- | --- |
 | `test_minicraft.js` / `_world` / `_visual` / `_npc` / `_npc_motion` | 60 / 90 / 56 / 43 / 17 |
-| `test_mobile_layout.js` | 32/32 |
+| `test_mobile_layout.js` | 36/36 |
 | `test_flappy_portrait.js` | 22/22 |
 | `test_game2048_mobile.js` / `test_game_boot.js` / `test_snake.js` | 17 / 59 / 67 |
+| `test_snake_touch.js` (новый) | 59/59 |
 | `test_profile_i18n.js` / `test_header_tiles.js` / `test_search.js` | 52 / 41 / 28 |
 | `test_camera_rover.js` / `test_camera_skyisle.js` / `test_chefs_rover.js` / `test_sky_logistics.js` | 57 / 29 / 56 / 33 |
 | `test_music.js` / `test_platform_music.js` / `test_wheel_math.js` | 34 / 14 / 10 098 |
@@ -143,6 +144,10 @@ Chefs-Rover и Redline раскладываются сами и не затра�
    игроком и разбегаются от монстров.
 4. Профиль: переключить язык — история операций и лимиты переводятся сразу,
    без перезагрузки.
+5. Snake на телефоне: провести пальцем по полю в любую сторону — змейка
+   поворачивает; стрелок на экране нет; кнопка «Стрелки» в правом верхнем углу
+   включает необязательную панель под полем. На компьютере: вести мышью над
+   полем, стрелки и WASD тоже работают.
 
 ---
 
