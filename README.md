@@ -178,6 +178,7 @@ python -m unittest tools.test_units_claim           # итог 2D-игр по «
 VERT_BASE=http://127.0.0.1:8000 python tools/test_rewards_e2e.py   # HTTP-E2E по всем играм (27)
 node tools/test_minicraft.js                        # MiniCraft: монеты, сундуки, жители (60)
 node tools/test_minicraft_world.js                  # вода, мосты, постройки, руки, нос (42)
+node tools/test_minicraft_touch.js                  # MiniCraft: обзор пальцем (свайпы, мультитач) и мышью (50)
 node tools/test_music.js                            # музыка: петля, кнопка, преференс (24)
 DATABASE_URL=postgresql://... .venv/bin/python -m unittest tools.test_economy
 .venv/bin/python tools/build_platform.py --check              # страницы соответствуют генератору
