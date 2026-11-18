@@ -866,6 +866,71 @@ def game_reward():
                     'ceiling': result.get('capped', False)})
 
 
+def _snake_session_reward(data, user, spec, played, checked):
+    """Итог забега Snake: обычные и золотые яблоки считаются раздельно.
+
+    Клиент присылает только количество яблок, сервер сам проверяет, что их
+    можно было собрать за указанное время, считает сумму по правилам каталога
+    и пишет одну транзакцию с ключом ``scs:<uid>:<sessionId>``. Повтор той же
+    сессии (в том числе после перезагрузки страницы) не платит второй раз,
+    поэтому клиенту разрешено безопасно повторять запрос.
+    """
+    try:
+        normal = int(data.get('apples') or 0)
+        golden = int(data.get('gold') or 0)
+    except (TypeError, ValueError):
+        return api_error(400, 'APPLES', 'Некорректный итог сессии')
+    if normal < 0 or golden < 0:
+        return api_error(400, 'APPLES', 'Некорректное число яблок')
+
+    apple_v = int(spec.get('apple_reward') or 1)
+    gold_v = int(spec.get('gold_reward') or 10)
+    level_every = max(1, int(spec.get('level_every') or 5))
+    level_v = int(spec.get('level_reward') or 5)
+
+    limit = int(spec.get('session_max_coins') or 36)
+    zero = False
+    clamped = False
+    if played < 5:                       # мгновенный заход не оплачиваем
+        normal = golden = 0
+        zero = True
+    ceiling = min(limit, max(3, played))  # быстрее одного яблока в секунду не бывает
+    # Сначала ограничиваем золото (оно реже), потом обычные яблоки: честный
+    # забег с золотым яблоком не должен потерять его из-за общего потолка.
+    gold_ceiling = max(1, ceiling // 5)
+    if golden > gold_ceiling:
+        clamped = True
+        golden = gold_ceiling
+    if normal + golden > ceiling:
+        clamped = True
+        normal = max(0, ceiling - golden)
+
+    amount = normal * apple_v + (normal // level_every) * level_v + golden * gold_v
+    session = re.sub(r'[^A-Za-z0-9_.-]', '', str(data.get('sessionId') or ''))[:48]
+    ref = 'scs:%s:%s' % (user['id'], session or checked['sid'])
+    data_store = get_store()
+    common = {'ok': True, 'applesCount': normal, 'goldCount': golden, 'clamped': clamped,
+              'zero': zero, 'appleReward': apple_v, 'goldReward': gold_v}
+    if amount <= 0:
+        common.update({'awarded': 0, 'coins': data_store.balance(user['id']), 'claimed': False,
+                       'capped': False, 'dailyLeft': None, 'repeated': False})
+        return jsonify(common)
+    try:
+        result = data_store.game_reward(user['id'], 'snake', amount, ref,
+                                        'Snake: %d обычных и %d золотых яблок' % (normal, golden),
+                                        spec['daily'])
+    except StoreError as exc:
+        return api_error(400, 'REWARD', str(exc))
+    if result.get('awarded'):
+        data_store.record_play(user['id'], 'snake')
+        data_store.progress_task(user['id'], 'play', 1)
+    common.update({'awarded': result.get('awarded', 0), 'coins': result['balance'],
+                   'claimed': True, 'capped': result.get('capped', False),
+                   'repeated': result.get('repeated', False),
+                   'dailyLeft': result.get('daily_left')})
+    return jsonify(common)
+
+
 @app.post('/api/games/session/claim')
 @login_required
 def game_session_claim():
@@ -900,8 +965,16 @@ def game_session_claim():
         return api_error(403, 'TICKET', 'Игровая сессия недействительна. Откройте игру заново.')
 
     try:
-        coins = int(data.get('coins') or 0)
         played = int(data.get('time') or 0)
+    except (TypeError, ValueError):
+        return api_error(400, 'COINS', 'Некорректный итог сессии')
+    if played < 0:
+        return api_error(400, 'COINS', 'Некорректное время сессии')
+    # ---- Snake: обычные и золотые яблоки считаются раздельно ----------------
+    if spec.get('session_award') == 'snake':
+        return _snake_session_reward(data, user, spec, played, checked)
+    try:
+        coins = int(data.get('coins') or 0)
     except (TypeError, ValueError):
         return api_error(400, 'COINS', 'Некорректный итог сессии')
     limit = int(spec.get('session_max_coins') or 150)

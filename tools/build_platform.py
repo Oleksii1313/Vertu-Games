@@ -283,13 +283,13 @@ def build_index() -> str:
 # --------------------------------------------------------------------------- #  top (catalog)
 def build_catalog() -> str:
     cards = casino_card() + '\n' + '\n'.join(game_card(g, i) for i, g in enumerate(visible_games()))
-    return f'''{head('Каталог игр', 'Все игры Vert Games: аркады, головоломки, гонки и 3D-приключения с серверными наградами V-монет.', 'catalog')}
+    return f'''{head('Каталог игр', 'Все игры Vert Games: аркады, головоломки, шутеры, песочницы и 3D-приключения с серверными наградами V-монет.', 'catalog')}
 {header('catalog')}
 <main class="wrap">
   <section class="cat-hero">
     <span class="eyebrow"><span data-ico="grid"></span> Каталог</span>
     <h1 style="font-size:clamp(26px,3.6vw,42px);margin:10px 0 10px">Все игры платформы</h1>
-    <p class="muted" style="max-width:70ch;margin:0">{games_count_ru()}: аркады, головоломки, шутеры, песочницы, гонки и полёты.
+    <p class="muted" style="max-width:70ch;margin:0">{games_count_ru()}: аркады, головоломки, шутеры, песочницы и полёты.
       Запуск из каталога сохраняет прогресс в аккаунте, а V-монеты начисляет сервер по опубликованным правилам.</p>
     <div class="toolbar" style="margin:22px 0 0">
       <label class="search"><span data-ico="search"></span>

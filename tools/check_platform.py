@@ -193,10 +193,16 @@ def main():
         check('на главной число игр совпадает с каталогом',
               f'data-stat="games">{len(expected_ids)}' in index_html,
               str(len(expected_ids)))
-        check('в каталоге и на главной «11 игр»',
-              '11 игр' in top_html and '11 игр' in index_html)
-        check('в отдаваемом каталоге 11 игр и Redline виден',
-              len(public_games_catalog(base)) == 11, str(len(public_games_catalog(base))))
+        check('в каталоге и на главной «10 игр» (Redline снят с витрины)',
+              '10 игр' in top_html and '10 игр' in index_html)
+        catalog_public = public_games_catalog(base)
+        check('в отдаваемом каталоге 10 игр и Redline скрыт',
+              len(catalog_public) == 10
+              and not any(g.get('id') == 'redline' for g in catalog_public),
+              str([g.get('id') for g in catalog_public]))
+        check('Redline не попал ни в одну отдаваемую страницу',
+              'data-game="redline"' not in index_html and 'data-game="redline"' not in top_html
+              and 'data-game="redline"' not in (ROOT / 'assets/vg/js/catalog-data.js').read_text(encoding='utf-8'))
 
         # Брендинг: старое имя не должно остаться ни в одной отдаваемой странице.
         legacy = []
@@ -725,9 +731,11 @@ def main():
         check('настройки казино сохраняются', status == 200, str(data))
         status, data = admin.get('/api/admin/games')
         check('список игр в админке', status == 200 and len(data['games']) == 11, str(len(data.get('games', []))))
+        from game_catalog import GAMES
         catalog = public_games_catalog(base)
-        check('каталог отдаёт все 11 игр, включая Redline',
-              len(catalog) == 11 and any(g.get('id') == 'redline' for g in catalog),
+        check('каталог отдаёт 10 игр, Redline скрыт, история сохранена',
+              len(catalog) == 10 and not any(g.get('id') == 'redline' for g in catalog)
+              and 'redline' in [g['id'] for g in GAMES],
               str([g.get('id') for g in catalog]))
         status, data = admin.get('/api/admin/items')
         check('админ: каталог предметов', status == 200 and len(data.get('items', [])) >= 15,

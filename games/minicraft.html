@@ -4933,7 +4933,7 @@ function Xg() {
       s = new Zi(new cn(1, 1, 1), n, 45e3);
     s.count = 0, s.frustumCulled = !1, Ht.add(s), is[t] = s
   }
-  Ti = mcxCoinMesh(), Ti.count = 0, Ti.frustumCulled = !1, Ht.add(Ti), er = new wt(new cn(1.01, 1.01, 1.01), new ti({
+  mcxCreateCoins(), er = new wt(new cn(1.01, 1.01, 1.01), new ti({
     color: 16777215,
     wireframe: !0,
     transparent: !0,
@@ -5466,78 +5466,89 @@ function mcxRenderClaimRows() {
 }
 
 /* ------------------------------------------------------------- монеты V */
-function mcxCoinTexture() {
-  var canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 64;
-  var c = canvas.getContext('2d');
-  // Корпус монеты: ярко-зелёный, с тёмной окантовкой и светлым ободком.
-  c.fillStyle = '#0b2c17';
-  c.beginPath();
-  c.arc(32, 32, 30, 0, Math.PI * 2);
-  c.fill();
-  var grad = c.createLinearGradient(0, 4, 0, 60);
-  grad.addColorStop(0, '#5bffb0');
-  grad.addColorStop(.45, '#23d95f');
-  grad.addColorStop(1, '#0f9f42');
-  c.fillStyle = grad;
-  c.beginPath();
-  c.arc(32, 32, 26, 0, Math.PI * 2);
-  c.fill();
-  c.strokeStyle = 'rgba(255,255,255,.55)';
-  c.lineWidth = 3;
-  c.beginPath();
-  c.arc(32, 32, 22, 0, Math.PI * 2);
-  c.stroke();
-  // Белая «V» — крупная, по центру, с тенью для контраста.
-  function glyph(color, dx, dy) {
-    c.fillStyle = color;
-    c.beginPath();
-    c.moveTo(13 + dx, 18 + dy);
-    c.lineTo(26 + dx, 18 + dy);
-    c.lineTo(32 + dx, 38 + dy);
-    c.lineTo(38 + dx, 18 + dy);
-    c.lineTo(51 + dx, 18 + dy);
-    c.lineTo(38 + dx, 50 + dy);
-    c.lineTo(26 + dx, 50 + dy);
-    c.closePath();
-    c.fill();
+/*
+ * Монета — КРУГЛЫЙ трёхмерный жетон, а не кубик: зелёный цилиндр (видны
+ * толщина и ребро) плюс белая «V» из четырёх тонких брусков. Буква стоит
+ * с обеих сторон, поэтому при вращении вокруг вертикальной оси монета
+ * всегда читается, а не превращается в ребро с «зеркальной» буквой.
+ * Геометрия повёрнута так, что плоскость монеты смотрит по ±Z; в мире
+ * монета вращается только вокруг Y, поэтому «V» остаётся вертикальной.
+ */
+var Tv = null;                    // белые штрихи буквы «V»
+var mcxCoinStrokes = null;        // локальные матрицы четырёх штрихов
+var mcxCoinMatrix = new st();     // матрица текущей монеты
+var mcxStrokeMatrix = new st();   // матрица текущего штриха
+var MCX_COIN_R = .34;             // радиус монеты
+var MCX_COIN_T = .1;              // толщина монеты
+
+/* Четыре штриха «V»: по два на лицевую и обратную сторону. */
+function mcxCoinStrokeMatrices() {
+  var out = [];
+  var tilt = .44;                 // наклон плеча буквы
+  var faces = [
+    [-.08, .048, tilt], [.08, .048, -tilt],
+    [-.08, -.048, tilt], [.08, -.048, -tilt]
+  ];
+  for (var i = 0; i < faces.length; i++) {
+    var f = faces[i];
+    var m = new st();
+    m.multiplyMatrices(new st().makeTranslation(f[0], 0, f[1]), new st().makeRotationZ(f[2]));
+    m.multiply(new st().makeScale(.085, .40, .022));
+    out.push(m);
   }
-  glyph('rgba(4,48,22,.75)', 1, 2);
-  glyph('#ffffff', 0, 0);
-  var texture = new Ps(canvas);
-  texture.colorSpace = Ut;
-  texture.magFilter = vt;
-  texture.minFilter = Mi;
-  texture.needsUpdate = !0;
-  return texture;
+  return out;
 }
 
-function mcxCoinMesh() {
-  return new Zi(new cn(.44, .44, .1), new Us({
-    map: mcxCoinTexture(),
-    emissive: 4704026,
+/* Создание обоих инстанс-мешей монеты: тело-цилиндр и белая «V». */
+function mcxCreateCoins() {
+  var body = new Ds(MCX_COIN_R, MCX_COIN_R, MCX_COIN_T, 28, 1, !1);
+  body.rotateX(Math.PI / 2);      // плоскость монеты смотрит по ±Z
+  Ti = new Zi(body, new Us({
+    color: 0x24d95f,
+    emissive: 0x14a34a,
     emissiveIntensity: .55,
-    metalness: .35,
-    roughness: .3
+    metalness: .5,
+    roughness: .28
   }), 460);
+  Ti.count = 0;
+  Ti.frustumCulled = !1;
+  Ht.add(Ti);
+  Tv = new Zi(new cn(1, 1, 1), new Us({
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: .22,
+    metalness: .1,
+    roughness: .35
+  }), 1840);
+  Tv.count = 0;
+  Tv.frustumCulled = !1;
+  Ht.add(Tv);
+  mcxCoinStrokes = mcxCoinStrokeMatrices();
 }
 
-/* Рисование монет: вращение, покачивание и мягкий пульс рядом с игроком. */
+/* Рисование монет: вращение вокруг Y, покачивание и мягкий пульс рядом. */
 function mcxDrawCoins() {
-  var i = 0;
-  for (var k = 0; k < F.coins.length; k++) {
+  var drawn = 0, strokes = 0;
+  for (var k = 0; k < F.coins.length && drawn < 458; k++) {
     var e = F.coins[k];
     var dx = e.x + .5 - F.x, dz = e.z + .5 - F.z;
     if (dx * dx + dz * dz > hi * hi) continue;
     var dist = Math.sqrt(dx * dx + dz * dz);
-    var pulse = 1 + Math.max(0, 1 - dist / 7) * .14 + Math.sin(F.elapsed * 5 + e.x * .7) * .05;
-    tr.makeRotationFromEuler(new en(0, F.elapsed * 1.9 + e.z * .35, 0));
-    tr.scale(new B(pulse, pulse, pulse));
-    tr.setPosition(e.x + .5, e.y + .72 + Math.sin(F.elapsed * 3 + e.x * .5) * .1, e.z + .5);
-    Ti.setMatrixAt(i++, tr);
+    var pulse = 1 + Math.max(0, 1 - dist / 7) * .16 + Math.sin(F.elapsed * 4 + e.x * .7) * .05;
+    var bob = Math.sin(F.elapsed * 2.6 + e.x * .5) * .09;
+    mcxCoinMatrix.makeRotationY(F.elapsed * 1.7 + e.z * .35);
+    mcxCoinMatrix.scale(new B(pulse, pulse, pulse));
+    mcxCoinMatrix.setPosition(e.x + .5, e.y + .78 + bob, e.z + .5);
+    Ti.setMatrixAt(drawn++, mcxCoinMatrix);
+    for (var s = 0; s < 4; s++) {
+      mcxStrokeMatrix.copy(mcxCoinMatrix).multiply(mcxCoinStrokes[s]);
+      Tv.setMatrixAt(strokes++, mcxStrokeMatrix);
+    }
   }
-  Ti.count = i;
+  Ti.count = drawn;
+  Tv.count = strokes;
   Ti.instanceMatrix.needsUpdate = !0;
+  Tv.instanceMatrix.needsUpdate = !0;
 }
 
 /* Поставить монету в точку, если там свободно и это не вода/листва. */
@@ -5820,9 +5831,13 @@ function mcxMakeVillager(tint, hat) {
   box(.52, .62, .34, 0, 1.02, 0, tint);              // туловище
   box(.46, .44, .42, 0, 1.52, 0, 0xf0c9a4);          // голова
   box(.5, .12, .46, 0, 1.76, 0, hat);                // шляпа
-  box(.22, .16, .22, -.3, 1.62, .12, 0xf0c9a4);      // «нос»/рука
-  box(.1, .1, .06, -.11, 1.55, .22, 0x2a2f36);       // глаза
-  box(.1, .1, .06, .11, 1.55, .22, 0x2a2f36);
+  // Лицо смотрит в +Z — туда же, куда смотрят глаза и куда поворачивается
+  // вся группа. Поэтому нос стоит ровно по центру передней грани головы,
+  // а не сбоку: раньше он был смещён на x = -0.3 и висел на щеке.
+  box(.09, .09, .05, -.1, 1.56, .215, 0x2a2f36);     // левый глаз
+  box(.09, .09, .05, .1, 1.56, .215, 0x2a2f36);      // правый глаз
+  box(.11, .11, .09, 0, 1.49, .225, 0xd9a97f);       // нос по центру лица
+  box(.15, .03, .04, 0, 1.40, .215, 0x8a5f47);       // рот
   box(.24, .18, .26, -.3, 1.14, 0, tint);            // руки
   box(.24, .18, .26, .3, 1.14, 0, tint);
   var left = box(.22, .58, .24, -.13, .4, 0, 0x4f3d2c);

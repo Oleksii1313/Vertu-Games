@@ -344,30 +344,67 @@ body[data-game="pong"] .controls{justify-content:space-between}
 }
 </style>
 <script src="/assets/vg/js/game-kit.js" defer></script>
+<style id="snake-style">
+/* === Snake: изумрудная змейка (локальные стили, другие игры не затрагиваются) === */
+.muted{position:fixed;top:72px;right:12px;z-index:40;width:44px;height:44px;border-radius:12px;
+  border:1px solid var(--line2);background:rgba(24,34,46,.85);color:var(--text);font-size:16px;
+  cursor:pointer;backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;
+  touch-action:manipulation;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.muted:active{transform:translateY(1px)}
+#snakeToast{position:fixed;left:50%;top:78px;transform:translate(-50%,-8px);z-index:60;
+  padding:9px 16px;border-radius:999px;background:rgba(10,26,32,.92);color:#a9ffe0;
+  border:1px solid rgba(80,240,190,.45);font:700 13px var(--body);letter-spacing:.2px;
+  opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;max-width:88vw;text-align:center}
+#snakeToast.show{opacity:1;transform:translate(-50%,0)}
+.panel .claim{margin:10px 0 4px;font-size:13px;line-height:1.45;min-height:18px;color:var(--muted)}
+.panel .claim.ok{color:#6bf0b8}
+.panel .claim.bad{color:#ff9aa6}
+.panel .claim.pending{color:#8fd7ff}
+.panel .claim.local{color:var(--muted)}
+.panel #fRetry{margin:0 auto 12px;padding:9px 16px;border-radius:10px;border:1px solid var(--line2);
+  background:var(--card2);color:var(--text);font:700 13px var(--body);cursor:pointer}
+.panel .row .v{text-align:right;margin-left:10px}
+.panel .row.gold .v{color:#ffcf4d}
+#fRows[hidden]{display:none}
+.info .stat.apple .v{color:#ff7d92}
+.info .stat.gold .v{color:#ffcf4d}
+@media(max-width:460px){.info .stat .l{font-size:8px;letter-spacing:.3px}}
+</style>
 </head>
 <body data-game="snake">
 <div class="info">
   <div class="stat"><span class="l">SCORE</span><span class="v" id="scoreVal">0</span></div>
-  <div class="stat"><span class="l">COINS</span><span class="v" id="coinsVal">0 V</span></div>
+  <div class="stat apple"><span class="l">APPLE</span><span class="v" id="appleVal">0</span></div>
+  <div class="stat gold"><span class="l">GOLD</span><span class="v" id="goldVal">0</span></div>
+  <div class="stat"><span class="l">V</span><span class="v" id="coinsVal">0 V</span></div>
   <div class="stat"><span class="l">LEVEL</span><span class="v" id="levelVal">1</span></div>
   <div class="stat"><span class="l">SPEED</span><span class="v" id="speedVal">1</span></div>
 </div>
+<button class="muted" id="muteBtn" type="button" title="звук" data-title-en="sound">🔊</button>
 <div class="board"><canvas id="c"></canvas></div>
+<div id="snakeToast" role="status"></div>
 <div class="controls" aria-label="Управление игрой" data-aria-label-en="Game controls"><div class="dpad"><button type="button" id="btnUp" aria-label="Вверх" data-aria-label-en="Up"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v14"/></svg></button><button type="button" id="btnLeft" aria-label="Влево" data-aria-label-en="Left"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7M7 12h14"/></svg></button><button type="button" id="btnPause" aria-label="Пауза" data-aria-label-en="Pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button><button type="button" id="btnRight" aria-label="Вправо" data-aria-label-en="Right"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7M3 12h14"/></svg></button><button type="button" id="btnDown" aria-label="Вниз" data-aria-label-en="Down"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 10 7 7 7-7M12 3v14"/></svg></button></div></div>
 
 <div class="overlay" id="overlay">
   <div class="panel">
     <h2 id="ovTitle">GAME OVER</h2>
     <p class="sub" id="ovSub"><span data-ru="Змейка столкнулась сама с собой" data-en="The snake ran into itself">Змейка столкнулась сама с собой</span></p>
-    <div class="row"><span class="k">Score</span><span class="v" id="fScore">0</span></div>
-    <div class="row"><span class="k">Level</span><span class="v" id="fLevel">1</span></div>
-    <div class="row"><span class="k">Length</span><span class="v" id="fLen">1</span></div>
+    <div id="fRows" hidden>
+      <div class="row"><span class="k"><span data-ru="Очки" data-en="Score">Очки</span></span><span class="v" id="fScore">0</span></div>
+      <div class="row"><span class="k"><span data-ru="Обычные яблоки" data-en="Normal apples">Обычные яблоки</span></span><span class="v" id="fApples">0</span></div>
+      <div class="row gold"><span class="k"><span data-ru="Золотые яблоки" data-en="Golden apples">Золотые яблоки</span></span><span class="v" id="fGold">0</span></div>
+      <div class="row"><span class="k"><span data-ru="Заработано V" data-en="V earned">Заработано V</span></span><span class="v" id="fV">0 V</span></div>
+      <div class="row"><span class="k"><span data-ru="Остаток дневного лимита" data-en="Daily limit left">Остаток дневного лимита</span></span><span class="v" id="fLeft">—</span></div>
+      <div class="row"><span class="k"><span data-ru="Исход" data-en="Outcome">Исход</span></span><span class="v" id="fOutcome">—</span></div>
+    </div>
     <div class="earn" id="fEarn">+0 V</div>
+    <p class="claim" id="fClaim"></p>
+    <button type="button" id="fRetry" hidden><span data-ru="Повторить" data-en="Retry">Повторить</span></button>
     <div class="btns">
       <button class="btn primary" id="ovBtn"><span data-ru="Играть снова" data-en="Play again">Играть снова</span></button>
       <button class="btn ghost" onclick="goHome()"><span data-ru="Домой" data-en="Home">Домой</span></button>
     </div>
-    <p class="hint"><span data-ru="Используй стрелки / свайпы. Нажми Space — пауза." data-en="Use arrows / swipes. Press Space to pause.">Используй стрелки / свайпы. Нажми Space — пауза.</span></p>
+    <p class="hint"><span data-ru="Стрелки / свайпы — поворот, Space — пауза. Золотое яблоко даёт 10 V, изумруд — множитель ×2." data-en="Arrows / swipes steer, Space pauses. A golden apple pays 10 V, an emerald gives a ×2 multiplier.">Стрелки / свайпы — поворот, Space — пауза. Золотое яблоко даёт 10 V, изумруд — множитель ×2.</span></p>
   </div>
 </div>
 
@@ -376,171 +413,977 @@ body[data-game="pong"] .controls{justify-content:space-between}
 <script>
 window.cheatPaused=false;(function(){var MIN_W=300,MIN_H=220;var el=document.getElementById('cheatOverlay');var why=el?el.querySelector('.ch-why'):null;function ev(){var tooSmall=(window.innerWidth<MIN_W)||(window.innerHeight<MIN_H);var hidden=document.hidden===true;var paused=tooSmall||hidden;if(paused===window.cheatPaused)return;window.cheatPaused=paused;if(el){if(paused){if(why){why.textContent=hidden?((window.VGT&&window.VGT('Окно свёрнуто или скрыто','The window is minimised or hidden'))||'Окно свёрнуто или скрыто'):((window.VGT&&window.VGT('Размер окна ниже допустимого','The window is smaller than the minimum size'))||'Размер окна ниже допустимого')}el.classList.add('show')}else el.classList.remove('show')}try{if(window.parent!==window)parent.postMessage({type:paused?'cheat_start':'cheat_end'},'*')}catch(e){}}document.addEventListener('visibilitychange',ev);window.addEventListener('resize',ev);window.addEventListener('focus',ev);ev()})();
 
-const c=document.getElementById('c'),ctx=c.getContext('2d');
-const grid=20;
-const scoreEl=document.getElementById('scoreVal'),coinsEl=document.getElementById('coinsVal'),levelEl=document.getElementById('levelVal'),speedEl=document.getElementById('speedVal');
-const overlay=document.getElementById('overlay');
-let cols,rows,tick=null,frame=0,particles=[];
-let score=0,coins=0,level=1,speed=150,started=false,paused=false,over=false;
-let snake=[],dir,nextDir,food;
+/* ============================================================================
+   SNAKE · изумрудная змейка
+   Плавное движение (интерполяция между тиками), изумрудное тело с чешуёй и
+   свечением, три вида коллектиблов, множители, арены с препятствиями, звук и
+   экран итогов, цифры которого приходят с сервера.
+   Награду считает ТОЛЬКО сервер: клиент отправляет число обычных и золотых
+   яблок, сервер проверяет их правдоподобность, суточный лимит и одноразовость
+   сессии (ключ scs:<uid>:<sessionId>) — повторов и «нарисованных» V нет.
+   ========================================================================== */
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+const GRID = 20, COLS = 20, ROWS = 20, S = COLS * GRID;      // поле 400×400 (логические px)
 
-function resize(){c.width=c.height=400;VGInput.fitSquare(c)}
-window.addEventListener('resize',resize);
+const scoreEl = document.getElementById('scoreVal'), vEl = document.getElementById('coinsVal');
+const apEl = document.getElementById('appleVal'), gdEl = document.getElementById('goldVal');
+const levelEl = document.getElementById('levelVal'), speedEl = document.getElementById('speedVal');
+const overlay = document.getElementById('overlay'), rowsBox = document.getElementById('fRows');
+const claimEl = document.getElementById('fClaim'), retryBtn = document.getElementById('fRetry');
+const ovTitle = document.getElementById('ovTitle'), ovSub = document.getElementById('ovSub');
+const ovBtn = document.getElementById('ovBtn'), fEarn = document.getElementById('fEarn');
+const fScore = document.getElementById('fScore'), fApples = document.getElementById('fApples');
+const fGold = document.getElementById('fGold'), fV = document.getElementById('fV');
+const fLeft = document.getElementById('fLeft'), fOutcome = document.getElementById('fOutcome');
+const toastEl = document.getElementById('snakeToast');
+const muteBtn = document.getElementById('muteBtn');
 
-function addCoin(n){coins+=n;coinsEl.textContent=coins+' V';if(window.parent!==window)try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}
+/* Экономика: те же числа заданы в каталоге (game_catalog.py) и проверяются
+   сервером. Клиент только показывает ожидаемую сумму, пока не пришёл ответ. */
+const APPLE_V = 1, GOLD_V = 10, LEVEL_EVERY = 5, LEVEL_V = 5;
+const BASE_SPEED = 145, MIN_SPEED = 62, SPEED_STEP = 7, SPEED_DIV = 20;
+const ARENAS = [['Луг', 'Meadow'], ['Колонны', 'Pillars'], ['Руины', 'Ruins']];
 
-function initBoard(){
-  resize();cols=Math.floor(c.width/grid);rows=Math.floor(c.height/grid);
-  const cx=Math.floor(cols/2),cy=Math.floor(rows/2);
-  // start moving RIGHT, body of 1 so the run begins gently
-  snake=[{x:cx,y:cy}];
-  dir={x:1,y:0};nextDir={x:1,y:0};
-  score=0;coins=0;level=1;over=false;particles=[];
-  scoreEl.textContent=0;coinsEl.textContent=0+' V';levelEl.textContent=1;speedEl.textContent=1;
-  spawnFood();
+const rnd = n => Math.floor(Math.random() * n);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const nowMs = () => (window.performance && performance.now ? performance.now() : Date.now());
+const cellKey = (x, y) => x + ':' + y;
+const T = (ru, en) => (window.VGT ? window.VGT(ru, en) : ru);
+
+/* ------------------------------------------------------------------- звук */
+const Snd = (function () {
+  let ac = null, muted = false;
+  try { muted = localStorage.getItem('vg_snake_mute') === '1'; } catch (e) {}
+  function audio() {
+    if (muted) return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!ac) { try { ac = new AC(); } catch (e) { return null; } }
+    if (ac.state === 'suspended' && ac.resume) { try { ac.resume(); } catch (e) {} }
+    return ac;
+  }
+  function tone(freq, dur, type, vol, to) {
+    const a = audio();
+    if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime;
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      if (to) o.frequency.exponentialRampToValueAtTime(Math.max(30, to), t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.16, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  return {
+    isMuted: () => muted,
+    setMuted(v) { muted = !!v; try { localStorage.setItem('vg_snake_mute', muted ? '1' : '0'); } catch (e) {} },
+    apple(n) { tone(480 + Math.min(9, n) * 45, 0.12, 'triangle', 0.15, 780); },
+    gold() { tone(880, 0.09, 'square', 0.13, 1320); setTimeout(() => tone(1320, 0.18, 'triangle', 0.13, 1760), 80); },
+    gem() { tone(620, 0.1, 'sine', 0.14, 990); setTimeout(() => tone(990, 0.22, 'sine', 0.12, 1500), 90); },
+    level() { tone(420, 0.1, 'triangle', 0.13, 840); setTimeout(() => tone(640, 0.14, 'triangle', 0.12, 1080), 95); },
+    turn() { tone(300, 0.04, 'sine', 0.05, 0); },
+    over() { tone(300, 0.5, 'sawtooth', 0.15, 70); setTimeout(() => tone(170, 0.6, 'sine', 0.13, 50), 130); }
+  };
+})();
+if (muteBtn) {
+  muteBtn.textContent = Snd.isMuted() ? '🔇' : '🔊';
+  muteBtn.onclick = () => { Snd.setMuted(!Snd.isMuted()); muteBtn.textContent = Snd.isMuted() ? '🔇' : '🔊'; };
 }
 
-/* start / restart via overlay */
-function ready(){
-  document.getElementById('ovTitle').textContent=((window.VGT&&window.VGT('ГОТОВ?','READY?'))||'ГОТОВ?');
-  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Нажми стрелку, свайп или кнопку, чтобы начать','Press an arrow, swipe or tap a button to start'))||'Нажми стрелку, свайп или кнопку, чтобы начать');
-  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('▶ Старт','▶ Start'))||'▶ Старт');
-  document.getElementById('fEarn').textContent='';
-  overlay.classList.add('show');started=false;paused=false;
-  initBoard();loop();
-}
-function startRun(){
-  overlay.classList.remove('show');started=true;paused=false;
-  if(tick)clearInterval(tick);speed=150;tick=setInterval(step,speed);
-}
-function gameOver(){over=true;started=false;if(tick)clearInterval(tick);
-  document.getElementById('ovTitle').textContent='GAME OVER';
-  document.getElementById('ovSub').textContent=((window.VGT&&window.VGT('Змейка столкнулась сама с собой','The snake ran into itself'))||'Змейка столкнулась сама с собой');
-  document.getElementById('fScore').textContent=score;document.getElementById('fLevel').textContent=level;document.getElementById('fLen').textContent=snake.length;
-  document.getElementById('fEarn').textContent='+'+coins+' V';
-  document.getElementById('ovBtn').textContent=((window.VGT&&window.VGT('Играть снова','Play again'))||'Играть снова');
-  overlay.classList.add('show');
-  spawnParticles(snake[0].x*grid+10,snake[0].y*grid+10,'#4037b0',30,6);
-  try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}
-}
-function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
+/* ------------------------------------------------------------------ состояние */
+let snake = [], prev = [], dir = { x: 1, y: 0 }, queue = [];
+let items = [], obstacles = new Set(), particles = [], floats = [], rings = [];
+let state = 'ready';                 // ready | playing | paused | over
+let score = 0, apples = 0, gold = 0, level = 1, arena = 0, speed = BASE_SPEED;
+let combo = 0, comboT = 0, boostUntil = 0, elapsedMs = 0, acc = 0, shake = 0;
+let reason = 'self', sessionId = '', lastTs = 0, started = false;
 
-/* ------- core fix: input queue. Only `dir` is what the snake ACTUALLY used last tick.
-   New presses go to `nextDir`, checked RIGOROUSLY against `dir`, and applied once at the
-   next tick. This stops the instant-180°-reversal-death. ------- */
-function pushDir(nx,ny){
-  // ignore no-op
-  if(nx===0&&ny===0)return;
-  // exact reverse of the direction actually moving -> reject
-  if(nx===-dir.x&&ny===-dir.y)return;
-  // same as current -> ignore
-  if(nx===dir.x&&ny===dir.y)return;
-  nextDir={x:nx,y:ny};
+function resize() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = Math.round(S * dpr);
+  c.height = Math.round(S * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  VGInput.fitSquare(c);
 }
-function peekOrigin(){return {x:snake[0].x,y:snake[0].y}}
+window.addEventListener('resize', resize);
 
-function spawnFood(){
-  let f;let guard=0;
-  do{f={x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)};guard++;}
-  while(snake.some(s=>s.x===f.x&&s.y===f.y)&&guard<400);
-  food=f;
+/* ------------------------------------------------------------------ награда */
+function expectedV() {
+  return apples * APPLE_V + Math.floor(apples / LEVEL_EVERY) * LEVEL_V + gold * GOLD_V;
+}
+const CLAIM = { state: 'idle', apples: 0, gold: 0, awarded: null, clamped: false, capped: false, zero: false, repeated: false, left: null, asked: 0 };
+
+function newSessionId() {
+  return 'sn-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
-function step(){
-  if(window.cheatPaused||paused||!started||over)return;
-  // apply the queued direction now (only legal ones were accepted)
-  dir=nextDir;
-  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
-  if(head.x<0)head.x=cols-1;if(head.x>=cols)head.x=0;
-  if(head.y<0)head.y=rows-1;if(head.y>=rows)head.y=0;
-  // self collision EXCLUDING the tail cell that is about to move away
-  const willGrow=(head.x===food.x&&head.y===food.y);
-  const bodyLen=willGrow?snake.length:snake.length-1;
-  for(let i=0;i<bodyLen;i++){if(snake[i].x===head.x&&snake[i].y===head.y){gameOver();return}}
-  snake.unshift(head);
-  if(willGrow){
-    score++;scoreEl.textContent=score;
-    addCoin(1);                                    // +1 V за съеденное яблоко
-    spawnParticles(food.x*grid+grid/2,food.y*grid+grid/2,'#ff2532',16,6);   // red apple particles
-    if(score%5===0){level++;levelEl.textContent=level;addCoin(5);            // +5 V за уровень скорости
-      if(tick)clearInterval(tick);speed=Math.max(70,150-level*8);speedEl.textContent=1+Math.floor((150-speed)/20);tick=setInterval(step,speed);}
-    spawnFood();
-  }else snake.pop();
-  frame++;
+function pendingSave(payload) {
+  try { localStorage.setItem('vg_snake_pending', JSON.stringify(payload)); } catch (e) {}
 }
-function spawnParticles(x,y,c,n,spd){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*spd,vy:(Math.random()-.5)*spd,l:1,c})}
-
-function setPaused(v){if(!started||over)return;paused=v;
-  document.getElementById('ovTitle').textContent=v?((window.VGT&&window.VGT('ПАУЗА','PAUSE'))||'ПАУЗА'):'';
-  document.getElementById('ovSub').textContent=v?((window.VGT&&window.VGT('Нажми ▶ или Space, чтобы продолжить','Press ▶ or Space to continue'))||'Нажми ▶ или Space, чтобы продолжить'):'';
-  document.getElementById('ovBtn').textContent=v?((window.VGT&&window.VGT('▶ Продолжить','▶ Continue'))||'▶ Продолжить'):'';
-  document.getElementById('fEarn').textContent='';
-  if(v){if(tick)clearInterval(tick);overlay.classList.add('show')}
-  else{overlay.classList.remove('show');tick=setInterval(step,speed)}
+function pendingClear() {
+  try { localStorage.removeItem('vg_snake_pending'); } catch (e) {}
 }
-document.getElementById('ovBtn').onclick=()=>{
-  if(over){initBoard();over=false;startRun();return}   // restart after game over
-  if(paused){setPaused(false);return}                  // resume from pause
-  startRun();                                          // start from READY
-};
 
-/* inputs */
-const bindBtn=(id,nx,ny)=>VGInput.tap(id,()=>input(nx,ny));
-function input(nx,ny){
-  if(over){return}
-  if(!started){initBoard();startRun();return} // first input = start moving
-  pushDir(nx,ny);
+/* Итог сессии уходит платформе; ответ сервера — единственный источник цифр. */
+function claimSession(reason) {
+  if (CLAIM.state !== 'idle') return false;
+  CLAIM.apples = apples;
+  CLAIM.gold = gold;
+  CLAIM.asked = expectedV();
+  if (parent === window) {                    // запуск без платформы: баланса нет
+    CLAIM.state = 'local';
+    renderClaim();
+    return false;
+  }
+  if (!apples && !gold) {
+    CLAIM.state = 'done';
+    CLAIM.awarded = 0;
+    renderClaim();
+    return false;
+  }
+  const payload = {
+    type: 'snakeSession', game: 'snake',
+    apples: apples | 0, gold: gold | 0, score: score | 0,
+    time: Math.round(elapsedMs / 1000), sessionId: sessionId, reason: reason || 'gameover'
+  };
+  CLAIM.state = 'pending';
+  renderClaim();                     // «Начисляем N V…» сразу, ещё до ответа
+  pendingSave(payload);
+  postClaim(payload);
+  return true;
 }
-bindBtn('btnUp',0,-1);bindBtn('btnDown',0,1);bindBtn('btnLeft',-1,0);bindBtn('btnRight',1,0);
-VGInput.tap('btnPause',()=>setPaused(!paused));
-
-/* keyboard */
-window.addEventListener('keydown',e=>{
-  const map={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
-  if(map[e.key]){e.preventDefault();input(...map[e.key]);return}
-  if(e.key===' '||e.key==='p'||e.key==='P'){e.preventDefault();if(!started&&!over){startRun()}else if(!over)setPaused(!paused)}
+function postClaim(payload) {
+  try { parent.postMessage(payload, location.origin); } catch (e) {}
+  clearTimeout(postClaim.timer);
+  postClaim.timer = setTimeout(() => {
+    if (CLAIM.state === 'pending') { CLAIM.state = 'failed'; renderClaim(); }
+  }, 9000);
+}
+addEventListener('message', function (event) {
+  if (event.origin !== location.origin) return;
+  const data = event.data;
+  if (!data || data.type !== 'snakeSessionResult' || data.game !== 'snake') return;
+  clearTimeout(postClaim.timer);
+  if (data.guest) {                       // игра открыта без входа в аккаунт
+    CLAIM.state = 'local';
+    renderClaim();
+    return;
+  }
+  CLAIM.state = 'done';
+  CLAIM.awarded = Number(data.awarded) || 0;
+  CLAIM.clamped = !!data.clamped;
+  CLAIM.capped = !!data.capped;
+  CLAIM.zero = !!data.zero;
+  CLAIM.repeated = !!data.repeated;
+  CLAIM.left = (data.dailyLeft === 0 || data.dailyLeft) ? Number(data.dailyLeft) : null;
+  if (data.apples != null) CLAIM.apples = Number(data.apples) || 0;
+  if (data.gold != null) CLAIM.gold = Number(data.gold) || 0;
+  pendingClear();
+  renderResults();
+  renderClaim();
 });
 
-/* swipe on canvas */
-VGInput.swipe(c,d=>{const map={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};input(...map[d])});
+/* Возврат к недополученной награде после перезагрузки: сессия одна и та же
+   (тот же sessionId), поэтому сервер не заплатит дважды. */
+function retryPendingClaim() {
+  if (parent === window) return;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('vg_snake_pending') || 'null'); } catch (e) {}
+  if (!saved || !saved.sessionId || !(saved.apples || saved.gold)) return;
+  setTimeout(() => {
+    CLAIM.state = 'pending';
+    CLAIM.apples = Number(saved.apples) || 0;
+    CLAIM.gold = Number(saved.gold) || 0;
+    CLAIM.asked = CLAIM.apples * APPLE_V + Math.floor(CLAIM.apples / LEVEL_EVERY) * LEVEL_V + CLAIM.gold * GOLD_V;
+    postClaim({
+      type: 'snakeSession', game: 'snake', apples: saved.apples | 0, gold: saved.gold | 0,
+      score: saved.score | 0, time: saved.time | 0, sessionId: saved.sessionId, reason: 'pending'
+    });
+  }, 1600);
+}
 
-function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
-function draw(){
-  const bg=ctx.createLinearGradient(0,0,0,c.height);bg.addColorStop(0,'#202a3a');bg.addColorStop(1,'#1a2230');ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);
-  ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=1;
-  for(let x=0;x<=cols;x++){ctx.beginPath();ctx.moveTo(x*grid,.5);ctx.lineTo(x*grid,c.height);ctx.stroke()}
-  for(let y=0;y<=rows;y++){ctx.beginPath();ctx.moveTo(.5,y*grid);ctx.lineTo(c.width,y*grid);ctx.stroke()}
-  // food — bright red apple
-  const pulse=.9+.1*Math.sin(frame*.3);
-  const fx=food.x*grid+grid/2, fy=food.y*grid+grid/2, R=grid*.42*pulse;
-  // green little leaf
-  ctx.fillStyle='#6dff3a';ctx.beginPath();ctx.ellipse(fx+2,fy-R-2,3.2,1.6,0.4,0,7);ctx.fill();
-  // red body
-  ctx.fillStyle='#ff2532';ctx.shadowBlur=14;ctx.shadowColor='#ff2532';
-  ctx.beginPath();ctx.arc(fx,fy,R,0,7);ctx.fill();ctx.shadowBlur=0;
-  // highlight
-  ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.arc(fx-R*.32,fy-R*.34,R*.2,0,7);ctx.fill();
-  // stem
-  ctx.strokeStyle='#8a5a2b';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(fx,fy-R);ctx.lineTo(fx+2,fy-R-3);ctx.stroke();
-  // snake — bright neon palette (only the snake is vivid; board stays neutral)
-  const n=snake.length;
-  for(let i=n-1;i>=0;i--){const s=snake[i],x=s.x*grid+1,y=s.y*grid+1,sz=grid-2;
-    if(i===0){ctx.fillStyle='#39ff14';ctx.shadowBlur=16;ctx.shadowColor='#39ff14';roundRect(x,y,sz,sz,6);ctx.fill();ctx.shadowBlur=0;
-      ctx.fillStyle='#c6ffb0';ctx.fillRect(x+2,y+2,sz-4,2);}
-    else{
-      // bright rainbow-ish gradient along the body (hot pink -> orange -> yellow -> lime)
-      const t=i/n;
-      let col;
-      if(t<0.25)col='#ff2bd6';else if(t<0.5)col='#ff7a2b';else if(t<0.75)col='#ffd21f';else col='#39ff14';
-      ctx.fillStyle=col;ctx.shadowBlur=8;ctx.shadowColor=col;roundRect(x,y,sz,sz,5);ctx.fill();ctx.shadowBlur=0;
+/* ------------------------------------------------------------------- тосты */
+let toastTimer = 0;
+function toast(text, ms) {
+  if (!toastEl) return;
+  toastEl.textContent = text;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 1900);
+}
+
+/* --------------------------------------------------------------- инициализация */
+function initBoard() {
+  resize();
+  const cx = COLS >> 1, cy = ROWS >> 1;
+  snake = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
+  prev = snake.map(s => ({ x: s.x, y: s.y }));
+  dir = { x: 1, y: 0 }; queue = [];
+  score = 0; apples = 0; gold = 0; level = 1; speed = BASE_SPEED;
+  combo = 0; comboT = 0; boostUntil = 0; elapsedMs = 0; acc = 0; shake = 0;
+  particles = []; floats = []; rings = []; items = []; obstacles = new Set();
+  arena = 0; reason = 'self';
+  sessionId = newSessionId();
+  CLAIM.state = 'idle'; CLAIM.awarded = null; CLAIM.left = null; CLAIM.clamped = false; CLAIM.capped = false;
+  spawnApple();
+  updateHud();
+}
+
+function occupied(x, y, skip) {
+  if (obstacles.has(cellKey(x, y))) return true;
+  if (snake.some(s => s.x === x && s.y === y)) return true;
+  return items.some(it => it !== skip && it.x === x && it.y === y);
+}
+
+function spawnItem(type) {
+  for (let guard = 0; guard < 600; guard++) {
+    const x = rnd(COLS), y = rnd(ROWS);
+    if (occupied(x, y)) continue;
+    const item = { type: type, x: x, y: y, born: nowMs(), ttl: type === 'gold' ? 9000 : type === 'gem' ? 7000 : 0 };
+    items.push(item);
+    return item;
+  }
+  return null;
+}
+function spawnApple() {
+  if (items.some(it => it.type === 'apple')) return;
+  spawnItem('apple');
+}
+
+/* ------------------------------------------------------------------- арена */
+function addBlock(x, y, w, h) {
+  for (let i = 0; i < w; i++) {
+    for (let j = 0; j < h; j++) {
+      const bx = x + i, by = y + j;
+      if (bx < 0 || by < 0 || bx >= COLS || by >= ROWS) continue;
+      obstacles.add(cellKey(bx, by));
     }
   }
-  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.l-=.02;ctx.globalAlpha=Math.max(0,p.l);ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,3,3)});ctx.globalAlpha=1;
-  particles=particles.filter(p=>p.l>0);
-  ctx.strokeStyle='rgba(43,153,160,.45)';ctx.lineWidth=2;roundRect(1,1,c.width-2,c.height-2,0);ctx.stroke();
 }
-function loop(){draw();requestAnimationFrame(loop)}
+function arenaFor(lv) { return lv >= 6 ? 2 : lv >= 3 ? 1 : 0; }
+
+function setArena(a, silent) {
+  arena = a;
+  obstacles = new Set();
+  if (a >= 1) {
+    [[3, 3], [15, 3], [3, 15], [15, 15]].forEach(p => addBlock(p[0], p[1], 2, 2));
+  }
+  if (a >= 2) {
+    addBlock(9, 1, 2, 3);
+    addBlock(9, 16, 2, 3);
+    addBlock(1, 9, 3, 2);
+    addBlock(16, 9, 3, 2);
+  }
+  /* Никого не замуровываем: клетки змейки и коллектиблов освобождаем, а вокруг
+     головы оставляем запас, чтобы новый блок не убил игрока в тот же тик. */
+  snake.forEach(s => obstacles.delete(cellKey(s.x, s.y)));
+  items.forEach(it => obstacles.delete(cellKey(it.x, it.y)));
+  const head = snake[0];
+  if (head) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        obstacles.delete(cellKey((head.x + dx + COLS) % COLS, (head.y + dy + ROWS) % ROWS));
+      }
+    }
+  }
+  if (silent) return;
+  toast(T('Новая арена: ' + ARENAS[a][0], 'New arena: ' + ARENAS[a][1]));
+  ring(snake[0].x * GRID + GRID / 2, snake[0].y * GRID + GRID / 2, '#54ffc0');
+  Snd.level();
+}
+
+/* ------------------------------------------------------------------ множитель */
+function multiplier() {
+  const base = 1 + Math.min(5, Math.max(0, combo - 1) * 0.25);
+  return base * (nowMs() < boostUntil ? 2 : 1);
+}
+function comboBump() {
+  combo = nowMs() - comboT <= 5000 ? Math.min(21, combo + 1) : 1;
+  comboT = nowMs();
+}
+
+/* --------------------------------------------------------------------- шаг */
+function step() {
+  if (queue.length) dir = queue.shift();
+  const head = { x: (snake[0].x + dir.x + COLS) % COLS, y: (snake[0].y + dir.y + ROWS) % ROWS };
+  const item = items.filter(it => it.x === head.x && it.y === head.y)[0] || null;
+  const grow = item ? (item.type === 'gold' ? 2 : item.type === 'gem' ? 0 : 1) : 0;
+  const bodyLen = snake.length - (grow ? 0 : 1);
+  for (let i = 0; i < bodyLen; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y) { die('self'); return; }
+  }
+  if (obstacles.has(cellKey(head.x, head.y))) { die('obstacle'); return; }
+  prev = snake.map(s => ({ x: s.x, y: s.y }));
+  snake.unshift(head);
+  if (grow === 2) {
+    const tail = snake[snake.length - 1];
+    snake.push({ x: tail.x, y: tail.y });
+  } else if (!grow) {
+    snake.pop();
+  }
+  if (item) eat(item, head);
+}
+
+function eat(item, head) {
+  items = items.filter(it => it !== item);
+  const cx = head.x * GRID + GRID / 2, cy = head.y * GRID + GRID / 2;
+  comboBump();
+  if (item.type === 'apple') {
+    apples++;
+    score += Math.max(1, Math.round(multiplier()));
+    burst(cx, cy, '#ff3b5c', 14, 5);
+    ring(cx, cy, '#ff6b86');
+    float(cx, cy, '+' + Math.max(1, Math.round(multiplier())), '#ff8fa3');
+    Snd.apple(apples);
+    spawnApple();
+    if (!items.some(it => it.type === 'gold') && Math.random() < 0.12) spawnItem('gold');
+    else if (!items.some(it => it.type === 'gem') && Math.random() < 0.08) spawnItem('gem');
+  } else if (item.type === 'gold') {
+    gold++;
+    score += 3 * Math.max(1, Math.round(multiplier()));
+    burst(cx, cy, '#ffd85c', 26, 7);
+    ring(cx, cy, '#ffe27a');
+    float(cx, cy, '+' + GOLD_V + ' V', '#ffe27a');
+    shake = Math.max(shake, 0.32);
+    Snd.gold();
+  } else {
+    boostUntil = nowMs() + 12000;
+    burst(cx, cy, '#66ffc0', 20, 6);
+    ring(cx, cy, '#7dffd0');
+    float(cx, cy, '×2', '#7dffd0');
+    Snd.gem();
+  }
+  const nextLevel = 1 + Math.floor(apples / LEVEL_EVERY);
+  if (nextLevel > level) {
+    level = nextLevel;
+    speed = Math.max(MIN_SPEED, BASE_SPEED - (level - 1) * SPEED_STEP);
+    float(snake[0].x * GRID + GRID / 2, snake[0].y * GRID + GRID / 2 - 14,
+      T('УРОВЕНЬ ' + level, 'LEVEL ' + level), '#8ef7d0');
+    if (arenaFor(level) !== arena) setArena(arenaFor(level), false);
+    Snd.level();
+  }
+  updateHud();
+}
+
+function finishSession(kind) {
+  if (state === 'over') return;
+  state = 'over';
+  reason = kind;
+  showResults();
+  claimSession(kind);
+}
+
+function die(kind) {
+  if (state !== 'playing') return;
+  shake = 1;
+  const head = snake[0] || { x: COLS >> 1, y: ROWS >> 1 };
+  const cx = head.x * GRID + GRID / 2, cy = head.y * GRID + GRID / 2;
+  burst(cx, cy, '#3ef0a8', 30, 8);
+  ring(cx, cy, '#ff6b86');
+  Snd.over();
+  finishSession(kind);
+}
+
+/* ------------------------------------------------------------------ эффекты */
+function burst(x, y, color, n, spread) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = 0.6 + Math.random() * (spread || 5);
+    particles.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, color: color, size: 1.6 + Math.random() * 2.4 });
+  }
+}
+function ring(x, y, color) { rings.push({ x: x, y: y, r: 4, life: 1, color: color }); }
+function float(x, y, text, color) {
+  /* Длинные подписи («УРОВЕНЬ 3») тоже не должны уезжать за край поля. */
+  const half = Math.min(S / 2 - 8, String(text).length * 4.3);
+  floats.push({ x: clamp(x, half + 6, S - half - 6), y: clamp(y, 18, S - 10), text: text, color: color, life: 1 });
+}
+
+/* --------------------------------------------------------------- HUD и итоги */
+function updateHud() {
+  if (scoreEl) scoreEl.textContent = score;
+  if (vEl) vEl.textContent = expectedV() + ' V';
+  if (apEl) apEl.textContent = apples;
+  if (gdEl) gdEl.textContent = gold;
+  if (levelEl) levelEl.textContent = level;
+  if (speedEl) speedEl.textContent = 1 + Math.round((BASE_SPEED - speed) / SPEED_DIV);
+}
+
+function outcomeText(kind) {
+  if (kind === 'obstacle') return T('Змейка врезалась в препятствие', 'The snake hit an obstacle');
+  if (kind === 'quit') return T('Сессия завершена', 'Session finished');
+  return T('Змейка столкнулась сама с собой', 'The snake ran into itself');
+}
+
+function showResults() {
+  ovTitle.textContent = T('ИГРА ОКОНЧЕНА', 'GAME OVER');
+  ovSub.textContent = outcomeText(reason);
+  rowsBox.hidden = false;
+  fEarn.style.display = '';
+  ovBtn.textContent = T('Играть снова', 'Play again');
+  renderResults();
+  renderClaim();
+  overlay.classList.add('show');
+}
+
+function renderResults() {
+  fScore.textContent = score;
+  fApples.textContent = (CLAIM.state === 'done' && CLAIM.awarded !== null) ? CLAIM.apples : apples;
+  fGold.textContent = (CLAIM.state === 'done' && CLAIM.awarded !== null) ? CLAIM.gold : gold;
+  fOutcome.textContent = outcomeText(reason);
+  if (CLAIM.state === 'done') {
+    fV.textContent = (CLAIM.awarded || 0) + ' V';
+    fEarn.textContent = '+' + (CLAIM.awarded || 0) + ' V';
+    fLeft.textContent = CLAIM.left === null ? '—' : CLAIM.left + ' V';
+  } else {
+    fV.textContent = expectedV() + ' V';
+    fEarn.textContent = '+' + expectedV() + ' V';
+    fLeft.textContent = '—';
+  }
+}
+
+function renderClaim() {
+  if (!claimEl) return;
+  retryBtn.hidden = CLAIM.state !== 'failed';
+  if (CLAIM.state === 'pending') {
+    claimEl.textContent = T('Начисляем ' + expectedV() + ' V на баланс…', 'Crediting ' + expectedV() + ' V to your balance…');
+    claimEl.className = 'claim pending';
+  } else if (CLAIM.state === 'local') {
+    claimEl.textContent = T('Игра запущена без аккаунта: заработано ' + expectedV() + ' V локально.',
+      'Started without an account: ' + expectedV() + ' V earned locally.');
+    claimEl.className = 'claim local';
+  } else if (CLAIM.state === 'failed') {
+    claimEl.textContent = T('Сервер не подтвердил награду. Нажми «Повторить» — двойного начисления не будет.',
+      'The server did not confirm the reward. Tap Retry — you will not be paid twice.');
+    claimEl.className = 'claim bad';
+  } else if (CLAIM.state === 'done') {
+    if (CLAIM.awarded > 0) {
+      const note = CLAIM.clamped ? T(' (учтено ' + CLAIM.apples + ' обычных и ' + CLAIM.gold + ' золотых яблок)',
+        ' (' + CLAIM.apples + ' normal and ' + CLAIM.gold + ' golden apples counted)') : '';
+      claimEl.textContent = T('На баланс зачислено ' + CLAIM.awarded + ' V', 'Credited to your balance: ' + CLAIM.awarded + ' V') + note;
+      claimEl.className = 'claim ok';
+    } else if (CLAIM.capped) {
+      claimEl.textContent = T('Суточный лимит исчерпан: яблоки не зачислены', 'Daily cap reached: apples were not credited');
+      claimEl.className = 'claim bad';
+    } else if (CLAIM.zero) {
+      claimEl.textContent = T('Сессия слишком короткая — V не начислены', 'The session was too short — no V credited');
+      claimEl.className = 'claim local';
+    } else if (CLAIM.repeated) {
+      claimEl.textContent = T('Награда за эту сессию уже зачислена ранее', 'This session has already been credited');
+      claimEl.className = 'claim ok';
+    } else if (!CLAIM.apples && !CLAIM.gold) {
+      claimEl.textContent = T('Ни одного яблока не собрано', 'No apples collected');
+      claimEl.className = 'claim local';
+    } else {
+      claimEl.textContent = T('Награда не подтверждена сервером. Попробуйте ещё раз.', 'The server did not confirm the reward. Please retry.');
+      claimEl.className = 'claim bad';
+    }
+  } else {
+    claimEl.textContent = '';
+    claimEl.className = 'claim';
+  }
+}
+
+/* ------------------------------------------------------------------ ввод */
+function pushDir(nx, ny) {
+  if (!nx && !ny) return;
+  const last = queue.length ? queue[queue.length - 1] : dir;
+  if (nx === -last.x && ny === -last.y) return;
+  if (nx === last.x && ny === last.y) return;
+  if (queue.length >= 2) queue.shift();
+  queue.push({ x: nx, y: ny });
+  Snd.turn();
+}
+
+function input(nx, ny) {
+  if (state === 'over') return;
+  if (state === 'ready') startRun();
+  else if (state === 'paused') setPaused(false);
+  pushDir(nx, ny);
+}
+
+function startRun() {
+  state = 'playing';
+  started = true;
+  acc = 0;
+  overlay.classList.remove('show');
+  renderClaim();
+}
+
+function setPaused(v) {
+  if (v) {
+    if (state !== 'playing') return;
+    state = 'paused';
+    ovTitle.textContent = T('ПАУЗА', 'PAUSE');
+    ovSub.textContent = T('Нажми ▶ или Space, чтобы продолжить', 'Press ▶ or Space to continue');
+    rowsBox.hidden = true;
+    fEarn.style.display = 'none';
+    claimEl.textContent = '';
+    ovBtn.textContent = T('▶ Продолжить', '▶ Continue');
+    overlay.classList.add('show');
+  } else {
+    if (state !== 'paused') return;
+    state = 'playing';
+    overlay.classList.remove('show');
+  }
+}
+
+function ready() {
+  initBoard();
+  state = 'ready';
+  ovTitle.textContent = T('ГОТОВ?', 'READY?');
+  ovSub.textContent = T('Нажми стрелку, свайп или кнопку, чтобы начать', 'Press an arrow, swipe or tap a button to start');
+  rowsBox.hidden = true;
+  fEarn.style.display = 'none';
+  claimEl.textContent = '';
+  retryBtn.hidden = true;
+  ovBtn.textContent = T('▶ Старт', '▶ Start');
+  overlay.classList.add('show');
+}
+
+ovBtn.onclick = () => {
+  if (state === 'over') { ready(); startRun(); return; }
+  if (state === 'paused') { setPaused(false); return; }
+  startRun();
+};
+if (retryBtn) retryBtn.onclick = () => {
+  if (CLAIM.state !== 'failed') return;
+  CLAIM.state = 'pending';
+  renderClaim();
+  postClaim({
+    type: 'snakeSession', game: 'snake', apples: CLAIM.apples | 0, gold: CLAIM.gold | 0,
+    score: score | 0, time: Math.round(elapsedMs / 1000), sessionId: sessionId, reason: reason
+  });
+};
+
+function goHome() { try { parent.postMessage({ type: 'home' }, '*'); } catch (e) {} }
+window.goHome = goHome;
+
+const bindBtn = (id, nx, ny) => VGInput.tap(id, () => input(nx, ny));
+bindBtn('btnUp', 0, -1); bindBtn('btnDown', 0, 1); bindBtn('btnLeft', -1, 0); bindBtn('btnRight', 1, 0);
+VGInput.tap('btnPause', () => { if (state === 'playing') setPaused(true); else if (state === 'paused') setPaused(false); });
+
+window.addEventListener('keydown', e => {
+  const map = {
+    ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0], W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0]
+  };
+  if (map[e.key]) { e.preventDefault(); input(map[e.key][0], map[e.key][1]); return; }
+  if (e.key === ' ' || e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+    e.preventDefault();
+    if (state === 'ready') startRun();
+    else if (state === 'playing') setPaused(true);
+    else if (state === 'paused') setPaused(false);
+  }
+});
+VGInput.swipe(c, d => { const map = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }; input(map[d][0], map[d][1]); });
+
+/* Флеш-запрос платформы перед закрытием окна игры. */
+addEventListener('message', function (event) {
+  if (event.origin !== location.origin) return;
+  if (event.data && event.data.type === 'vg:flush') {
+    if (state === 'playing') finishSession('flush');   // закрывают окно: фиксируем итог
+  }
+});
+
+/* ---------------------------------------------------------------- отрисовка */
+function rr(x, y, w, h, r) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
+function drawBackground(t) {
+  const g = ctx.createRadialGradient(S * 0.5, S * 0.42, 30, S * 0.5, S * 0.5, S * 0.8);
+  g.addColorStop(0, '#0a2230');
+  g.addColorStop(0.55, '#07171f');
+  g.addColorStop(1, '#040e14');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, S, S);
+  ctx.strokeStyle = 'rgba(96,236,196,.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 1; i < COLS; i++) {
+    ctx.moveTo(i * GRID + 0.5, 0); ctx.lineTo(i * GRID + 0.5, S);
+    ctx.moveTo(0, i * GRID + 0.5); ctx.lineTo(S, i * GRID + 0.5);
+  }
+  ctx.stroke();
+  const haze = ctx.createLinearGradient(0, 0, 0, S * 0.45);
+  haze.addColorStop(0, 'rgba(40,226,170,' + (0.10 + 0.03 * Math.sin(t / 900)) + ')');
+  haze.addColorStop(1, 'rgba(40,226,170,0)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, S, S * 0.45);
+}
+
+function drawObstacles() {
+  obstacles.forEach(k => {
+    const parts = k.split(':'), px = +parts[0] * GRID, py = +parts[1] * GRID;
+    ctx.fillStyle = '#10242c';
+    rr(px + 1, py + 1, GRID - 2, GRID - 2, 4); ctx.fill();
+    ctx.fillStyle = '#1b3b46';
+    rr(px + 2.5, py + 2.5, GRID - 5, GRID - 6, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(70,244,186,.35)';
+    ctx.fillRect(px + 4, py + GRID - 6, GRID - 8, 2);
+  });
+}
+
+function itemPulse(item, t) {
+  const left = item.ttl ? item.ttl - (nowMs() - item.born) : Infinity;
+  return { left: left, alpha: left < 1200 ? clamp(left / 1200, 0.25, 1) : 1, grow: clamp((nowMs() - item.born) / 220, 0, 1) };
+}
+
+function drawApple(x, y, item, t) {
+  const p = itemPulse(item, t);
+  const cx = x * GRID + GRID / 2, cy = y * GRID + GRID / 2;
+  const R = GRID * 0.43 * (0.94 + 0.06 * Math.sin(t / 240)) * (0.4 + 0.6 * p.grow);
+  ctx.save();
+  ctx.globalAlpha = p.alpha;
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = '#ff2f52';
+  const g = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.2, cx, cy, R);
+  g.addColorStop(0, '#ff9aa6');
+  g.addColorStop(0.5, '#f42a44');
+  g.addColorStop(1, '#9e0f22');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = p.alpha;
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.beginPath(); ctx.ellipse(cx - R * 0.34, cy - R * 0.38, R * 0.22, R * 0.14, -0.6, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#8a5a2b'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx, cy - R * 0.92); ctx.quadraticCurveTo(cx + 1.6, cy - R * 1.24, cx + 3, cy - R * 1.34); ctx.stroke();
+  ctx.fillStyle = '#57ff9d';
+  ctx.beginPath(); ctx.ellipse(cx + 5.2, cy - R * 1.18, 3.1, 1.6, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.92, 0.7, 1.9); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawGoldApple(x, y, item, t) {
+  const p = itemPulse(item, t);
+  const cx = x * GRID + GRID / 2, cy = y * GRID + GRID / 2;
+  const R = GRID * 0.42 * (0.95 + 0.05 * Math.sin(t / 200)) * (0.4 + 0.6 * p.grow);
+  ctx.save();
+  ctx.globalAlpha = p.alpha;
+  const halo = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, R * 1.9);
+  halo.addColorStop(0, 'rgba(255,214,90,.35)');
+  halo.addColorStop(1, 'rgba(255,214,90,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.9, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,222,110,' + (0.30 + 0.22 * Math.sin(t / 170)) + ')';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.32, 0, Math.PI * 2); ctx.stroke();
+  ctx.shadowBlur = 18; ctx.shadowColor = '#ffc42e';
+  const g = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.15, cx, cy, R);
+  g.addColorStop(0, '#fff6c2');
+  g.addColorStop(0.45, '#ffd34d');
+  g.addColorStop(1, '#c68a06');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = p.alpha;
+  const spin = t / 380;
+  for (let i = 0; i < 4; i++) {
+    const a = spin + i * Math.PI / 2;
+    const r1 = R * 1.5, r2 = R * 1.85;
+    ctx.strokeStyle = 'rgba(255,240,170,' + (0.5 + 0.4 * Math.sin(t / 150 + i)) + ')';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#9a6a12'; ctx.lineWidth = 1.7;
+  ctx.beginPath(); ctx.moveTo(cx, cy - R * 0.9); ctx.quadraticCurveTo(cx + 1.6, cy - R * 1.2, cx + 3.2, cy - R * 1.3); ctx.stroke();
+  ctx.fillStyle = '#78ffb4';
+  ctx.beginPath(); ctx.ellipse(cx + 5.6, cy - R * 1.22, 3.4, 1.8, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawGem(x, y, item, t) {
+  const p = itemPulse(item, t);
+  const cx = x * GRID + GRID / 2, cy = y * GRID + GRID / 2;
+  const R = GRID * 0.42 * (0.94 + 0.06 * Math.sin(t / 210)) * (0.4 + 0.6 * p.grow);
+  ctx.save();
+  ctx.globalAlpha = p.alpha;
+  ctx.shadowBlur = 16; ctx.shadowColor = '#3dffc0';
+  const g = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+  g.addColorStop(0, '#c9ffe8');
+  g.addColorStop(0.45, '#38f7b4');
+  g.addColorStop(1, '#0b8f68');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - R * 1.15);
+  ctx.lineTo(cx + R * 0.86, cy);
+  ctx.lineTo(cx, cy + R * 1.05);
+  ctx.lineTo(cx - R * 0.86, cy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = p.alpha * 0.75;
+  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - R * 1.15); ctx.lineTo(cx, cy + R * 1.05);
+  ctx.moveTo(cx - R * 0.86, cy); ctx.lineTo(cx + R * 0.86, cy);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawItems(t) {
+  items.slice().forEach(item => {
+    if (item.ttl && nowMs() - item.born > item.ttl) { items = items.filter(it => it !== item); }
+  });
+  items.forEach(item => {
+    if (item.type === 'apple') drawApple(item.x, item.y, item, t);
+    else if (item.type === 'gold') drawGoldApple(item.x, item.y, item, t);
+    else drawGem(item.x, item.y, item, t);
+  });
+}
+
+function snakePoints(k) {
+  const out = [];
+  for (let i = 0; i < snake.length; i++) {
+    const cur = snake[i], old = prev[i] || cur;
+    let x = cur.x, y = cur.y;
+    if (Math.abs(cur.x - old.x) <= 1 && Math.abs(cur.y - old.y) <= 1) {
+      x = lerp(old.x, cur.x, k);
+      y = lerp(old.y, cur.y, k);
+    }
+    out.push({ x: x * GRID + GRID / 2, y: y * GRID + GRID / 2 });
+  }
+  return out;
+}
+
+function bodyColor(i, n) {
+  const t = n > 1 ? i / (n - 1) : 0;
+  const hue = 158 - 12 * t;
+  const light = 62 - 30 * t;
+  const sat = 82 - 8 * t;
+  return 'hsl(' + hue + ', ' + sat + '%, ' + light + '%)';
+}
+
+function drawSnake(k, t) {
+  const pts = snakePoints(k);
+  const n = pts.length;
+  if (!n) return;
+  ctx.save();
+  /* общее свечение тела */
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = 'rgba(38,246,168,.55)';
+  ctx.strokeStyle = 'rgba(38,246,168,.35)';
+  ctx.lineWidth = GRID * 0.8;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  let startedPath = false;
+  for (let i = 0; i < n; i++) {
+    const p = pts[i];
+    if (i && Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > GRID * 1.7) {
+      startedPath = false;
+    }
+    if (!startedPath) { ctx.moveTo(p.x, p.y); startedPath = true; }
+    else ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* тело по сегментам: от хвоста к голове */
+  for (let i = n - 1; i >= 1; i--) {
+    const a = pts[i], b = pts[i - 1];
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    if (dist > GRID * 1.7) continue;                       // переход через край поля
+    const taper = 1 - 0.42 * (i / Math.max(1, n - 1));
+    ctx.strokeStyle = bodyColor(i, n);
+    ctx.lineWidth = GRID * 0.82 * taper;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+
+  /* чешуя: светлые полукруги на каждом сегменте */
+  for (let i = 1; i < n; i++) {
+    const p = pts[i];
+    const s = 0.22 + 0.12 * Math.sin(i * 1.7 + t / 260);
+    ctx.strokeStyle = 'rgba(220,255,240,' + (0.10 + 0.10 * s) + ')';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, GRID * (0.16 + 0.05 * s), 0.6, 2.4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, GRID * (0.16 + 0.05 * s), 3.7, 5.5);
+    ctx.stroke();
+  }
+
+  /* голова */
+  const head = pts[0];
+  const ang = Math.atan2(dir.y, dir.x);
+  const R = GRID * 0.46;
+  ctx.save();
+  ctx.translate(head.x, head.y);
+  ctx.rotate(ang);
+  ctx.shadowBlur = 20; ctx.shadowColor = 'rgba(60,255,190,.8)';
+  const hg = ctx.createRadialGradient(-R * 0.2, -R * 0.3, R * 0.2, 0, 0, R);
+  hg.addColorStop(0, '#c9ffe8');
+  hg.addColorStop(0.45, '#3bf3ad');
+  hg.addColorStop(1, '#0e8f66');
+  ctx.fillStyle = hg;
+  rr(-R, -R * 0.9, R * 2, R * 1.8, R * 0.7);
+  ctx.fill();
+  ctx.restore();
+
+  /* глаза смотрят по направлению движения */
+  const ex = dir.x * GRID * 0.20, ey = dir.y * GRID * 0.20;
+  const nx = -dir.y, ny = dir.x;
+  for (const side of [-1, 1]) {
+    const px = head.x + ex + nx * side * GRID * 0.19;
+    const py = head.y + ey + ny * side * GRID * 0.19;
+    ctx.fillStyle = '#04130f';
+    ctx.beginPath(); ctx.arc(px, py, GRID * 0.115, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(220,255,245,.85)';
+    ctx.beginPath(); ctx.arc(px - GRID * 0.03, py - GRID * 0.035, GRID * 0.04, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* язык мелькает, когда рядом яблоко */
+  const near = items.some(it => it.type !== 'gem' && Math.hypot(it.x - snake[0].x, it.y - snake[0].y) <= 4);
+  if (near && Math.sin(t / 130) > 0.55) {
+    ctx.strokeStyle = '#ff5a7a';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(head.x + dir.x * R, head.y + dir.y * R);
+    ctx.lineTo(head.x + dir.x * (R + 8), head.y + dir.y * (R + 8));
+    ctx.stroke();
+  }
+}
+
+function drawFx() {
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy; p.vx *= 0.96; p.vy *= 0.96; p.life -= 0.022;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+  });
+  particles = particles.filter(p => p.life > 0);
+  rings.forEach(r => {
+    r.r += 2.6; r.life -= 0.045;
+    ctx.globalAlpha = Math.max(0, r.life) * 0.7;
+    ctx.strokeStyle = r.color; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.stroke();
+  });
+  rings = rings.filter(r => r.life > 0);
+  ctx.font = '700 12px "Lato",system-ui,sans-serif';
+  ctx.textAlign = 'center';
+  floats.forEach(f => {
+    f.y -= 0.65; f.life -= 0.016;
+    ctx.globalAlpha = Math.max(0, f.life);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
+  });
+  floats = floats.filter(f => f.life > 0);
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'start';
+}
+
+function drawVignette() {
+  const v = ctx.createRadialGradient(S / 2, S / 2, S * 0.36, S / 2, S / 2, S * 0.74);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(0,0,0,.55)');
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, S, S);
+  ctx.strokeStyle = 'rgba(60,240,190,.28)';
+  ctx.lineWidth = 2;
+  rr(1, 1, S - 2, S - 2, 0);
+  ctx.stroke();
+}
+
+function drawCombo(t) {
+  const m = multiplier();
+  if (combo < 2 && m <= 1) return;
+  const label = '×' + (Math.round(m * 10) / 10).toString().replace('.0', '');
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.font = '800 13px "Oswald","Lato",system-ui,sans-serif';
+  const w = ctx.measureText(label).width + 18;
+  ctx.fillStyle = m > 2 ? 'rgba(255,196,46,.18)' : 'rgba(60,240,190,.16)';
+  rr(S - w - 8, 8, w, 22, 11);
+  ctx.fill();
+  ctx.strokeStyle = m > 2 ? 'rgba(255,206,77,.65)' : 'rgba(70,240,190,.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = m > 2 ? '#ffdf8a' : '#8ef7d0';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, S - w / 2 - 8, 23);
+  ctx.restore();
+  ctx.textAlign = 'start';
+}
+
+function draw(t) {
+  const k = state === 'playing' ? clamp(acc / speed, 0, 1) : 1;
+  ctx.save();
+  if (shake > 0) {
+    ctx.translate((Math.random() - 0.5) * 9 * shake, (Math.random() - 0.5) * 9 * shake);
+  }
+  drawBackground(t);
+  drawObstacles();
+  drawItems(t);
+  drawSnake(k, t);
+  drawFx();
+  ctx.restore();
+  drawVignette();
+  drawCombo(t);
+  shake = Math.max(0, shake - 0.035);
+}
+
+/* ------------------------------------------------------------------- цикл */
+function frameLoop(ts) {
+  requestAnimationFrame(frameLoop);
+  const dt = lastTs ? Math.min(90, ts - lastTs) : 16;
+  lastTs = ts;
+  if (state === 'playing' && !window.cheatPaused && !document.hidden) {
+    elapsedMs += dt;
+    acc += dt;
+    let guard = 0;
+    while (acc >= speed && guard++ < 5) {
+      acc -= speed;
+      step();
+      if (state !== 'playing') { acc = 0; break; }
+    }
+  }
+  draw(ts);
+}
+
+/* Открытый доступ для проверок (как window.__mcx у MiniCraft). */
+window.__snake = {
+  state: () => state,
+  board: () => ({
+    state: state, snake: snake.slice(), items: items.slice(), obstacles: Array.from(obstacles),
+    apples: apples, gold: gold, score: score, level: level, speed: speed, arena: arena,
+    earned: expectedV(), sessionId: sessionId, elapsed: elapsedMs
+  }),
+  claim: () => CLAIM,
+  dir: () => ({ dir: dir, queue: queue.slice() }),
+  step: () => { if (state === 'ready') startRun(); step(); },
+  turn: (x, y) => input(x, y),
+  finish: (kind) => die(kind || 'self'),
+  setApples: (n, g) => { apples = n; gold = g || 0; },
+  spawn: (type) => spawnItem(type),
+  placeAppleAt: (x, y) => { items = items.filter(it => it.type !== 'apple'); items.push({ type: 'apple', x: x, y: y, born: nowMs(), ttl: 0 }); },
+  ready: () => ready(),
+  render: () => { showResults(); },
+  retry: () => { if (CLAIM.state === 'failed') { CLAIM.state = 'pending'; renderClaim(); postClaim({ type: 'snakeSession', game: 'snake', apples: CLAIM.apples | 0, gold: CLAIM.gold | 0, score: score | 0, time: Math.round(elapsedMs / 1000), sessionId: sessionId, reason: reason }); } }
+};
+
+/* ------------------------------------------------------------------- старт */
 ready();
+requestAnimationFrame(frameLoop);
+retryPendingClaim();
 </script>
 <script id="game-autofocus">
 /* Автофокус игрового полотна: клавиатура работает сразу, без предварительного клика. */

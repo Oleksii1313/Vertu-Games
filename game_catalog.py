@@ -105,14 +105,25 @@ GAMES = [
         'cat': ['Аркады'], 'cat_en': ['Arcades'],
         'desc': 'Легендарная змейка', 'desc_en': 'The legendary snake',
         'reward': 5, 'daily': 300, 'event': 'level',
-        'how_ru': 'Собирай еду и расти. Каждые 5 очков — 5 V (лимит 300 V в сутки).',
-        'how_en': 'Eat food and grow. Every 5 points pays 5 V (300 V daily cap).',
-        'long_ru': 'Легендарная змейка. Собирай еду, расти и не врезайся в себя.\n\nКаждые 5 очков — '
-                   'новый уровень скорости.',
-        'long_en': 'The legendary snake. Eat food, grow longer and don’t crash into yourself.\n\nEvery '
-                   '5 points raise the speed level.',
-        'controls_ru': 'Стрелки / WASD — направление',
-        'controls_en': 'Arrows / WASD — direction',
+        # Итоговая награда за забег: игра присылает отдельно обычные и золотые
+        # яблоки, сервер сам считает сумму, проверяет правдоподобность по времени
+        # и одноразовость сессии. Клиентские V не принимаются.
+        'session_claim': True, 'session_award': 'snake', 'session_max_coins': 36,
+        'apple_reward': 1, 'gold_reward': 10, 'level_every': 5, 'level_reward': 5,
+        'how_ru': 'Собирай яблоки и расти. Каждое яблоко — 1 V, каждые 5 яблок — ещё 5 V, '
+                  'редкое золотое яблоко — 10 V (лимит 300 V в сутки).',
+        'how_en': 'Eat apples and grow. Every apple pays 1 V, every 5 apples pay 5 V more, '
+                  'a rare golden apple pays 10 V (300 V daily cap).',
+        'long_ru': 'Легендарная змейка в изумрудном стиле: чешуя, свечение и плавные повороты. '
+                   'Собирай яблоки, расти и не врезайся в себя.\n\nКроме обычных яблок на поле '
+                   'появляются редкие золотые (10 V) и изумруды — временный множитель ×2. Каждые '
+                   '5 яблок — новый уровень скорости и новая арена с препятствиями.',
+        'long_en': 'The legendary snake in emerald style: scales, glow and smooth turns. Eat apples, '
+                   'grow longer and don’t crash into yourself.\n\nBesides normal apples the board '
+                   'spawns rare golden ones (10 V) and emeralds — a temporary ×2 multiplier. Every '
+                   '5 apples raise the speed level and open a new arena with obstacles.',
+        'controls_ru': 'Стрелки / WASD — направление, пробел — пауза',
+        'controls_en': 'Arrows / WASD — direction, Space — pause',
     },
     {
         'id': 'minicraft', 'name': 'MiniCraft 3D', 'name_en': 'MiniCraft 3D',
@@ -169,9 +180,12 @@ GAMES = [
         'controls_en': 'Arrows / A, D — move, Space — shoot',
     },
     {
-        # Redline снова на витрине: игра полностью реализована и должна быть
-        # в каталоге (11 игр). Скрыть снова можно флагом 'hidden': True.
+        # Redline снят с витрины по требованию владельца платформы: карточки и
+        # запуска нет. Запись остаётся в каталоге, чтобы не потерять историю —
+        # game_statistics, ledger и game_receipts ссылаются на id 'redline'.
+        # Файл игры тоже остаётся, но публичных ссылок на него больше нет.
         'id': 'redline', 'name': 'Redline: Розыск', 'name_en': 'Redline: Wanted',
+        'hidden': True,
         'file': 'games/redline.html', 'icon': 'racecar', 'tag': 'NEW',
         'cat': ['Гонки', 'Популярное'], 'cat_en': ['Racing', 'Popular'],
         'desc': 'Городские гонки и погони', 'desc_en': 'City racing and police pursuits',
