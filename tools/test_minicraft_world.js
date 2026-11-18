@@ -104,6 +104,7 @@ window.__world = () => ({
   F, mcxVillages, mcxChestSpots, mcxCoinSpots, mcxWaterList, mcxWaterCells, mcxWaterMesh,
   mcxWaterAt, mcxGet, cs, ir, mcxMakeVillager, mcxSwingVillager, mcxRestVillager, mcxShade,
   mcxWorldStats, mcxClearEntities,
+  mcxStandAt, mcxFreeSpot, mcxPathTo, mcxVillagerStep, mcxUpdateVillagers,
   startWorld: Kh, playGame: Zl, mc: () => Mt, Ht,
   ids: { air: Ai, grass: Vh, ground: Gh, stone: Hh, sand: Wh, wood: Xh, leaf: Bl, coin: qh, bed: Vl },
   ids2: { brick: SB, cobble: CB, beam: DW, plank: PL, tile: RF, plaster: PS, glass: GL, slate: SL },
@@ -318,6 +319,29 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // У всех живых NPC в мире тоже есть руки.
   const live = W.F.villagers.map((x) => x.mesh.userData.arms || []);
   check('у всех заспавненных жителей есть руки', live.length > 0 && live.every((a) => a.length === 2), live.length);
+
+  /* ------------------------------------- навигация жителей в живом мире */
+  W.playGame();
+  await wait(30);
+  const groundOf = (npc) => W.ir(Math.floor(npc.x), Math.floor(npc.z));
+  const misplaced = W.F.villagers.filter((npc) => !W.mcxStandAt(npc.x, npc.z, groundOf(npc)));
+  check('при спавне ни один житель не стоит в блоке или в воде', misplaced.length === 0, misplaced.length);
+
+  const beforePos = W.F.villagers.map((npc) => ({ npc, x: npc.x, z: npc.z }));
+  frames(240);
+  const walked = beforePos.filter(({ npc, x, z }) => Math.hypot(npc.x - x, npc.z - z) > 0.5).length;
+  check('жители гуляют по деревне', walked >= Math.ceil(W.F.villagers.length * 0.4),
+    [walked, W.F.villagers.length]);
+
+  const clipped = W.F.villagers.filter((npc) => !W.mcxStandAt(npc.x, npc.z, groundOf(npc)));
+  check('во время прогулки жители не входят в блоки', clipped.length === 0, clipped.length);
+
+  const sunk = W.F.villagers.filter((npc) => Math.abs(npc.y - groundOf(npc)) > 1.4);
+  check('жители не проваливаются под землю', sunk.length === 0,
+    sunk.map((npc) => Number((npc.y - groundOf(npc)).toFixed(2))));
+
+  const stuck = W.F.villagers.filter((npc) => (npc.stuck || 0) > 2);
+  check('нет жителей, застрявших навсегда', stuck.length === 0, stuck.map((npc) => npc.stuck));
 
   /* ------------------------------------------------ вода анимируется */
   W.playGame();
