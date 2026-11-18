@@ -24,6 +24,9 @@ GAMES = [
         'desc': 'Классическая аркада с птицей-путешественницей',
         'desc_en': 'The classic arcade with a travelling bird',
         'reward': 2, 'daily': 400, 'event': 'pipe',
+        # Итог забега считает сервер: клиент присылает только число пройденных труб.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 60,
+        'session_units_per_sec': 0.8,
         'how_ru': 'Нажимай на экран или пробел, чтобы взмахивать крыльями. Каждая пройденная труба '
                   'приносит 2 V (лимит 400 V в сутки).',
         'how_en': 'Tap the screen or press space to flap. Every pipe you pass pays 2 V '
@@ -43,6 +46,9 @@ GAMES = [
         'cat': ['Головоломки'], 'cat_en': ['Puzzles'],
         'desc': 'Логическая головоломка с плитками', 'desc_en': 'A logic puzzle with sliding tiles',
         'reward': 3, 'daily': 300, 'event': 'merge',
+        # Единица — блок из 100 очков; сумму V считает сервер.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 40,
+        'session_units_per_sec': 0.35,
         'how_ru': 'Двигай плитки стрелками или свайпами. Каждые 100 очков — 3 V (лимит 300 V в сутки).',
         'how_en': 'Move tiles with arrows or swipes. Every 100 points pays 3 V (300 V daily cap).',
         'long_ru': 'Логическая игра-головоломка. Сдвигай плитки стрелками или свайпами и объединяй '
@@ -58,6 +64,9 @@ GAMES = [
         'cat': ['Экшен', 'Популярное'], 'cat_en': ['Action', 'Popular'],
         'desc': 'Бесконечный раннер по платформам', 'desc_en': 'An endless platform runner',
         'reward': 5, 'daily': 400, 'event': 'distance',
+        # Единица — 500 метров дистанции.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 24,
+        'session_units_per_sec': 0.25,
         'how_ru': 'Беги вправо, прыгай по платформам и уворачивайся. За каждые 500 метров — 5 V '
                   '(лимит 400 V в сутки).',
         'how_en': 'Run right, jump across platforms and dodge. Every 500 metres pays 5 V '
@@ -75,6 +84,9 @@ GAMES = [
         'cat': ['Аркады'], 'cat_en': ['Arcades'],
         'desc': 'Ретро-теннис с комбо', 'desc_en': 'Retro tennis with combos',
         'reward': 2, 'daily': 300, 'event': 'combo',
+        # Единица — комбо из 5 отбитий.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 50,
+        'session_units_per_sec': 0.6,
         'how_ru': 'Отбивай мяч ракеткой. Каждое комбо из 5 отбитий — 2 V (лимит 300 V в сутки).',
         'how_en': 'Return the ball with your paddle. Every 5-hit combo pays 2 V (300 V daily cap).',
         'long_ru': 'Ретро-теннис. Отбивай мяч ракеткой, набирай комбо и не пропускай голы.\n\nКаждые '
@@ -90,6 +102,9 @@ GAMES = [
         'cat': ['Шутеры', 'Экшен'], 'cat_en': ['Shooters', 'Action'],
         'desc': 'Космический шутер с волнами врагов', 'desc_en': 'A space shooter with enemy waves',
         'reward': 5, 'daily': 500, 'event': 'wave',
+        # Единица — пройденная волна.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 20,
+        'session_units_per_sec': 0.2,
         'how_ru': 'Сбивай врагов и проходи волны. Каждая волна — 5 V (лимит 500 V в сутки).',
         'how_en': 'Blast enemies and clear waves. Each wave pays 5 V (500 V daily cap).',
         'long_ru': 'Космический шутер: управляй кораблём, сбивай врагов и уворачивайся от атак.\n\n'
@@ -140,18 +155,24 @@ GAMES = [
                   'ровно 3 V (до 150 монет за сессию, лимит 450 V в сутки).',
         'how_en': 'Collect green V coins in villages, farms and forests: each coin pays exactly '
                   '3 V (up to 150 coins per session, 450 V daily cap).',
-        'long_ru': 'Кубический мир 256 × 256: шесть деревень с домами, дорогами, фермами, '
-                   'колодцами и заборами, дружелюбные жители, которые подсказывают дорогу к '
-                   'сундукам, и монстры трёх видов — зомби, скелеты и пауки.\n\n'
+        'long_ru': 'Зелёные озёра и реки с песчаными берегами, остров с кладом, деревянные и '
+                   'каменные мосты, причалы, сторожевые башни, мельница, рынок, небольшой замок, '
+                   'руины и пещеры. Шесть деревень с домами, дорогами, фермами, колодцами и '
+                   'заборами, дороги между поселениями, ели, берёзы, цветы, грибы и валуны. '
+                   'Дружелюбные жители с руками и походкой подсказывают дорогу к сундукам, '
+                   'а монстры трёх видов — зомби, скелеты и пауки — охраняют опасные окраины.\n\n'
                    'Каждая зелёная монета V даёт ровно 3 V. Монеты лежат на дорогах, фермах, '
                    'в лесах, у деревень и в опасных окраинах мира; сундуки открываются один '
                    'раз за сессию. Каждую минуту врагов становится больше, а в конце — экран '
                    'результатов с числом монет, V, побед, сундуков и временем.\n\n'
                    'WASD — движение, мышь — обзор, пробел — прыжок, ЛКМ — ломать / атаковать, '
                    'ПКМ — строить, 1–6 — выбор блока. Раунд длится 3 минуты, Esc — пауза.',
-        'long_en': 'A 256 × 256 voxel world: six villages with houses, roads, farms, wells and '
-                   'fences, friendly villagers who point the way to chests, and three kinds of '
-                   'monsters — zombies, skeletons and spiders.\n\n'
+        'long_en': 'Green lakes and rivers with sandy shores, an island with a hidden chest, '
+                   'wooden and stone bridges, docks, watchtowers, a windmill, a market, a small '
+                   'castle, ruins and caves. Six villages with houses, roads, farms, wells and '
+                   'fences, roads between settlements, pines, birches, flowers, mushrooms and '
+                   'boulders. Friendly villagers with arms and a walking cycle point the way to '
+                   'chests, while zombies, skeletons and spiders guard the dangerous edges.\n\n'
                    'Every green V coin pays exactly 3 V. Coins lie along roads, on farms, in '
                    'forests, around villages and in the dangerous edges of the map; chests can '
                    'be opened once per session. Every minute brings more enemies, and at the '
@@ -168,6 +189,9 @@ GAMES = [
         'cat': ['Аркады', 'Популярное'], 'cat_en': ['Arcades', 'Popular'],
         'desc': 'Прыжки по платформам вверх', 'desc_en': 'Bounce your way upwards',
         'reward': 2, 'daily': 400, 'event': 'metre',
+        # Единица — 100 метров подъёма.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 40,
+        'session_units_per_sec': 0.45,
         'how_ru': 'Прыгай всё выше. Каждые 100 метров — 2 V (лимит 400 V в сутки).',
         'how_en': 'Climb as high as you can. Every 100 metres pays 2 V (400 V daily cap).',
         'long_ru': 'Прыгун отскакивает сам: направляй его стрелками или A/D, стреляй пробелом. Зелёные '
@@ -230,6 +254,9 @@ GAMES = [
         'cat': ['Приключения', 'Популярное'], 'cat_en': ['Adventure', 'Popular'],
         'desc': 'Фудтрак-вездеход по дорогам Аурелии', 'desc_en': 'A food-truck rover across Aurelia',
         'reward': 6, 'daily': 300, 'event': 'order',
+        # Единица — выполненный заказ.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 12,
+        'session_units_per_sec': 0.12,
         'how_ru': 'Выполненные заказы приносят 6 V (лимит 300 V в сутки).',
         'how_en': 'Completed orders pay 6 V (300 V daily cap).',
         'long_ru': 'Космокухня: Дороги Аурелии. Леса четырёх биомов, десять деревень с рынками и '
@@ -287,6 +314,11 @@ def public_games():
             'icon': g['icon'], 'tag': g['tag'], 'cat': g['cat'], 'cat_en': g['cat_en'],
             'desc': g['desc'], 'desc_en': g['desc_en'], 'reward': g['reward'],
             'event': g['event'], 'daily': g['daily'], 'how_ru': g['how_ru'], 'how_en': g['how_en'],
+            # Игры с итоговой наградой сессии: платформа должна знать, что сумму
+            # считает сервер, а клиент присылает только «единицы» события.
+            'sessionClaim': bool(g.get('session_claim')),
+            'sessionMaxUnits': g.get('session_max_units'),
+            'unitReward': g['reward'],
             'long_ru': g['long_ru'], 'long_en': g['long_en'],
             'controls_ru': g['controls_ru'], 'controls_en': g['controls_en'],
         })

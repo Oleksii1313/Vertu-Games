@@ -4909,14 +4909,16 @@ function Jh() {
 
 function $h() {
   mcxDrawCoins();
+  mcxAnimateWater(F ? F.elapsed : 0);
 }
 
+var mcxLocalCoins = 0;
 function Wg(i) {
-  window.parent !== window && window.parent.postMessage({
-    type: "addCoins",
-    amount: i,
-    game: "minicraft"
-  }, Hl)
+  /* Раньше каждая монета уходила в каталог как addCoins с суммой от клиента:
+     это давало вторую, «фоновую» выплату помимо итоговой сессии и расходилось
+     с балансом. Теперь монеты копятся локально и уходят одним итогом
+     minicraftSession, а сумму V считает сервер (одна монета = 3 V). */
+  mcxLocalCoins = i;
 }
 
 function Xg() {
@@ -5557,6 +5559,7 @@ function mcxPlaceCoin(x, y, z) {
   if (x < 2 || z < 2 || x >= ct - 2 || z >= ct - 2) return !1;
   if (y < 1 || y >= dn - 2) return !1;
   if (cs(x, y, z) !== Ai || cs(x, y - 1, z) === Ai || cs(x, y - 1, z) === qh) return !1;
+  if (mcxWaterAt(x, z) && y <= mcxWaterAt(x, z)) return !1;   // под водой монет нет
   if (!Rt(x, y - 1, z)) return !1;
   if (F.coins.some(function (c) { return c.x === x && c.y === y && c.z === z; })) return !1;
   ui(x, y, z, qh);
@@ -5699,6 +5702,474 @@ function mcxBench(cx, cz, base) {
   mcxSet(cx + 1, base, cz, Xh);
 }
 
+/* ============================================================================
+   ВОДА, ДОРОГИ, ДОСТОПРИМЕЧАТЕЛЬНОСТИ И РАСТИТЕЛЬНОСТЬ
+   ----------------------------------------------------------------------------
+   Базовая карта (высоты + деревья) генерируется движком; этот блок дополняет её
+   до «живого» мира: озёра, реки, пруды, ручьи, песчаные берега, острова,
+   деревянные и каменные мосты, причалы, сторожевые башни, мельница, рынок,
+   замок, руины, пещеры, дороги между поселениями, заборы и разная зелень.
+
+   Вода реализована без новых блоков: чаша вырезается до дна, вода — это воздух,
+   поверхность рисуется отдельным прозрачным InstancedMesh (один draw call на
+   всю карту). Поэтому физика игрока, монеты и постройки продолжают работать с
+   существующей системой блоков, а карта получает озёра и реки.
+   ========================================================================== */
+var mcxWaterCells = {};     // "x,z" -> уровень поверхности воды
+/* Счётчики наполнения: сколько водоёмов, построек и зелени реально создано.
+   Их проверяют автотесты, а отчёт берёт точные числа. */
+var mcxWorldStats = { lakes: 0, rivers: 0, bridges: 0, docks: 0, towers: 0, windmills: 0,
+                      markets: 0, castles: 0, ruins: 0, caves: 0, islands: 0,
+                      pines: 0, birches: 0, details: 0 };
+function mcxCount(key, n) { mcxWorldStats[key] = (mcxWorldStats[key] || 0) + (n == null ? 1 : n); }
+var mcxWaterList = [];      // [{x, z, level}]
+var mcxWaterMesh = null;    // визуальная поверхность (одна на карту)
+var mcxWaterMat = null;
+
+function mcxWaterAt(x, z) { return mcxWaterCells[x + ',' + z] || 0; }
+
+function mcxInVillage(x, z, pad) {
+  for (var i = 0; i < mcxVillages.length; i++) {
+    var v = mcxVillages[i];
+    if (Math.hypot(x - v.x, z - v.z) < v.r + (pad == null ? 3 : pad)) return true;
+  }
+  return false;
+}
+
+/* Вырезать чашу: дно, ровные стенки и песчаная кромка по краю. */
+function mcxCarveBasin(cx, cz, r, depth, level) {
+  for (var dx = -r - 2; dx <= r + 2; dx++)
+    for (var dz = -r - 2; dz <= r + 2; dz++) {
+      var d = Math.hypot(dx, dz) / r;
+      if (d > 1.34) continue;
+      var x = cx + dx, z = cz + dz;
+      if (x < 4 || z < 4 || x >= ct - 4 || z >= ct - 4) continue;
+      if (mcxInVillage(x, z, 3)) continue;
+      if (d <= 1) {
+        mcxCount('water', 0);
+        var bed = Math.max(2, level - Math.max(1, Math.round(depth * (1 - d * d * .7))));
+        for (var y = bed + 1; y < dn - 1; y++) if (mcxGet(x, y, z) !== Ai) mcxSet(x, y, z, Ai);
+        mcxSet(x, bed, z, Gh);
+        mcxWaterCells[x + ',' + z] = level;
+        mcxWaterList.push({ x: x, z: z, level: level });
+      } else {
+        // Берег: песок и мягкий спуск, чтобы из воды всегда можно было выйти.
+        var h = ir(x, z);
+        if (d <= 1.3) {                     // песчаная кромка вокруг воды
+          var beach = Math.max(level - 1, Math.min(h - 1, level + 1));
+          if (mcxGet(x, beach, z) !== Ai) mcxSet(x, beach, z, Wh);
+        }
+        if (h > level + 1) for (var k = level + 1; k < h; k++) mcxSet(x, k, z, Ai);
+        var top = Math.min(level + 1, Math.max(level - 1, h));
+        mcxSet(x, top - 1, z, Wh);
+        for (var g = top; g < dn - 1; g++) if (mcxGet(x, g, z) !== Ai) mcxSet(x, g, z, Ai);
+      }
+    }
+}
+
+/* Река/ручей: извилистая линия, вырезанная по точкам. */
+function mcxCarveRiver(x0, z0, x1, z1, width, wiggle) {
+  var steps = Math.max(Math.abs(x1 - x0), Math.abs(z1 - z0));
+  for (var s = 0; s <= steps; s += 1) {
+    var t = s / steps;
+    var cx = Math.round(x0 + (x1 - x0) * t + Math.sin(t * 6.4) * wiggle);
+    var cz = Math.round(z0 + (z1 - z0) * t + Math.cos(t * 4.7) * wiggle);
+    if (cx < 6 || cz < 6 || cx >= ct - 6 || cz >= ct - 6) continue;
+    if (mcxInVillage(cx, cz, 4)) continue;
+    var level = mcxClamp(ir(cx, cz), 5, dn - 8);
+    mcxCarveBasin(cx, cz, Math.max(2, Math.round(width / 2)), 2, level);
+  }
+}
+
+/* Поверхность воды: полупрозрачные плитки на уровне воды + лёгкая волна. */
+function mcxBuildWaterMesh() {
+  if (mcxWaterMesh) { Ht.remove(mcxWaterMesh); mcxWaterMesh = null; }
+  if (!mcxWaterList.length) return;
+  if (!mcxWaterMat)
+    mcxWaterMat = new zn({ color: 0x2f86c8, transparent: true, opacity: .66,
+                           emissive: 0x081f36, depthWrite: false });
+  var mesh = new Zi(new cn(1, .9, 1), mcxWaterMat, mcxWaterList.length);
+  var m = new st();
+  for (var i = 0; i < mcxWaterList.length; i++) {
+    var c = mcxWaterList[i];
+    m.identity();
+    m.setPosition(c.x + .5, c.level + .45, c.z + .5);
+    mesh.setMatrixAt(i, m);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.userData.mcxWater = true;
+  mesh.renderOrder = 2;
+  Ht.add(mesh);
+  mcxWaterMesh = mesh;
+}
+
+/* Волна на воде: вызывается из общего кадра отрисовки. */
+function mcxAnimateWater(elapsed) {
+  if (!mcxWaterMesh) return;
+  mcxWaterMesh.position.y = Math.sin(elapsed * 1.4) * .045;
+}
+
+/* ------------------------------------------------ мосты, причалы, дороги */
+function mcxDeck(x, z, level, along, rail) {
+  mcxSet(x, level, z, Xh);
+  if (!rail) return;
+  if (along === 'x') {
+    mcxSet(x, level + 1, z - 1, Xh);
+    mcxSet(x, level + 1, z + 1, Xh);
+  } else {
+    mcxSet(x - 1, level + 1, z, Xh);
+    mcxSet(x + 1, level + 1, z, Xh);
+  }
+}
+
+/* Мост через воду по линии дороги: настил вровень с берегом, перила. */
+function mcxBridgeLine(x0, z0, x1, z1) {
+  var steps = Math.max(Math.abs(x1 - x0), Math.abs(z1 - z0));
+  var along = Math.abs(x1 - x0) >= Math.abs(z1 - z0) ? 'x' : 'z';
+  var inWater = false, level = 0, made = 0;
+  for (var s = 0; s <= steps; s++) {
+    var t = s / steps;
+    var x = Math.round(x0 + (x1 - x0) * t), z = Math.round(z0 + (z1 - z0) * t);
+    var w = mcxWaterAt(x, z);
+    if (!w) { inWater = false; continue; }
+    level = w;
+    mcxCount('bridges');
+    mcxDeck(x, z, level, along, s % 2 === 0);
+    if (along === 'x') mcxDeck(x, z + 1, level, along, false);
+    else mcxDeck(x + 1, z, level, along, false);
+    if (!inWater) {           // начало моста: крепкие каменные быки
+      mcxSet(x, level - 1, z, Hh);
+      made++;
+    }
+    inWater = true;
+  }
+  return made;
+}
+
+/* Дорога между двумя точками: ровная тропа по рельефу, мосты над водой. */
+function mcxRoad(x0, z0, x1, z1) {
+  var steps = Math.max(Math.abs(x1 - x0), Math.abs(z1 - z0));
+  for (var s = 0; s <= steps; s++) {
+    var t = s / steps;
+    var x = Math.round(x0 + (x1 - x0) * t), z = Math.round(z0 + (z1 - z0) * t);
+    if (x < 5 || z < 5 || x >= ct - 5 || z >= ct - 5) continue;
+    var w = mcxWaterAt(x, z);
+    if (w) {
+      mcxSet(x, w, z, Xh);                        // настил моста
+      mcxSet(x, w + 1, z, Ai);
+      if (s % 6 === 3) mcxSet(x, w + 1, z + 1, Xh);
+      continue;
+    }
+    var h = ir(x, z);
+    if (h < 3 || h >= dn - 4) continue;
+    mcxSet(x, h - 1, z, Gh);
+    if (s % 9 === 4) mcxLantern(x, z, h);
+    if (s % 14 === 6) mcxCoinSpots.push({ x: x, y: h, z: z });
+  }
+}
+
+function mcxDock(x, z, dx, dz, len, level) {
+  mcxCount('docks');
+  for (var i = 1; i <= len; i++) {
+    var px = x + dx * i, pz = z + dz * i;
+    mcxSet(px, level, pz, Xh);
+    if (i % 2 === 0) {                     // сваи в воде
+      mcxSet(px, level - 1, pz, Xh);
+      mcxSet(px, level - 2, pz, Xh);
+    }
+  }
+  var ex = x + dx * (len + 1), ez = z + dz * (len + 1);
+  mcxCoinSpots.push({ x: ex, y: level + 1, z: ez });
+  mcxChestSpots.push({ x: ex + .5, y: level + 1, z: ez + .5, kind: 'coins' });
+}
+
+/* ---------------------------------------------------------- архитектура */
+function mcxTower(cx, cz, base, h) {
+  mcxCount('towers');
+  for (var y = 1; y <= h; y++)
+    for (var dx = -1; dx <= 1; dx++)
+      for (var dz = -1; dz <= 1; dz++) {
+        var edge = Math.abs(dx) === 1 || Math.abs(dz) === 1;
+        if (edge) mcxSet(cx + dx, base + y, cz + dz, y > h * .6 ? Hh : Xh);
+        else mcxSet(cx + dx, base + y, cz + dz, Ai);
+      }
+  for (var dx2 = -2; dx2 <= 2; dx2++)
+    for (var dz2 = -2; dz2 <= 2; dz2++) {
+      mcxSet(cx + dx2, base + h, cz + dz2, Xh);
+      if (Math.abs(dx2) === 2 || Math.abs(dz2) === 2) mcxSet(cx + dx2, base + h + 1, cz + dz2, Hh);
+    }
+  mcxSet(cx, base + 3, cz, Ai);          // вход
+  mcxSet(cx, base + 2, cz, Ai);
+  mcxSet(cx + 2, base + h + 2, cz, Bl);  // флажок
+  mcxChestSpots.push({ x: cx + .5, y: base + h + 1, z: cz + .5, kind: 'treasure' });
+  mcxCoinSpots.push({ x: cx + 1, y: base + h + 1, z: cz + 1 });
+}
+
+function mcxWindmill(cx, cz, base) {
+  mcxCount('windmills');
+  mcxFlatten(cx, cz, 4, base);
+  for (var y = 1; y <= 6; y++) {
+    var r = y > 4 ? 1 : 2;
+    for (var dx = -r; dx <= r; dx++)
+      for (var dz = -r; dz <= r; dz++) {
+        var edge = Math.abs(dx) === r || Math.abs(dz) === r;
+        mcxSet(cx + dx, base + y - 1, cz + dz, edge ? Hh : Ai);
+      }
+  }
+  for (var dz2 = -2; dz2 <= 2; dz2++) mcxSet(cx, base + 7, cz + dz2, Xh);      // вал
+  for (var k = 1; k <= 4; k++) {                                              // лопасти
+    mcxSet(cx - k, base + 7 + k, cz, Xh);
+    mcxSet(cx + k, base + 7 + k, cz, Xh);
+    mcxSet(cx - k, base + 7 - k, cz, Xh);
+    mcxSet(cx + k, base + 7 - k, cz, Xh);
+  }
+  mcxVillages[0] && mcxVillages[0].villagers.push({ x: cx + 3, z: cz + 2 });
+  mcxCoinSpots.push({ x: cx + 1, y: base, z: cz + 3 });
+}
+
+function mcxMarket(cx, cz, base) {
+  mcxCount('markets');
+  for (var i = 0; i < 4; i++) {
+    var ax = cx + (i % 2) * 6 - 3, az = cz + Math.floor(i / 2) * 6 - 3;
+    for (var dx = 0; dx <= 2; dx++)
+      for (var dz = 0; dz <= 1; dz++) mcxSet(ax + dx, base, az + dz, Xh);
+    mcxSet(ax, base + 1, az, Xh); mcxSet(ax + 2, base + 1, az, Xh);
+    mcxSet(ax, base + 2, az, i % 2 ? Bl : Wh);
+    mcxSet(ax + 1, base + 2, az, i % 2 ? Bl : Wh);
+    mcxSet(ax + 2, base + 2, az, i % 2 ? Bl : Wh);
+    mcxCoinSpots.push({ x: ax + 1, y: base + 1, z: az + 2 });
+  }
+  mcxBench(cx, cz, base);
+  mcxBench(cx + 1, cz + 1, base);
+  for (var v = 0; v < mcxVillages.length; v++)
+    if (Math.hypot(mcxVillages[v].x - cx, mcxVillages[v].z - cz) < 24)
+      mcxVillages[v].villagers.push({ x: cx + 2, z: cz - 1 }, { x: cx - 2, z: cz + 2 });
+}
+
+function mcxCastle(cx, cz, base) {
+  mcxCount('castles');
+  mcxFlatten(cx, cz, 9, base);
+  for (var dx = -8; dx <= 8; dx++)
+    for (var dz = -8; dz <= 8; dz++) {
+      var wall = Math.abs(dx) === 8 || Math.abs(dz) === 8;
+      if (!wall) { mcxSet(cx + dx, base, cz + dz, Gh); continue; }
+      for (var y = 1; y <= 5; y++) mcxSet(cx + dx, base + y - 1, cz + dz, Hh);
+      if ((dx + dz) % 2 === 0) mcxSet(cx + dx, base + 5, cz + dz, Hh);   // зубцы
+    }
+  for (var g = -1; g <= 1; g++) {                                    // ворота
+    for (var gy = 1; gy <= 3; gy++) mcxSet(cx + g, base + gy - 1, cz - 8, Ai);
+    mcxSet(cx + g, base + 4, cz - 8, Hh);
+  }
+  var corners = [[-8, -8], [8, -8], [-8, 8], [8, 8]];
+  for (var c = 0; c < corners.length; c++) mcxTower(cx + corners[c][0], cz + corners[c][1], base + 4, 4);
+  mcxHouse(cx - 5, cz + 1, 5, 4, 3, base, 1, true);
+  mcxHouse(cx + 1, cz + 1, 4, 4, 3, base, 2, false);
+  mcxChestSpots.push({ x: cx + .5, y: base, z: cz + 5.5, kind: 'treasure' });
+  for (var v = 0; v < mcxVillages.length; v++)
+    if (mcxVillages[v].index === 2) mcxVillages[v].villagers.push({ x: cx + 1, z: cz + 4 });
+}
+
+function mcxRuins(cx, cz, base) {
+  mcxCount('ruins');
+  for (var dx = -5; dx <= 5; dx++)
+    for (var dz = -5; dz <= 5; dz++) {
+      if (Math.hypot(dx, dz) > 5) continue;
+      mcxSet(cx + dx, base - 1, cz + dz, Gh);
+      for (var y = base; y < base + 4; y++) if (mcxGet(cx + dx, y, cz + dz) !== Ai) mcxSet(cx + dx, y, cz + dz, Ai);
+    }
+  for (var k = 0; k < 26; k++) {                 // осыпавшиеся стены
+    var ax = cx + mcxInt(-5, 5), az = cz + mcxInt(-5, 5);
+    var hh = mcxInt(1, 3);
+    for (var yy = 1; yy <= hh; yy++) mcxSet(ax, base + yy - 1, az, mcxRnd() > .5 ? Hh : Vh);
+  }
+  mcxSet(cx + 2, base, cz - 2, Bl);
+  mcxSet(cx - 3, base, cz + 2, Bl);
+  mcxChestSpots.push({ x: cx + .5, y: base, z: cz + 3.5, kind: 'treasure' });
+  mcxCoinSpots.push({ x: cx - 2, y: base, z: cz - 2 });
+}
+
+/* Пещера: вход в склоне холма, короткий тоннель и сундук в глубине. */
+function mcxCave(cx, cz) {
+  var h = ir(cx, cz);
+  if (h < 9) return;
+  mcxCount('caves');
+  var dir = mcxRnd() > .5 ? 1 : -1;
+  for (var d = 0; d < 9; d++) {
+    var x = cx + dir * d;
+    var y = h - 1;
+    for (var w = -1; w <= 1; w++) {
+      mcxSet(x, y, cz + w, Ai);
+      mcxSet(x, y + 1, cz + w, Ai);
+      mcxSet(x, y + 2, cz + w, Hh);      // потолок
+      mcxSet(x, y - 1, cz + w, Gh);      // пол
+    }
+    if (d === 8) {
+      mcxChestSpots.push({ x: cx + dir * 9 + .5, y: h - 1, z: cz + .5, kind: 'treasure' });
+      mcxCoinSpots.push({ x: cx + dir * 8, y: h - 1, z: cz + 1 });
+    }
+  }
+  mcxSet(cx, h + 1, cz, Hh);
+  mcxSet(cx, h + 2, cz, Ai);
+}
+
+/* Остров внутри озера: песчаная отмель, монеты и сундук. */
+function mcxIsland(cx, cz, level) {
+  mcxCount('islands');
+  for (var dx = -3; dx <= 3; dx++)
+    for (var dz = -3; dz <= 3; dz++) {
+      if (Math.hypot(dx, dz) > 3) continue;
+      var x = cx + dx, z = cz + dz;
+      delete mcxWaterCells[x + ',' + z];
+      for (var i = mcxWaterList.length - 1; i >= 0; i--)
+        if (mcxWaterList[i].x === x && mcxWaterList[i].z === z) mcxWaterList.splice(i, 1);
+      mcxSet(x, level, z, Wh);
+      for (var y = level + 1; y < dn - 1; y++) if (mcxGet(x, y, z) !== Ai) mcxSet(x, y, z, Ai);
+    }
+  mcxSet(cx, level + 1, cz, Xh);
+  mcxSet(cx + 1, level + 1, cz, Xh);
+  mcxChestSpots.push({ x: cx + 1.5, y: level + 1, z: cz + .5, kind: 'treasure' });
+  for (var c = 0; c < 4; c++) mcxCoinSpots.push({ x: cx + mcxInt(-2, 2), y: level + 1, z: cz + mcxInt(-2, 2) });
+}
+
+/* ---------------------------------------------------------- растительность */
+function mcxPine(x, z, h) {
+  var y = ir(x, z);
+  if (y < 3 || y >= dn - 10 || mcxWaterAt(x, z)) return;
+  mcxCount('pines');
+  for (var k = 1; k <= 4; k++) mcxSet(x, y + k - 1, z, Xh);
+  for (var r = 2; r >= 0; r--)
+    for (var dx = -r; dx <= r; dx++)
+      for (var dz = -r; dz <= r; dz++) {
+        if (Math.abs(dx) + Math.abs(dz) > r + 1) continue;
+        if (dx === 0 && dz === 0) continue;
+        if (mcxGet(x + dx, y + 3 + (2 - r), z + dz) === Ai) mcxSet(x + dx, y + 3 + (2 - r), z + dz, Bl);
+      }
+  mcxSet(x, y + 5, z, Bl);
+}
+
+function mcxBirch(x, z) {
+  var y = ir(x, z);
+  if (y < 3 || y >= dn - 8 || mcxWaterAt(x, z)) return;
+  mcxCount('birches');
+  for (var k = 1; k <= 4; k++) mcxSet(x, y + k - 1, z, Wh);
+  for (var dx = -1; dx <= 1; dx++)
+    for (var dz = -1; dz <= 1; dz++)
+      for (var dy = 2; dy <= 4; dy++)
+        if (mcxGet(x + dx, y + dy, z + dz) === Ai) mcxSet(x + dx, y + dy, z + dz, Bl);
+}
+
+/* Мелкая зелень: кусты и цветы блоками, грибы и камни — маленькими мешами. */
+function mcxFloraDetail(x, z) {
+  var y = ir(x, z);
+  if (y < 3 || y >= dn - 4 || mcxWaterAt(x, z) || mcxInVillage(x, z, 1)) return;
+  if (mcxGet(x, y, z) !== Ai) return;
+  var kind = mcxInt(0, 9);
+  var mesh;
+  mcxCount('details');
+  if (kind < 4) {
+    mcxSet(x, y, z, Bl);                    // куст/кочка
+    return;
+  }
+  if (kind < 7) {                           // цветы
+    mesh = mcxBox(.16, .3, .16, mcxRnd() > .5 ? 0xe4576f : 0xf2c14e, true);
+    mesh.position.set(x + .5, y + .15, z + .5);
+  } else if (kind < 9) {                    // грибы
+    mesh = mcxBox(.2, .22, .2, 0xd8cbb4, true);
+    mesh.position.set(x + .55, y + .11, z + .45);
+  } else {                                  // валун
+    mesh = mcxBox(.5, .34, .42, 0x8d9299);
+    mesh.position.set(x + .5, y + .17, z + .5);
+  }
+  if (mesh) Ht.add(mesh);
+}
+
+function mcxBakeFlora() {
+  var i;
+  for (i = 0; i < mcxVillages.length; i++) {
+    var v = mcxVillages[i];
+    for (var k = 0; k < 26; k++) {
+      var a = mcxRnd() * Math.PI * 2, r = v.r + 3 + mcxRnd() * 22;
+      var x = Math.round(v.x + Math.cos(a) * r), z = Math.round(v.z + Math.sin(a) * r);
+      if (x < 5 || z < 5 || x >= ct - 5 || z >= ct - 5) continue;
+      var pick = mcxInt(0, 9);
+      if (pick < 3) mcxPine(x, z);
+      else if (pick < 5) mcxBirch(x, z);
+      else mcxFloraDetail(x, z);
+    }
+  }
+  for (i = 0; i < 120; i++) {
+    var fx = mcxInt(6, ct - 7), fz = mcxInt(6, ct - 7);
+    var kind = mcxInt(0, 9);
+    if (kind < 3) mcxFloraDetail(fx, fz);
+    else if (kind < 5) mcxBirch(fx, fz);
+    else if (kind < 7) mcxPine(fx, fz);
+  }
+}
+
+/* ------------------------------------------------------- сборка ландшафта */
+function mcxBakeLandmarks() {
+  var i, v;
+  // Мосты и дороги между соседними поселениями.
+  for (i = 0; i + 1 < mcxVillages.length; i++) {
+    var a = mcxVillages[i], b = mcxVillages[i + 1];
+    if (Math.hypot(a.x - b.x, a.z - b.z) < 130) mcxRoad(a.x, a.z, b.x, b.z);
+  }
+  // Озёра: два больших и два малых.
+  var lakes = [
+    { x: 128 + 14, z: 128 - 52, r: 16, depth: 3 },
+    { x: 128 - 62, z: 128 - 6, r: 13, depth: 3 },
+    { x: 128 + 46, z: 128 + 44, r: 9, depth: 2 },
+    { x: 128 - 34, z: 128 + 62, r: 8, depth: 2 }
+  ];
+  for (i = 0; i < lakes.length; i++) {
+    var L = lakes[i];
+    if (mcxInVillage(L.x, L.z, L.r)) continue;
+    var level = mcxClamp(ir(L.x, L.z) - 1, 5, dn - 8);
+    mcxCount('lakes');
+    mcxCarveBasin(L.x, L.z, L.r, L.depth, level);
+    if (i === 0) mcxIsland(L.x + 5, L.z - 3, level);
+    if (i === 1) mcxDock(L.x + L.r + 1, L.z, -1, 0, 4, level);
+  }
+  // Реки и ручьи: две реки и один ручей между озёрами.
+  mcxCount('rivers', 3);
+  mcxCarveRiver(10, 150, 246, 108, 5, 10);
+  mcxCarveRiver(120, 8, 176, 248, 4, 8);
+  mcxCarveRiver(72, 96, 96, 150, 3, 4);
+  // Ветки дорог через воду получают мосты.
+  for (i = 0; i + 1 < mcxVillages.length; i++) {
+    var a2 = mcxVillages[i], b2 = mcxVillages[i + 1];
+    mcxBridgeLine(a2.x, a2.z, b2.x, b2.z);
+  }
+  // Мельница, замок, руины и пещеры — вне воды и поселений.
+  var wind = { x: 128 + 30, z: 128 + 26 };
+  if (!mcxWaterAt(wind.x, wind.z) && !mcxInVillage(wind.x, wind.z, 0))
+    mcxWindmill(wind.x, wind.z, mcxClamp(ir(wind.x, wind.z), 5, dn - 12));
+  var castle = { x: 128 - 34, z: 128 + 84 };
+  if (!mcxWaterAt(castle.x, castle.z))
+    mcxCastle(castle.x, castle.z, mcxClamp(ir(castle.x, castle.z), 5, dn - 14));
+  var spots = [
+    { x: 128 + 76, z: 128 + 12 }, { x: 128 - 78, z: 128 - 70 },
+    { x: 128 + 8, z: 128 - 92 }
+  ];
+  for (i = 0; i < spots.length; i++) {
+    var sp = spots[i];
+    if (mcxWaterAt(sp.x, sp.z)) continue;
+    if (i % 2 === 0) mcxRuins(sp.x, sp.z, mcxClamp(ir(sp.x, sp.z), 4, dn - 8));
+    else mcxTower(sp.x, sp.z, mcxClamp(ir(sp.x, sp.z), 4, dn - 12), 6);
+  }
+  for (i = 0; i < 3; i++) {
+    var cxx = 128 + mcxInt(-96, 96), czz = 128 + mcxInt(-96, 96);
+    if (Math.hypot(cxx - 128, czz - 128) < 46) continue;
+    mcxCave(cxx, czz);
+  }
+  // Рынок в двух поселениях.
+  for (i = 0; i < mcxVillages.length; i++) {
+    v = mcxVillages[i];
+    if (v.index % 2 === 1 && !v.market) { v.market = true; mcxMarket(v.x + 3, v.z - 3, v.base); }
+  }
+  mcxBuildWaterMesh();
+}
+
 function mcxBakeVillage(def, index) {
   var r = def.r;
   var cx = mcxClamp(Math.round(128 + def.dx), r + 6, ct - r - 7);
@@ -5778,6 +6249,10 @@ function mcxBakeVillages() {
   ];
   for (var i = 0; i < defs.length && i < MCX_SEED_POINTS; i++) mcxBakeVillage(defs[i], i);
   mcxBakeWilderness();
+  /* Второй слой карты: вода, дороги, архитектура и растительность. */
+  mcxBakeLandmarks();
+  mcxBakeFlora();
+  mcxBuildWaterMesh();
 }
 
 
@@ -5808,6 +6283,10 @@ function mcxDrop(mesh) {
 }
 
 function mcxClearEntities() {
+  if (mcxWaterMesh) { Ht.remove(mcxWaterMesh); mcxWaterMesh = null; }
+  mcxWaterCells = {};
+  mcxWaterList.length = 0;
+  for (var k in mcxWorldStats) mcxWorldStats[k] = 0;
   if (F) {
     (F.monsters || []).forEach(function (m) { mcxDrop(m.mesh); });
     (F.villagers || []).forEach(function (v) { mcxDrop(v.mesh); });
@@ -5838,12 +6317,54 @@ function mcxMakeVillager(tint, hat) {
   box(.09, .09, .05, .1, 1.56, .215, 0x2a2f36);      // правый глаз
   box(.11, .11, .09, 0, 1.49, .225, 0xd9a97f);       // нос по центру лица
   box(.15, .03, .04, 0, 1.40, .215, 0x8a5f47);       // рот
-  box(.24, .18, .26, -.3, 1.14, 0, tint);            // руки
-  box(.24, .18, .26, .3, 1.14, 0, tint);
+  // Руки: полноценные воксельные конечности на плечевом шарнире. Раньше это
+  // были два коротких кубика цвета туловища, утопленных в корпус, — жители
+  // выглядели без рук. Теперь рука висит от плеча вдоль тела и качается при
+  // ходьбе (см. mcxSwingVillager), при повороте группы двигается вместе с ней.
+  var armColor = mcxShade(tint, .78);
+  function arm(side) {
+    var pivot = new vn();
+    pivot.position.set(side * .33, 1.30, .01);
+    pivot.rotation.z = side * -.07;
+    var mesh = mcxBox(.19, .62, .21, armColor);
+    mesh.position.set(0, -.31, 0);
+    pivot.add(mesh);
+    var cuff = mcxBox(.2, .1, .22, mcxShade(tint, .62));   // кисть чуть темнее
+    cuff.position.set(0, -.62, 0);
+    pivot.add(cuff);
+    group.add(pivot);
+    return pivot;
+  }
+  var armLeft = arm(-1), armRight = arm(1);
   var left = box(.22, .58, .24, -.13, .4, 0, 0x4f3d2c);
   var right = box(.22, .58, .24, .13, .4, 0, 0x4f3d2c);
   group.userData.legs = [left, right];
+  group.userData.arms = [armLeft, armRight];
   return group;
+}
+
+/* Затемнение цвета для рукавов: тот же оттенок одежды, но темнее. */
+function mcxShade(hex, k) {
+  var r = Math.round(((hex >> 16) & 255) * k),
+      g = Math.round(((hex >> 8) & 255) * k),
+      b = Math.round((hex & 255) * k);
+  return (r << 16) | (g << 8) | b;
+}
+
+/* Анимация жителя: ноги и руки качаются в противофазе, как при ходьбе. */
+function mcxSwingVillager(mesh, swing) {
+  if (!mesh || !mesh.userData) return;
+  var legs = mesh.userData.legs, arms = mesh.userData.arms;
+  if (legs) { legs[0].rotation.x = swing; legs[1].rotation.x = -swing; }
+  if (arms) { arms[0].rotation.x = -swing * .8; arms[1].rotation.x = swing * .8; }
+}
+
+/* Плавное затухание качания, когда житель стоит. */
+function mcxRestVillager(mesh) {
+  if (!mesh || !mesh.userData) return;
+  var legs = mesh.userData.legs, arms = mesh.userData.arms;
+  if (legs) { legs[0].rotation.x *= .85; legs[1].rotation.x *= .85; }
+  if (arms) { arms[0].rotation.x *= .85; arms[1].rotation.x *= .85; }
 }
 
 function mcxSpawnVillagers() {
@@ -5919,11 +6440,9 @@ function mcxUpdateVillagers(dt) {
         if (!Rt(Math.floor(px), Math.round(v.y), Math.floor(pz))) { v.x = px; v.z = pz; }
       }
       v.mesh.rotation.y = Math.atan2(dx, dz);
-      v.mesh.userData.legs[0].rotation.x = Math.sin(F.elapsed * 7 + v.bob) * .5;
-      v.mesh.userData.legs[1].rotation.x = -Math.sin(F.elapsed * 7 + v.bob) * .5;
+      mcxSwingVillager(v.mesh, Math.sin(F.elapsed * 7 + v.bob) * .5);
     } else {
-      v.mesh.userData.legs[0].rotation.x *= .85;
-      v.mesh.userData.legs[1].rotation.x *= .85;
+      mcxRestVillager(v.mesh);
     }
     var groundY = ir(Math.floor(v.x), Math.floor(v.z));
     v.y += (groundY - v.y) * Math.min(1, dt * 8);

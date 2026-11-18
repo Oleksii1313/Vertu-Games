@@ -131,7 +131,7 @@ class SnakeClaimTest(unittest.TestCase):
 
     def test_other_games_still_have_no_session_reward(self):
         response = self.client.post('/api/games/session/claim', {
-            'game': 'flappy', 'apples': 5, 'time': 60, 'ticket': self.client.ticket('flappy')})
+            'game': 'skyisle', 'apples': 5, 'time': 60, 'ticket': self.client.ticket('skyisle')})
         self.assertEqual(response.status_code, 404, response.get_json())
 
     def test_card_and_daily_cap_are_unchanged(self):
@@ -299,7 +299,7 @@ class SnakeClaimTest(unittest.TestCase):
         broken = {'sid': 'x', 'sig': 'deadbeef', 'amount': 500, 'game': 'snake'}
         response = self.client.claim(apples=5, gold=0, time=60, ticket=broken)
         self.assertEqual(response.status_code, 403, response.get_json())
-        foreign = self.client.claim(apples=5, gold=0, time=60, ticket=self.client.ticket('flappy'))
+        foreign = self.client.claim(apples=5, gold=0, time=60, ticket=self.client.ticket('skyisle'))
         self.assertEqual(foreign.status_code, 403, foreign.get_json())
         self.assertEqual(store.balance(self.uid), before)
 

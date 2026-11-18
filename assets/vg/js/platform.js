@@ -804,6 +804,7 @@
   }
 
   function openGame(game) {
+    if (window.VGMusic) window.VGMusic.duck(true);
     var overlay = $('#playOverlay');
     // На части страниц оверлей уже есть (пустой контейнер из разметки) —
     // тогда его содержимое тоже нужно собрать.
@@ -1104,7 +1105,72 @@
         claimSnake(false);
         return;
       }
+      if (data.type === 'gameSession') {
+        /*
+         * Универсальный итог забега (flappy, 2048, platformer, pong, shooter,
+         * doodle, rover). Клиент присылает только «единицы» события — сколько
+         * труб пройдено, волн закрыто, сотен очков набрано. Сумму V, проверку
+         * правдоподобности по времени, суточный лимит и одноразовость сессии
+         * делает сервер; клиент показывает то, что пришло в ответе.
+         */
+        var sessGame = String(data.game || '');
+        if (sessGame !== gameName) return;
+        var sessUnits = Math.max(0, Math.min(500, Math.floor(Number(data.units) || 0)));
+        var sessTime = Math.max(0, Math.min(3600, Math.floor(Number(data.time) || 0)));
+        var sessId = String(data.sessionId || '').slice(0, 60);
+        var sessionAnswer = function (result, error) {
+          acknowledge(event.source, {
+            type: 'gameSessionResult', game: sessGame, sessionId: sessId,
+            ok: !!(result && (result.awarded > 0 || result.claimed)),
+            units: (result && result.unitsCount != null) ? result.unitsCount : sessUnits,
+            asked: sessUnits,
+            awarded: (result && result.awarded) || 0,
+            rate: (result && result.rate) || known.reward || 1,
+            clamped: !!(result && result.clamped),
+            capped: !!(result && result.capped),
+            zero: !!(result && result.zero),
+            repeated: !!(result && result.repeated),
+            balance: result && result.coins,
+            dailyLeft: (result && result.dailyLeft != null) ? result.dailyLeft : null,
+            error: error ? String(error.message || '').slice(0, 120) : ''
+          });
+        };
+        var claimSessionRun = function (retry) {
+          if (!VG.activeGame) { sessionAnswer(null); return; }
+          // Без входа начислять некуда: игра покажет итог как локальный.
+          if (!VG.user()) { sessionAnswer(null); return; }
+          if (!ticket) {   // билет ещё не пришёл — молча повторяем
+            fetchTicket().then(function (fresh) { fresh && fresh.sig && claimSessionRun(false); });
+            return;
+          }
+          api('/api/games/session/claim', {
+            body: { game: sessGame, units: sessUnits, time: sessTime, sessionId: sessId, ticket: ticket }
+          }).then(function (result) {
+            if (result.coins != null) updateCoins(result.coins);
+            if (result.awarded > 0) {
+              toast(T('+' + fmt(result.awarded) + ' V · ' + (known.name || sessGame),
+                '+' + fmt(result.awarded) + ' V · ' + (known.name_en || sessGame)));
+            } else if (result.capped) {
+              toast(T('Суточный лимит наград по этой игре исчерпан.',
+                'The daily reward cap for this game is reached.'), 'bad');
+            }
+            sessionAnswer(result);
+            return result;
+          }).catch(function (error) {
+            if (error.status === 429) toast(error.message, 'bad');
+            if (error.status === 403 && error.code === 'TICKET' && !retry) {
+              return fetchTicket().then(function (fresh) { fresh && fresh.sig && claimSessionRun(true); });
+            }
+            sessionAnswer(null, error);
+          });
+        };
+        claimSessionRun(false);
+        return;
+      }
       if (data.type === 'addCoins' || data.type === 'gameOver') {
+        // Игры с итоговой наградой сессии платят только через session/claim:
+        // событие addCoins от них больше не начисляет V (иначе двойная выплата).
+        if (known.sessionClaim) return;
         // Событие без собственной квитанции: начисляем одну награду за серию.
         if (data.type === 'gameOver') { toast(T('Игра окончена', 'Game over')); return; }
         if (window.__vgRewardLock && Date.now() - window.__vgRewardLock < 12000) return;
@@ -1178,6 +1244,7 @@
   }
 
   function closeGame() {
+    if (window.VGMusic) window.VGMusic.duck(false);
     var overlay = $('#playOverlay');
     if (!overlay) return;
     var frame = overlay.querySelector('.play-frame');
@@ -1253,6 +1320,19 @@
   VG.iconHtml = function (name, size) { return '<span class="ico-inline">' + icon(name, size) + '</span>'; };
 
   /* -------------------------------------------------------------- bootstrap */
+  /* Музыка вынесена в отдельный файл: он подключается на всех страницах и
+     держит один плеер на вкладку. Если файл не загрузился (старый кэш),
+     платформа работает как раньше — без ошибок в консоли. */
+  function loadMusic() {
+    if (window.VGMusic || document.getElementById('vg-music-script')) return;
+    var script = document.createElement('script');
+    script.id = 'vg-music-script';
+    script.src = '/assets/vg/js/music.js';
+    script.defer = true;
+    script.onerror = function () {};
+    (document.head || document.documentElement).appendChild(script);
+  }
+
   function boot() {
     var saved = storage('vg_lang');
     if (saved === 'en' || saved === 'ru') {
@@ -1263,6 +1343,7 @@
     hydrateIcons();
     applyGuestOnly();
     refreshSession();
+    loadMusic();
     document.addEventListener('click', function (event) {
       var link = event.target.closest && event.target.closest('[data-require-auth]');
       if (link && !state.user) {

@@ -165,8 +165,8 @@ body{height:100vh;height:100dvh;width:100%;min-height:0;overscroll-behavior:none
 body>canvas{flex:1 1 0%;height:0;min-height:0;width:100%;touch-action:none}
 /* Портретное поле 9:16. Холст вписывается в свободную область целиком:
    на телефоне в ландшафте и на широком мониторе вокруг остаётся фон. */
-.stage{flex:1 1 0%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px calc(8px + env(safe-area-inset-right,0px)) 8px calc(8px + env(safe-area-inset-left,0px));overflow:hidden;touch-action:none}
-body[data-game="flappy"]>canvas,body[data-game="flappy"] .stage>canvas{flex:none;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:9/16;border-radius:16px;background:#141c28;box-shadow:0 18px 48px #00000073,0 0 0 1px #78dcd22e;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.stage{flex:1 1 0%;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px calc(2px + env(safe-area-inset-right,0px)) 6px calc(2px + env(safe-area-inset-left,0px));overflow:hidden;touch-action:none}
+body[data-game="flappy"]>canvas,body[data-game="flappy"] .stage>canvas{flex:none;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:3/5;border-radius:16px;background:#141c28;box-shadow:0 18px 48px #00000073,0 0 0 1px #78dcd22e;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 @media (orientation:landscape) and (max-height:520px){.stage{padding:4px 8px}}
 
 .info{flex-shrink:0;min-height:62px;padding:10px calc(64px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px));gap:6px;align-items:center}
@@ -390,7 +390,7 @@ const scan=document.getElementById('c'),ctx=scan.getContext('2d');
    и на широком мониторе поле остаётся вертикальным, а вокруг — пустое место.
    Физика, коллизии и координаты объектов не зависят от размера окна.
    --------------------------------------------------------------------------- */
-const W=360, H=640;          // логический портретный мир (9:16)
+const W=384, H=640;          // логический портретный мир (3:5) — на 6,7 % шире прежнего 9:16
 const GROUND=64;             // высота земли в логических единицах
 const GRAVITY=0.34, FLAP=-6.8, PIPE_SPEED=2.6, PIPE_EVERY=95, GAP=150;
 let bird,pipes,groundX,frame,stars,particles;
@@ -429,6 +429,7 @@ function init(){
   bird={x:80,y:H/2,vy:0,r:16,rot:0,wing:0};pipes=[];groundX=0;frame=0;score=0;particles=[];
   stars=Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H,s:Math.random()*1.6+.4}));
   document.getElementById('scoreVal').textContent=0;running=true;
+  if(!window.VGReward)coinsEl.textContent='0 V';
 }
 const bestEl=document.getElementById('bestVal');bestEl.textContent=best;
 const coinsEl=document.getElementById('coinsVal');
@@ -456,11 +457,37 @@ function update(){
     if(p.x+p.w<-100)pipes.splice(i,1);}
   groundX=(groundX-PIPE_SPEED)%24;frame++;
 }
-function addCoin(n){coins+=n;coinsEl.textContent=coins+' V';if(window.parent!==window){try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}}
+/* ---------------------------------------------------------------------------
+   НАГРАДА. Клиент больше не присылает сумму V: он считает только пройденные
+   трубы (единицы). Итог забега уходит на сервер, сервер умножает трубы на
+   ставку каталога (2 V), проверяет время, суточный лимит и одноразовость
+   сессии и возвращает подтверждённую сумму. Пока ответа нет, показываем
+   ожидаемую сумму — она всегда равна трубам × 2 V, как в карточке игры.
+   ------------------------------------------------------------------------- */
+const COIN_RATE = 2;
+if (window.VGReward) { VGReward.init('flappy', COIN_RATE); VGReward.on(paintReward); }
+function rewardV() { return window.VGReward ? window.VGReward.v() : coins * COIN_RATE; }
+function paintReward(state) {
+  var st = state || (window.VGReward ? VGReward.state() : null);
+  if (!st) return;
+  coinsEl.textContent = st.v + ' V';
+  var earn = document.getElementById('fEarn');
+  if (earn && overShown) {
+    earn.textContent = (st.state === 'done' ? '+' + st.awarded : '+' + st.v) + ' V' +
+      (st.capped ? ' · ' + (window.VGT ? VGT('дневной лимит', 'daily cap') : 'daily cap') : '');
+  }
+}
+let overShown = false;
+function addCoin(n){if(window.VGReward)VGReward.add(n);else coins+=n;paintReward();}
 function gameOver(){running=false;saveBest();document.getElementById('fScore').textContent=score;
-  document.getElementById('fBest').textContent=best;document.getElementById('fEarn').textContent='+'+coins+' V';
-  burst(bird.x,bird.y);document.getElementById('overlay').classList.add('show');try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}}
-function restart(){document.getElementById('overlay').classList.remove('show');init()}
+  document.getElementById('fBest').textContent=best;overShown=true;
+  document.getElementById('fEarn').textContent='+'+rewardV()+' V';
+  burst(bird.x,bird.y);document.getElementById('overlay').classList.add('show');
+  if(window.VGReward)VGReward.finish('crash');else UIover();
+}
+function UIover(){paintReward();}
+function restart(){document.getElementById('overlay').classList.remove('show');overShown=false;
+  if(window.VGReward)VGReward.reset();document.getElementById('fEarn').textContent='+0 V';init()}
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
 function burst(x,y){for(let i=0;i<26;i++)particles.push({x,y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,life:1,c:Math.random()>.5?'#2b99a0':'#3730a0'})}
 function draw(){

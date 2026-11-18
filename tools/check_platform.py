@@ -221,9 +221,13 @@ def main():
 
         # Flappy Bird: портретное поле живёт в движке, а не в CSS-локе.
         flappy = (ROOT / 'games/flappy.html').read_text(encoding='utf-8')
-        check('Flappy: вертикальная сцена 9:16', 'aspect-ratio:9/16' in flappy and 'class="stage"' in flappy)
-        check('Flappy: логический мир 360×640 и вписывание по min()',
-              'const W=360, H=640' in flappy and 'Math.min(availW/W, availH/H)' in flappy)
+        # Портретное поле стало шире (3:5 вместо 9:16), но осталось вертикальным:
+        # мир по-прежнему вписывается по min() и не зависит от поворота экрана.
+        check('Flappy: вертикальная сцена 3:5', 'aspect-ratio:3/5' in flappy and 'class="stage"' in flappy)
+        check('Flappy: логический мир 384×640 и вписывание по min()',
+              'const W=384, H=640' in flappy and 'Math.min(availW/W, availH/H)' in flappy)
+        check('Flappy: поле шире прежнего и без лишних боковых полей',
+              'padding:6px calc(2px + env(safe-area-inset-right,0px))' in flappy)
         check('Flappy: реакция на поворот и resize',
               "addEventListener('orientationchange'" in flappy and "addEventListener('resize',onViewportChange)" in flappy)
         check('Flappy: фиксированный шаг физики 60 Гц', 'const STEP=1000/60' in flappy)

@@ -389,6 +389,23 @@ const MAXFALL=13,GRAV=.5;
 const scoreEl=document.getElementById('scoreVal'),coinsEl=document.getElementById('coinsVal'),livesEl=document.getElementById('livesVal'),distEl=document.getElementById('distVal');
 let score=0,coins=0,lives=3,running=true,invulnerable=0,cameraX=0,worldWidth=0;
 let lastSafe={x:60,y:0},frame=0,shake=0,flash=0,bestDist=0,lastMark=0,standingPlatform=null;
+/* Награда: клиент считает только «единицы» (Math.floor(dist()/500)), сумму V считает сервер. */
+const COIN_RATE=5;
+if(window.VGReward){VGReward.init('platformer',COIN_RATE);}
+let shownV=-1,overShown=false;
+function rewardUnits(){return Math.floor(dist()/500)}
+function syncV(){
+  if(window.VGReward)VGReward.set(rewardUnits());
+  coins=window.VGReward?VGReward.v():coins;
+  if(typeof coinsEl!=='undefined'&&coinsEl&&coins!==shownV){shownV=coins;coinsEl.textContent=coins+' V'}
+  return coins;
+}
+VGReward.on&&VGReward.on(function(st){
+  if(st.state!=='done')return;
+  var el=document.getElementById('fEarn');
+  if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
+});
+
 const player={x:60,y:100,w:30,h:34,vx:0,vy:0,speed:5.6,jumpForce:11.8,grounded:false,doubleJump:false,facing:1};
 let platforms=[],gameCoins=[],hazards=[],stars=[],clouds=[],mountains=[],keys={},particles=[],floaters=[];
 function resize(){const oldHeight=c.height;c.width=Math.max(320,window.innerWidth);c.height=Math.max(320,c.clientHeight);const dy=c.height-oldHeight;
@@ -396,7 +413,7 @@ function resize(){const oldHeight=c.height;c.width=Math.max(320,window.innerWidt
 }
 window.addEventListener('resize',resize);
 function fmt(v){return (Math.round(v*10)/10)%1===0?String(Math.round(v)):String(Math.round(v*10)/10)}
-function addCoin(n){coins+=n;coinsEl.textContent=fmt(coins)+' V';if(window.parent!==window)try{parent.postMessage({type:'addCoins',amount:n},'*')}catch(e){}}
+function addCoin(n){syncV()}
 function addFloat(x,y,txt,color){floaters.push({x,y,txt,color,l:1,vy:-1})}
 let ac=null,muted=false;
 function beep(f,dur,type,vol,slide){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;if(slide)o.frequency.linearRampToValueAtTime(slide,ac.currentTime+dur);g.gain.value=0;g.gain.linearRampToValueAtTime(vol||.12,ac.currentTime+.01);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur);}catch(e){}}
@@ -421,10 +438,12 @@ function takeDamage(){if(invulnerable>0)return;lives--;updateLives();shake=10;fl
 function gameOver(){running=false;const dst=dist();if(dst>bestDist)bestDist=dst;
   document.getElementById('fScore').textContent=score;document.getElementById('fCoins').textContent=fmt(coins);document.getElementById('fDist').textContent=dst+' m';
   document.getElementById('sub').textContent=dst>400?((window.VGT&&window.VGT('Невероятный забег!','An incredible run!'))||'Невероятный забег!'):dst>150?((window.VGT&&window.VGT('Отличный результат!','Great result!'))||'Отличный результат!'):((window.VGT&&window.VGT('Ты только разогревался','You were just warming up'))||'Ты только разогревался');
-  document.getElementById('fEarn').textContent='+'+fmt(coins)+' V';document.getElementById('overlay').classList.add('show');
-  beep(150,.7,'sawtooth',.2,50);try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}}
+  syncV();overShown=true;document.getElementById('fEarn').textContent='+'+fmt(coins)+' V';
+  document.getElementById('overlay').classList.add('show');
+  beep(150,.7,'sawtooth',.2,50);
+  if(window.VGReward)VGReward.finish('over');else try{parent.postMessage({type:'gameOver',score},'*')}catch(e){}}
 function dist(){return Math.max(0,Math.round((cameraX+player.x-200)/50))}
-function restart(){document.getElementById('overlay').classList.remove('show');start()}
+function restart(){document.getElementById('overlay').classList.remove('show');shownV=-1;overShown=false;if(window.VGReward)VGReward.reset();start()}setInterval(syncV,600);
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
 function start(){
   resize();platforms=[makePlatform(-60,c.height-80,900,null)];gameCoins=[];hazards=[];particles=[];floaters=[];
