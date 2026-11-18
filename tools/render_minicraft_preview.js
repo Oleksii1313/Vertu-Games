@@ -156,6 +156,85 @@ function drawMap(W) {
   return canvas;
 }
 
+
+/* ---------------------------------------------------------------------------
+   Изометрия деревни: настоящая проверка архитектуры глазами. Каждый блок
+   рисуется ромбом сверху и двумя гранями сбоку, порядок отрисовки — от дальних
+   к ближним, поэтому крыши, трубы и балконы читаются как в игре.
+   --------------------------------------------------------------------------- */
+const ISO = {
+  1: ['#74a94d', '#5d8c3d'], 2: ['#8a6a45', '#6f5436'], 3: ['#93989c', '#767b7f'],
+  4: ['#e2d2a4', '#c8b98d'], 5: ['#8b5a2b', '#6f4721'], 6: ['#3f7a35', '#2f5c28'],
+  7: ['#ffd166', '#e0b34a'], 8: ['#4b4f55', '#3a3d42'],
+  9: ['#8f9498', '#73787c'], 10: ['#7d8286', '#63686c'], 11: ['#5a4229', '#463320'],
+  12: ['#b08a54', '#8d6c3f'], 13: ['#a04a38', '#7d3628'], 14: ['#e7dcc2', '#c9bfa6'],
+  15: ['#a9ccd8', '#7f9ea9'], 16: ['#49525c', '#363d45']
+};
+
+function drawVillage(W, index, out) {
+  const v = W.mcxVillages[index];
+  const R = 16;
+  const top = v.base + 16;
+  const blocks = [];
+  for (let x = v.x - R; x <= v.x + R; x++) {
+    for (let z = v.z - R; z <= v.z + R; z++) {
+      for (let y = v.base - 1; y <= top; y++) {
+        const id = W.cs(x, y, z);
+        if (!id || id === 8) continue;
+        if (y > v.base && id === 2) continue;      // подземную землю не рисуем
+        blocks.push({ x, y, z, id });
+      }
+    }
+  }
+  blocks.sort((a, b) => (a.x + a.z) - (b.x + b.z) || a.y - b.y);
+  const tw = 9, th = 5, bh = 7;
+  const w = (R * 2 + 10) * tw, h = (R * 2 + 3) * th + 18 * bh + 90;
+  const canvas = createCanvas(w, h);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0b0e14';
+  ctx.fillRect(0, 0, w, h);
+  const ox = w / 2, oy = 40 + R * 2 * th + 16 * bh;
+  const proj = (x, y, z) => [ox + (x - z) * tw / 2, oy + (x + z) * th / 2 - y * bh];
+  for (const b of blocks) {
+    const [sx, sy] = proj(b.x - v.x, b.y, b.z - v.z);
+    const [cTop, cSide] = ISO[b.id] || ['#555', '#444'];
+    // верхняя грань
+    ctx.fillStyle = cTop;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - th / 2);
+    ctx.lineTo(sx + tw / 2, sy);
+    ctx.lineTo(sx, sy + th / 2);
+    ctx.lineTo(sx - tw / 2, sy);
+    ctx.closePath();
+    ctx.fill();
+    // левая грань (темнее)
+    ctx.fillStyle = cSide;
+    ctx.beginPath();
+    ctx.moveTo(sx - tw / 2, sy);
+    ctx.lineTo(sx, sy + th / 2);
+    ctx.lineTo(sx, sy + th / 2 + bh);
+    ctx.lineTo(sx - tw / 2, sy + bh);
+    ctx.closePath();
+    ctx.fill();
+    // правая грань (средняя)
+    ctx.fillStyle = cSide;
+    ctx.beginPath();
+    ctx.moveTo(sx + tw / 2, sy);
+    ctx.lineTo(sx, sy + th / 2);
+    ctx.lineTo(sx, sy + th / 2 + bh);
+    ctx.lineTo(sx + tw / 2, sy + bh);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = '#c6ff3d';
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillText('MiniCraft · ' + v.name + ' · стиль ' + v.style, 18, 28);
+  ctx.strokeStyle = 'rgba(255,255,255,.12)';
+  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+  fs.writeFileSync(out, canvas.toBuffer('image/png'));
+  return out;
+}
+
 function drawVillager(W) {
   const group = W.mcxMakeVillager(0x3f7f52, 0xc9b26a);
   const parts = [];
@@ -208,6 +287,15 @@ function drawVillager(W) {
   fs.writeFileSync(path.join(OUT, 'minicraft-world-map.png'), map.toBuffer('image/png'));
   const villager = drawVillager(W);
   fs.writeFileSync(path.join(OUT, 'minicraft-villager-arms.png'), villager.toBuffer('image/png'));
+  /* Три деревни трёх стилей: сруб, камень и фахверк. */
+  const seen = {};
+  for (const v of W.mcxVillages) {
+    if (seen[v.style]) continue;
+    seen[v.style] = true;
+    const file = path.join(OUT, 'minicraft-village-' + v.style + '.png');
+    drawVillage(W, v.index, file);
+    console.log('деревня ' + v.style + ': ' + file);
+  }
   console.log('наполнение:', JSON.stringify(W.mcxWorldStats));
   console.log('карта:', path.join(OUT, 'minicraft-world-map.png'));
   console.log('житель:', path.join(OUT, 'minicraft-villager-arms.png'));

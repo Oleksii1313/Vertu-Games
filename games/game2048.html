@@ -345,7 +345,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
   body>.controls button{min-height:36px;height:36px}
 }
 </style>
-<script src="/assets/vg/js/game-kit.js" defer></script>
+<script src="/assets/vg/js/game-kit.js"></script>
 </head>
 <body data-game="game2048">
 <div class="info">
@@ -394,7 +394,7 @@ function syncV(){
   if(typeof coinsEl!=='undefined'&&coinsEl&&coins!==shownV){shownV=coins;coinsEl.textContent=coins+' V'}
   return coins;
 }
-VGReward.on&&VGReward.on(function(st){
+window.VGReward&&VGReward.on&&VGReward.on(function(st){
   if(st.state!=='done')return;
   var el=document.getElementById('fEarn');
   if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');

@@ -53,6 +53,7 @@
   /* --------------------------------------------------------------- состояние */
   var ctx = null, master = null, noise = null, timer = null;
   var step = 0, nextTime = 0, playing = false, ducked = false;
+  var gameMode = false;   // игрок внутри игры: музыка полностью остановлена
   var listeners = [];
   var enabled = readPref();
 
@@ -151,7 +152,7 @@
 
   /* -------------------------------------------------------------- управление */
   function start() {
-    if (playing || !enabled) return;
+    if (playing || !enabled || gameMode) return;
     if (!ensureContext()) return;
     if (ctx.state === 'suspended' && ctx.resume) {
       ctx.resume().catch(function () {});
@@ -186,7 +187,37 @@
   function setEnabled(on) {
     enabled = !!on;
     writePref(enabled);
-    if (enabled) start(); else stop();
+    if (enabled && !gameMode) start(); else stop();
+    paint();
+  }
+
+  /*
+   * Игровой режим. Требование платформы: пока открыта любая из 11 игр, фоновая
+   * музыка каталога молчит полностью (не «тише», а именно тишина), чтобы не
+   * мешать звукам игры. Позиция петли запоминается, поэтому на выходе мелодия
+   * продолжается с того же места, а не начинается заново.
+   */
+  function setGameMode(on) {
+    on = !!on;
+    if (on === gameMode) return;
+    gameMode = on;
+    if (on) {
+      if (playing) {
+        // Фиксируем текущий шаг петли, чтобы вернуться ровно в это место.
+        setPhaseStart(Date.now() - Math.round(step * STEP * 1000));
+      }
+      playing = false;
+      clearInterval(timer);
+      timer = null;
+      if (master && ctx) {
+        try { master.gain.cancelScheduledValues(ctx.currentTime); master.gain.value = 0; } catch (e) {}
+      }
+    } else if (enabled) {
+      /* Продолжаем ровно с того шага, на котором остановились: время, пока
+         игрок был в игре, не «проматывает» мелодию вперёд. */
+      setPhaseStart(Date.now() - Math.round(step * STEP * 1000));
+      start();
+    }
     paint();
   }
 
@@ -196,7 +227,7 @@
     if (gestureBound) return;
     gestureBound = true;
     var onGesture = function () {
-      if (!enabled) return;
+      if (!enabled || gameMode) return;
       if (!ctx) ensureContext();
       if (ctx && ctx.state === 'suspended' && ctx.resume) ctx.resume().catch(function () {});
       start();
@@ -311,12 +342,15 @@
       }
       paint();
     },
+    /* Вход/выход из игры: полная остановка и продолжение с того же места. */
+    setGameMode: setGameMode,
+    inGame: function () { return gameMode; },
     on: function (cb) { if (typeof cb === 'function') listeners.push(cb); },
     /* Для тестов и отладки: позиция петли и число шагов. */
     debug: function () {
       return { enabled: enabled, playing: playing, step: step, loop: LOOP_STEPS,
                tempo: TEMPO, stepSeconds: STEP, state: ctx ? ctx.state : 'none',
-               ducked: ducked, phase: phaseStart() };
+               ducked: ducked, gameMode: gameMode, phase: phaseStart() };
     }
   };
 

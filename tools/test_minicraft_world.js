@@ -106,6 +106,8 @@ window.__world = () => ({
   mcxWorldStats, mcxClearEntities,
   startWorld: Kh, playGame: Zl, mc: () => Mt, Ht,
   ids: { air: Ai, grass: Vh, ground: Gh, stone: Hh, sand: Wh, wood: Xh, leaf: Bl, coin: qh, bed: Vl },
+  ids2: { brick: SB, cobble: CB, beam: DW, plank: PL, tile: RF, plaster: PS, glass: GL, slate: SL },
+  roof: mcxGableRoof, square: mcxSquare,
   CT: ct, DN: dn
 });
 ` + runtime.slice(idx);
@@ -124,6 +126,62 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let i = 0; i < 250 && api().mc() !== 'ready'; i++) await wait(20);
   const W = api();
   const ids = W.ids;
+
+  /* ------------------------------------------- архитектура поселений */
+  const M = W.ids2;
+  const worldCount = (id) => {
+    let n = 0;
+    for (let x = 1; x < W.CT - 1; x++)
+      for (let z = 1; z < W.CT - 1; z++)
+        for (let y = 1; y < W.DN - 1; y++) if (W.cs(x, y, z) === id) n++;
+    return n;
+  };
+  const cBrick = worldCount(M.brick), cCobble = worldCount(M.cobble), cBeam = worldCount(M.beam);
+  const cPlank = worldCount(M.plank), cTile = worldCount(M.tile), cPlaster = worldCount(M.plaster);
+  const cGlass = worldCount(M.glass), cSlate = worldCount(M.slate);
+  check('каменная кладка используется в постройках', cBrick > 400, cBrick);
+  check('булыжник — фундаменты и цоколи', cCobble > 600, cCobble);
+  check('тёмное дерево — балки, рамы, коньки', cBeam > 400, cBeam);
+  check('доски — стены и полы срубов', cPlank > 400, cPlank);
+  check('черепица — крыши домов', cTile > 400, cTile);
+  check('побелка — фахверковые дома', cPlaster > 80, cPlaster);
+  check('стекло — окна домов и бойницы башен', cGlass > 60, cGlass);
+  check('сланец — крыши башен и каменных домов', cSlate > 150, cSlate);
+
+  /* Каждая деревня: дома с крышей, труба, окна, мостовая площади. */
+  const villageReport = [];
+  for (const v of W.mcxVillages) {
+    let roofs = 0, glass = 0, chimneys = 0, paved = 0, beams = 0;
+    for (let dx = -v.r; dx <= v.r; dx++)
+      for (let dz = -v.r; dz <= v.r; dz++) {
+        const x = v.x + dx, z = v.z + dz;
+        for (let y = v.base; y < v.base + 13; y++) {
+          const id = W.cs(x, y, z);
+          if (id === M.tile || id === M.slate) roofs++;
+          else if (id === M.glass) glass++;
+          else if (id === M.beam) beams++;
+          if (id === M.cobble && y > v.base + 3) chimneys++;
+        }
+        const floor = W.cs(x, v.base - 1, z);
+        if (Math.hypot(dx, dz) <= 4.2 && (floor === M.brick || floor === M.cobble)) paved++;
+      }
+    villageReport.push({ name: v.name, roofs, glass, chimneys, paved, beams, villagers: v.villagers.length });
+  }
+  check('в каждой деревне есть крыши', villageReport.every((v) => v.roofs > 60),
+    villageReport.map((v) => v.roofs));
+  check('в каждой деревне есть окна со стеклом', villageReport.every((v) => v.glass >= 4),
+    villageReport.map((v) => v.glass));
+  check('в каждой деревне есть трубы над крышами', villageReport.every((v) => v.chimneys >= 4),
+    villageReport.map((v) => v.chimneys));
+  check('центр каждой деревни — мощёная площадь', villageReport.every((v) => v.paved >= 20),
+    villageReport.map((v) => v.paved));
+  check('в деревнях есть тёмные балки (переплёты, коньки)', villageReport.every((v) => v.beams > 30),
+    villageReport.map((v) => v.beams));
+  check('в каждой деревне живут NPC', villageReport.every((v) => v.villagers >= 3),
+    villageReport.map((v) => v.villagers));
+  check('стили деревень различаются (сруб / камень / фахверк)',
+    new Set(W.mcxVillages.map((v) => v.style)).size >= 3,
+    W.mcxVillages.map((v) => v.style));
 
   /* ------------------------------------------------ вода */
   const cells = W.mcxWaterList;
