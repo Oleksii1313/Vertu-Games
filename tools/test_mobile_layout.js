@@ -31,8 +31,10 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.join(__dirname, '..');
-const CLASSIC = ['snake', 'game2048', 'flappy', 'pong', 'shooter', 'platformer'];
-const OTHER = ['doodle', 'minicraft', 'sky-isle', 'chefs-rover', 'redline'];
+/* Snake раскладывает себя сам (большое поле + свайпы), поэтому в общий набор
+   «статистика — поле — кнопки» она больше не входит. */
+const CLASSIC = ['game2048', 'flappy', 'pong', 'shooter', 'platformer'];
+const OTHER = ['snake', 'doodle', 'minicraft', 'sky-isle', 'chefs-rover', 'redline'];
 
 const results = [];
 function check(name, ok, extra) {
@@ -53,6 +55,10 @@ check('во всех классических играх есть панель �
   CLASSIC.filter((n) => !/class="info"/.test(html[n]) || !/class="controls"/.test(html[n])));
 check('doodle (есть .controls, но нет .info) в набор не попадает',
   !/class="info"/.test(html.doodle));
+check('snake вышла из набора: своя раскладка вместо панели стрелок',
+  !/class="controls"/.test(html.snake) && /id="snakeBody"/.test(html.snake));
+check('у snake поле, стрелки и HUD разведены по отдельным контейнерам',
+  /class="board"/.test(html.snake) && /id="padDock"/.test(html.snake) && /class="hud-actions"/.test(html.snake));
 check('3D-игры раскладываются сами (canvas на весь экран)',
   ['minicraft', 'sky-isle', 'chefs-rover', 'redline'].every((n) =>
     /position:\s*fixed;inset:0|position:\s*absolute;inset:0/.test(html[n])),
@@ -109,13 +115,13 @@ function boot(name, width, height) {
   return { w, dom, errors };
 }
 
-const booted = boot('snake', 390, 844);
+const booted = boot('game2048', 390, 844);
 const w = booted.w;
 const doc = w.document;
 const styleOf = (id) => doc.getElementById(id);
 const css = (id) => (styleOf(id) ? styleOf(id).textContent : '');
 
-check('snake запускается без ошибок', booted.errors.length === 0, booted.errors.slice(0, 3));
+check('game2048 запускается без ошибок', booted.errors.length === 0, booted.errors.slice(0, 3));
 check('html получает класс vg-classic', doc.documentElement.classList.contains('vg-classic'));
 check('базовые правила экрана вставлены (#vg-base-fit)',
   !!styleOf('vg-base-fit') && /overscroll-behavior:none/.test(css('vg-base-fit')));
@@ -189,6 +195,12 @@ check('подсказка о фокусе и запрет выделения н�
   typeof w.VGGame.focus === 'function' && !!styleOf('vg-no-select'));
 
 /* --------------------------- 6. игры с другой раскладкой не затронуты */
+const snake = boot('snake', 390, 844);
+const sdoc = snake.w.document;
+check('snake не получает vg-classic (у неё своя раскладка)',
+  !sdoc.documentElement.classList.contains('vg-classic'));
+check('snake не получает правил классической раскладки', !sdoc.getElementById('vg-classic-fit'));
+
 const doodle = boot('doodle', 390, 844);
 const ddoc = doodle.w.document;
 check('doodle не получает vg-classic', !ddoc.documentElement.classList.contains('vg-classic'));
