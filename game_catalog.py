@@ -125,10 +125,12 @@ GAMES = [
         # и одноразовость сессии. Клиентские V не принимаются.
         'session_claim': True, 'session_award': 'snake', 'session_max_coins': 36,
         'apple_reward': 1, 'gold_reward': 10, 'level_every': 5, 'level_reward': 5,
-        'how_ru': 'Собирай яблоки и расти. Каждое яблоко — 1 V, каждые 5 яблок — ещё 5 V, '
-                  'редкое золотое яблоко — 10 V (лимит 300 V в сутки).',
-        'how_en': 'Eat apples and grow. Every apple pays 1 V, every 5 apples pay 5 V more, '
-                  'a rare golden apple pays 10 V (300 V daily cap).',
+        'how_ru': 'Веди пальцем по полю или мышью — змейка повернёт. Собирай яблоки и расти: '
+                  'каждое яблоко — 1 V, каждые 5 яблок — ещё 5 V, редкое золотое яблоко — 10 V '
+                  '(лимит 300 V в сутки).',
+        'how_en': 'Drag a finger across the field or move the mouse to steer. Eat apples and '
+                  'grow: every apple pays 1 V, every 5 apples pay 5 V more, a rare golden apple '
+                  'pays 10 V (300 V daily cap).',
         'long_ru': 'Легендарная змейка в изумрудном стиле: чешуя, свечение и плавные повороты. '
                    'Собирай яблоки, расти и не врезайся в себя.\n\nКроме обычных яблок на поле '
                    'появляются редкие золотые (10 V) и изумруды — временный множитель ×2. Каждые '
@@ -137,8 +139,8 @@ GAMES = [
                    'grow longer and don’t crash into yourself.\n\nBesides normal apples the board '
                    'spawns rare golden ones (10 V) and emeralds — a temporary ×2 multiplier. Every '
                    '5 apples raise the speed level and open a new arena with obstacles.',
-        'controls_ru': 'Стрелки / WASD — направление, пробел — пауза',
-        'controls_en': 'Arrows / WASD — direction, Space — pause',
+        'controls_ru': 'Свайп по полю / мышь / стрелки — направление, пробел — пауза',
+        'controls_en': 'Swipe across the field / mouse / arrows — direction, Space — pause',
     },
     {
         'id': 'minicraft', 'name': 'MiniCraft 3D', 'name_en': 'MiniCraft 3D',

@@ -321,6 +321,12 @@ GAMES_EN.update({
     '▶ Старт': '▶ Start',
     '▶ В бой': '▶ To battle',
     'Нажми стрелку, свайп или кнопку, чтобы начать': 'Press an arrow, swipe or tap a button to start',
+    # Snake: поле на весь экран и управление свайпами/мышью
+    'Стрелки': 'Arrows',
+    'Свайп по полю, стрелки или мышь — и змейка пошла':
+        'Swipe across the field, use the arrow keys or the mouse to set off',
+    'Веди пальцем по полю или мышью — змейка повернёт. Стрелки и WASD тоже работают, Space — пауза. Золотое яблоко даёт 10 V, изумруд — множитель ×2.':
+        'Drag a finger across the field or move the mouse to steer. Arrow keys and WASD work too, Space pauses. A golden apple pays 10 V, an emerald gives a ×2 multiplier.',
     'Удерживай стрелки для движения и «Огонь» для стрельбы. Можно нажимать одновременно. АВТО стреляет за тебя.': 'Hold the arrows to move and Fire to shoot. You can press both at once. AUTO shoots for you.',
     'Нажми ▶ или Space, чтобы продолжить': 'Press ▶ or Space to continue',
     'Невероятно! Ты собрал 2048!': 'Incredible! You reached 2048!',

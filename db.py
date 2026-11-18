@@ -1498,14 +1498,21 @@ class DataStore:
         return {'id': int(new_id)}
 
     def user_daily_tasks(self, user_id: int):
+        """Задания на сегодня. Служебная метка ``[seed:ключ]`` в описании нужна
+        только сеятелю каталога — игроку она не показывается."""
         with self.driver.transaction(isolation='read committed') as c:
-            return c.execute(
-                'SELECT t.id, t.title, t.description, t.reward, t.task_type, t.target_value, '
+            rows = c.execute(
+                'SELECT t.id, t.title, t.description, t.title_en, t.desc_en, t.reward, '
+                't.task_type, t.target_value, '
                 'COALESCE(ud.progress,0) AS progress, COALESCE(ud.completed,FALSE) AS completed, '
                 'COALESCE(ud.claimed,FALSE) AS claimed FROM daily_tasks t '
                 'LEFT JOIN user_daily_tasks ud ON ud.task_id=t.id AND ud.user_id=? '
                 'AND ud.task_date=? WHERE t.is_active=TRUE ORDER BY t.id',
                 (int(user_id), _today_iso())).fetchall()
+        for row in rows:
+            row['description'] = re.sub(r'\s*\[seed:[^\]]*\]', '',
+                                        str(row.get('description') or '')).strip()
+        return rows
 
     def progress_task(self, user_id: int, task_type: str, amount: int = 1) -> list[dict]:
         """Продвинуть ежедневные задания нужного типа (вызывается игровыми событиями)."""

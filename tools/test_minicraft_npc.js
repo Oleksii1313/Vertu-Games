@@ -148,17 +148,30 @@ for (let z = 0; z <= 20; z++) for (let y = 1; y <= 2; y++) set(6, y, z, STONE);
   check('при скольжении не входит в блок', get(Math.floor(v.x), Math.round(v.y), Math.floor(v.z)) === AIR);
 }
 
-/* ------------------------------------- 9. тупик: шаг отклонён, позиция цела */
+/* -------------------------- 9. тупик: житель топчется внутри, но не в стене */
 build();
 for (let x = 4; x <= 6; x++) { for (let y = 1; y <= 2; y++) { set(x, y, 4, STONE); set(x, y, 6, STONE); } }
 for (let z = 4; z <= 6; z++) { for (let y = 1; y <= 2; y++) { set(4, y, z, STONE); set(6, y, z, STONE); } }
 {
   const v = villager(5.5, 5.5);
-  const res = N.mcxVillagerStep(v, 9.5, 5.5, 0.3);
-  check('в замкнутом кармане шаг отклонён', res === 'blocked', res);
-  check('при отказе житель остаётся на месте', v.x === 5.5 && v.z === 5.5, [v.x, v.z]);
+  // Житель может переступить внутри свободной клетки, но не входит в стену —
+  // важна не «неподвижность», а то, что он остаётся в проходимой клетке.
+  const start = { x: v.x, z: v.z };
+  let inWall = false;
+  for (let i = 0; i < 40; i++) {
+    N.mcxVillagerStep(v, 9.5, 5.5, 0.05);
+    if (get(Math.floor(v.x), Math.round(v.y), Math.floor(v.z)) !== AIR) inWall = true;
+  }
+  check('в замкнутом кармане житель не входит в стену', !inWall, [v.x, v.z]);
+  check('из кармана житель не «просачивается» наружу',
+    Math.floor(v.x) === 5 && Math.floor(v.z) === 5, [v.x.toFixed(2), v.z.toFixed(2)]);
+  check('в кармане житель остаётся на своей клетке', Math.hypot(v.x - start.x, v.z - start.z) < .8,
+    Math.hypot(v.x - start.x, v.z - start.z).toFixed(2));
   const p = N.mcxPathTo(5.5, 5.5, ir(5, 5), 12.5, 5.5);
   check('из замкнутого кармана маршрута нет', p === null, p && p.length);
+  const part = N.mcxPathTo(5.5, 5.5, ir(5, 5), 12.5, 5.5, 600, true);
+  check('частичный маршрут не выводит из кармана', part === null || part.every((pt) => Math.floor(pt.x) === 5 && Math.floor(pt.z) === 5),
+    part && part.length);
 }
 
 /* ---------------------------------------------- 10. габариты: голова и тело */
@@ -200,11 +213,21 @@ for (let z = 4; z <= 8; z++) for (let y = 1; y <= 2; y++) set(2, y, z, STONE);
 /* --------------------------------- 13. код игры: проверки на месте */
 check('в игре спавн жителей ищет свободную точку', /mcxFreeSpot\(spot\.x \+ \.5/.test(html));
 check('в игре шаг жителя проверяет опору и тело', /if \(!mcxStandAt\(nx, nz, ny\)\) continue;/.test(html));
-check('в игре есть поиск пути и пересчёт при блокировке', /mcxPathTo\(v\.x, v\.z, v\.y, v\.goalX, v\.goalZ\)/.test(html) &&
-  /v\.path = \[\];\s*\n\s*v\.repath = 0;/.test(html));
-check('в игре есть безопасный idle после застревания', /v\.idle = v\.clock \+ 1\.2/.test(html));
-check('испуг отменяет отдых и житель убегает', /v\.idle = 0;\s*\/\/ испуг отменяет/.test(html));
-check('в игре жители не телепортируются сквозь блоки', !/v\.x = v\.targetX/.test(html));
+check('в игре есть поиск пути с частичным маршрутом',
+  /mcxPathTo\(v\.x, v\.z, v\.y, v\.goalX, v\.goalZ, MCX_NPC_BUDGET, true\)/.test(html));
+check('в игре маршрут пересчитывается при блокировке',
+  /v\.path\.length = 0;\s*\n\s*v\.repathAt = 0;/.test(html));
+check('в игре поиск пути ограничен бюджетом кадра',
+  /budget\.left--/.test(html) && /if \(!budget \|\| budget\.left <= 0\) return false;/.test(html));
+check('в игре есть самовосстановление после застревания',
+  /v\.stall > \.45/.test(html) && /Math\.abs\(v\.y - groundY\) > 1/.test(html));
+check('в игре есть пауза-отдых и смена цели после блокировок',
+  /v\.blocked \|\| 0\) > 24/.test(html) && /v\.timer = \.4 \+ mcxRnd\(\) \* \.8;/.test(html));
+check('испуг переводит жителя в бегство',
+  /v\.state = 'flee';/.test(html) && /v\.flee = 1\.1;/.test(html));
+check('жители не телепортируются сквозь блоки', !/v\.x = v\.targetX/.test(html));
+check('жители расходятся и не встают друг в друга', /mcxCrowded\(v, nx, nz\)/.test(html) && /MCX_NPC_SEP/.test(html));
+check('цель жителя не в соседе, а рядом с ним', /other\.x \+ Math\.cos\(ang\) \* reach/.test(html));
 
 console.log(results.filter((r) => r.startsWith('FAIL')).join('\n'));
 console.log('ИТОГО: ' + results.filter((r) => r.startsWith('PASS')).length + '/' + results.length + ' проверок пройдено');
