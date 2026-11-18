@@ -116,7 +116,7 @@ GAMES_EN.update({
     'Закрыть справку': 'Close help',
     'Зелёный круг у почтового депо': 'The green circle by the post depot',
     'Карта острова и точка доставки': 'Island map and delivery point',
-    'ЛКМ + перетаскивание · Камера R · Вернуть камеру Esc · Пауза': 'LMB + drag · camera, R · reset camera, Esc · pause',
+    'ПКМ + перетаскивание · Камера R · Вернуть камеру Esc · Пауза': 'RMB + drag · camera, R · reset camera, Esc · pause',
     'Левый джойстик — полёт по горизонтали. Кнопки ▲ и ▼ меняют высоту. Свайп по сцене вращает камеру. Можно лететь, менять высоту и осматриваться одновременно.': 'The left joystick flies horizontally. The ▲ and ▼ buttons change altitude. Swiping the scene rotates the camera. You can fly, change altitude and look around at the same time.',
     'Можно летать на высоте от 1,5 до 20 м. Дома и мельницы мягко останавливают дрон, без повреждений и штрафов. Сроков доставки нет.': 'You can fly at altitudes from 1.5 to 20 m. Houses and windmills gently stop the drone, without damage or penalties. There are no delivery deadlines.',
     'Набор высоты': 'Climb',

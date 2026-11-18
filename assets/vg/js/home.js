@@ -39,7 +39,7 @@
     $$('[data-stat="coins"]').forEach(function (node) { node.textContent = fmt(data.totals.coins); });
     $$('[data-stat="plays"]').forEach(function (node) { node.textContent = fmt(data.totals.plays); });
     if (!data.users.length) {
-      box.innerHTML = '<div class="empty">' + T('Пока нет игроков — станьте первым.', 'No players yet — be the first.') + '</div>';
+      box.innerHTML = '<div class="empty">' + T('Пока нет игроков — станьте первым.', 'No players yet — be the first.', 'Kol kas žaidėjų nėra — būk pirmas.') + '</div>';
       return;
     }
     box.innerHTML = data.users.slice(0, 6).map(function (user, index) {
@@ -56,24 +56,49 @@
     var box = $('#achievements');
     if (!box) return;
     if (!list.length) {
-      box.innerHTML = '<div class="empty">' + T('Достижения появятся, когда игроки начнут играть.', 'Achievements will appear once players start playing.') + '</div>';
+      box.innerHTML = '<div class="empty">' + T('Достижения появятся, когда игроки начнут играть.', 'Achievements will appear once players start playing.', 'Pasiekimai atsiras, kai žaidėjai pradės žaisti.') + '</div>';
       return;
     }
     box.innerHTML = list.slice(0, 6).map(function (item) {
       return '<div class="list-row"><span class="ico">' + VG.icon(item.icon || 'trophy', 17) + '</span>' +
-        '<span class="meta"><b>' + escapeHtml(VG.lang() === 'en' ? item.name_en : item.name_ru) + '</b>' +
+        '<span class="meta"><b>' + escapeHtml(VG.achievementName(item)) + '</b>' +
         '<small>' + escapeHtml(item.username) + ' · ' + VG.timeAgo(item.unlocked) + '</small></span>' +
         '<span style="font-weight:800;color:#dcff8a;font-size:12px">+' + fmt(item.coins) + ' V</span></div>';
     }).join('');
   }
 
+  /* Последний ответ сервера: нужен, чтобы таблица лидеров и лента достижений
+     перерисовывались на новом языке сразу после переключения RU/EN — имена
+     игроков при этом не переводятся, а титулы, названия ачивок и относительное
+     время («2 часа назад» / «2 hours ago») берутся из текущего языка. */
+  var boardData = null, boardFailed = false;
+
+  function boardError() {
+    var box = $('#leaderboard');
+    if (box) {
+      box.innerHTML = '<div class="empty">' +
+        T('Не удалось загрузить рейтинг.', 'Could not load the leaderboard.', 'Nepavyko įkelti reitingo.') + '</div>';
+    }
+  }
+
+  function renderBoard() {
+    if (!boardData) {
+      /* Сервер недоступен — сообщение тоже переводим при смене языка. */
+      if (boardFailed) boardError();
+      return;
+    }
+    renderLeaderboard(boardData);
+    renderAchievements(boardData.achievements || []);
+  }
+  VG.onLangChange(renderBoard);
+
   function loadBoard() {
     VG.api('/api/leaderboard').then(function (data) {
-      renderLeaderboard(data);
-      renderAchievements(data.achievements || []);
+      boardData = data;
+      renderBoard();
     }).catch(function () {
-      var box = $('#leaderboard');
-      if (box) box.innerHTML = '<div class="empty">' + T('Не удалось загрузить рейтинг.', 'Could not load the leaderboard.') + '</div>';
+      boardFailed = true;
+      renderBoard();
     });
   }
 
@@ -91,11 +116,24 @@
         if (cat && cats.indexOf(cat) === -1) cats.push(cat);
       });
     });
-    if (chips) {
-      chips.innerHTML = '<button class="chip on" data-cat="">' + T('Все', 'All') + '</button>' + cats.map(function (cat) {
-        return '<button class="chip" data-cat="' + escapeHtml(cat) + '">' + escapeHtml(cat) + '</button>';
+    /* Значение чипа — русский жанр (он же в data-cats карточек), подпись —
+       перевод из VG_DATA.categories. */
+    var CATEGORIES = {};
+    ((window.VG_DATA && window.VG_DATA.categories) || []).forEach(function (cat) { CATEGORIES[cat.ru] = cat; });
+    function catLabel(cat) {
+      var value = window.VG.lang();
+      var known = CATEGORIES[cat];
+      if (!known || value === 'ru') return cat;
+      return (value === 'lt' ? known.lt : known.en) || known.en || cat;
+    }
+    function renderChips() {
+      if (!chips) return;
+      chips.innerHTML = '<button class="chip on" data-cat="">' + T('Все', 'All', 'Visi') + '</button>' + cats.map(function (cat) {
+        return '<button class="chip" data-cat="' + escapeHtml(cat) + '">' + escapeHtml(catLabel(cat)) + '</button>';
       }).join('');
     }
+    renderChips();
+    if (chips && VG.onLangChange) VG.onLangChange(renderChips);
     var activeCat = '';
     function apply() {
       var query = (search ? search.value : '').trim().toLowerCase();

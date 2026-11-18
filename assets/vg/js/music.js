@@ -281,10 +281,13 @@
       '<path d="M9 18V6l10-2v11"/><circle cx="6.5" cy="18" r="2.6"/><circle cx="16.5" cy="15" r="2.6"/>' +
       '<path d="M3 3l18 18"/></svg>';
   }
+  function T(ru, en, lt) {
+    if (window.VG && window.VG.T) return window.VG.T(ru, en, lt);
+    return ru;
+  }
   function label(on) {
-    var ru = window.VG && window.VG.lang && window.VG.lang() === 'en';
-    if (on) return ru ? 'MUSIC' : 'МУЗЫКА';
-    return ru ? 'MUSIC OFF' : 'МУЗЫКА ВЫКЛ';
+    if (on) return T('МУЗЫКА', 'MUSIC', 'MUZIKA');
+    return T('МУЗЫКА ВЫКЛ', 'MUSIC OFF', 'MUZIKA IŠJ.');
   }
 
   function build() {
@@ -306,14 +309,18 @@
     });
     document.body.appendChild(button);
     paint();
+    if (window.VG && VG.onLangChange) VG.onLangChange(paint);
   }
 
   function paint() {
     if (!button) return;
     var on = enabled;
     button.setAttribute('aria-pressed', on ? 'true' : 'false');
-    button.title = on ? 'Музыка включена — нажмите, чтобы выключить'
-                      : 'Музыка выключена — нажмите, чтобы включить';
+    button.title = on
+      ? T('Музыка включена — нажмите, чтобы выключить', 'Music on — click to turn off',
+          'Muzika įjungta – spustelėkite, kad išjungtumėte')
+      : T('Музыка выключена — нажмите, чтобы включить', 'Music off — click to turn on',
+          'Muzika išjungta – spustelėkite, kad įjungtumėte');
     button.setAttribute('aria-label', button.title);
     button.innerHTML = (on ? iconNote() : iconMuted()) +
       '<span class="vgm-bars" aria-hidden="true"><i></i><i></i><i></i></span>' +

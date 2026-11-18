@@ -43,11 +43,11 @@ RUNTIME = r'''<script id="game-i18n-runtime">
   function detect() {
     try {
       var query = new URLSearchParams(location.search).get('lang');
-      if (query === 'en' || query === 'ru') return query;
+      if (query === 'en' || query === 'ru' || query === 'lt') return query;
     } catch (e) {}
     try {
       var saved = localStorage.getItem('vg_lang');
-      if (saved === 'en' || saved === 'ru') return saved;
+      if (saved === 'en' || saved === 'ru' || saved === 'lt') return saved;
     } catch (e) {}
     return 'ru';
   }
@@ -68,13 +68,24 @@ RUNTIME = r'''<script id="game-i18n-runtime">
     node.innerHTML = value;
   }
 
+  /* Литовских строк в играх пока нет: для LT берём английские, чтобы вместо
+     русского текста был хотя бы понятный английский. */
+  function textFor(node, name) {
+    function read(code) {
+      return node.getAttribute(name ? 'data-' + name + '-' + code : 'data-' + code);
+    }
+    var text = read(lang);
+    if (text == null && lang === 'lt') text = read('en');
+    return text;
+  }
+
   function apply(next) {
-    lang = next === 'en' ? 'en' : 'ru';
+    lang = next === 'en' || next === 'lt' ? next : 'ru';
     document.documentElement.setAttribute('lang', lang);
     var nodes = document.querySelectorAll('[data-ru]');
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
-      var text = node.getAttribute(lang === 'en' ? 'data-en' : 'data-ru');
+      var text = textFor(node, '');
       if (text == null) continue;
       if (node.tagName === 'OPTION') node.textContent = text;
       else node.innerHTML = text;
@@ -83,31 +94,34 @@ RUNTIME = r'''<script id="game-i18n-runtime">
       var record = dynamic[d];
       if (!record.node || !record.node.parentNode) continue;
       if (record.node.getAttribute && record.node.getAttribute('data-ru')) continue;
-      if (record.node.tagName === 'OPTION') record.node.textContent = lang === 'en' ? record.en : record.ru;
-      else record.node.innerHTML = lang === 'en' ? record.en : record.ru;
+      var value = lang === 'ru' ? record.ru : record.en;
+      if (record.node.tagName === 'OPTION') record.node.textContent = value;
+      else record.node.innerHTML = value;
     }
     /* Заголовок вкладки: переводим document.title, а не атрибут title у <html>. */
     var root = document.documentElement;
-    var titleEn = root.getAttribute('data-title-en');
-    if (titleEn) {
-      if (lang === 'en') {
+    var title = textFor(root, 'title');
+    if (title) {
+      if (lang !== 'ru') {
         if (!root.hasAttribute('data-title-ru')) root.setAttribute('data-title-ru', document.title);
-        document.title = titleEn;
+        document.title = title;
       } else if (root.hasAttribute('data-title-ru')) {
         document.title = root.getAttribute('data-title-ru');
       }
     }
-    var attrNodes = (document.body || document).querySelectorAll('[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]');
+    var selector = '[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]';
+    if (lang === 'lt') selector += ',[data-aria-label-lt],[data-title-lt],[data-placeholder-lt],[data-alt-lt]';
+    var attrNodes = (document.body || document).querySelectorAll(selector);
     for (var j = 0; j < attrNodes.length; j++) {
       var el = attrNodes[j];
       for (var k = 0; k < ATTRS.length; k++) {
         var name = ATTRS[k];
-        var english = el.getAttribute('data-' + name + '-en');
-        if (english == null) continue;
+        var translated = textFor(el, name);
+        if (translated == null) continue;
         var store = 'data-' + name + '-ru';
-        if (lang === 'en') {
+        if (lang !== 'ru') {
           if (!el.hasAttribute(store)) el.setAttribute(store, el.getAttribute(name) || '');
-          el.setAttribute(name, english);
+          el.setAttribute(name, translated);
         } else if (el.hasAttribute(store)) {
           el.setAttribute(name, el.getAttribute(store));
         }
@@ -127,13 +141,13 @@ RUNTIME = r'''<script id="game-i18n-runtime">
         }
         var english = dictionary(value) || value;
         dynamic.push({ node: this, ru: value, en: english });
-        nativeSet.call(this, lang === 'en' ? english : value);
+        nativeSet.call(this, lang === 'ru' ? value : english);
       }
     });
   }
 
   /* Динамические строки: игра вызывает window.VGT('рус', 'eng'). */
-  window.VGT = function (ru, en) { return lang === 'en' ? en : ru; };
+  window.VGT = function (ru, en) { return lang === 'ru' ? ru : en; };
   window.VG_I18N = { apply: apply, lang: function () { return lang; } };
 
   apply(lang);
