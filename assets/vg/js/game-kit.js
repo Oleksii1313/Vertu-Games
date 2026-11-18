@@ -139,7 +139,147 @@
     }, { passive: false });
   }
 
-  /* ------------------------------------------------------- 4. Инициализация */
+  /* ============================================================================
+     4. Игра на весь экран телефона
+     ----------------------------------------------------------------------------
+     Плеер платформы отдаёт игре всю площадь экрана, но у классических 2D-игр
+     (snake, 2048, flappy, pong, shooter, platformer) поле сидело в жёсткой
+     колонке «статистика — поле — кнопки»: в портрете панели ели по 60–90 px
+     сверху и снизу, а в ландшафте поле оставалось вертикальной полосой среди
+     пустых полей. Здесь мы возвращаем игре её площадь:
+
+       * портрет  — панели компактные, отступы поля убраны;
+       * ландшафт — экран раскладывается в строку: поле во всю высоту слева,
+                    кнопки колонкой справа, статистика тонкой полосой поверх
+                    нижнего края (полоса прозрачна и не перехватывает нажатия).
+
+     Правила ставятся только на страницы с классической раскладкой (.info и
+     .controls), поэтому 3D-игры, Doodle и Redline не затрагиваются. Плюс JS
+     помечает режим экрана (data-vg-view) и после поворота телефона просит игры
+     пересчитать вид: часть браузеров сообщает об orientationchange раньше, чем
+     обновляет размеры окна.
+     ========================================================================== */
+
+  var BASE_CSS = [
+    /* Адресная строка мобильного браузера и «резинка» прокрутки не должны
+       сдвигать поле: фон остаётся на месте, страница не тянется. */
+    'html{overscroll-behavior:none;-webkit-text-size-adjust:100%}',
+    'body{overscroll-behavior:none}'
+  ].join('');
+
+  var CLASSIC_CSS = [
+    /* Высота по видимой области: в мобильном Safari 100vh больше экрана. */
+    '.vg-classic body{height:100vh;height:100dvh}',
+
+    /* ------------------------------------------------ портрет телефона */
+    '@media (max-width:820px){',
+    '.vg-classic .info{padding:4px 8px;gap:6px}',
+    '.vg-classic .info .l,.vg-classic .info small{font-size:9px;letter-spacing:.7px}',
+    '.vg-classic .info .v,.vg-classic .info b{font-size:15px}',
+    '.vg-classic .board,.vg-classic .board-wrap{padding:0;flex:1 1 auto;min-height:0;min-width:0}',
+    /* .stage у части игр без стилей — он должен забирать всю оставшуюся высоту. */
+    '.vg-classic .stage{flex:1 1 auto;min-height:0;min-width:0;padding:0;display:flex;',
+    '  align-items:center;justify-content:center}',
+    '.vg-classic .stage>canvas{flex:0 0 auto}',
+    '.vg-classic .controls{padding:6px 8px;gap:8px}',
+    '}',
+
+    /* ----------------------------------------------- ландшафт телефона */
+    '@media (orientation:landscape) and (max-height:600px){',
+    '.vg-classic body{display:flex;flex-direction:row;align-items:stretch}',
+    /* Статистика — тонкая полоса поверх нижнего края игрового поля. */
+    '.vg-classic .info{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:12;',
+    '  background:linear-gradient(0deg,rgba(5,6,10,.78),rgba(5,6,10,0));border:0;',
+    '  padding:2px 8px calc(2px + env(safe-area-inset-bottom,0px));pointer-events:none}',
+    '.vg-classic .info .l,.vg-classic .info small{font-size:8px}',
+    '.vg-classic .info .v,.vg-classic .info b{font-size:13px}',
+    /* Поле — во всю высоту слева, кнопки — колонкой справа. */
+    '.vg-classic .stage,.vg-classic .board,.vg-classic .board-wrap,.vg-classic body>canvas{',
+    '  flex:1 1 0;min-width:0;min-height:0;align-self:stretch;padding:0}',
+    '.vg-classic .controls{flex:0 0 auto;flex-direction:column;justify-content:center;',
+    '  border:0;padding:6px;gap:10px;width:auto;',
+    '  background:linear-gradient(90deg,rgba(5,6,10,0),rgba(5,6,10,.45))}',
+    '.vg-classic .muted{top:6px!important;right:6px!important}',
+    /* Подсказки «стрелки / свайпы» в ландшафте только отнимают высоту у поля. */
+    '.vg-classic body>.hint,.vg-classic body>.help{display:none}',
+    '.vg-classic .dpad{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}',
+    '}'
+  ].join('');
+
+  function style(id, css) {
+    var node = document.getElementById(id);
+    if (!node) {
+      node = document.createElement('style');
+      node.id = id;
+      (document.head || document.documentElement).appendChild(node);
+    }
+    node.textContent = css;
+    return node;
+  }
+
+  function landscape() {
+    return window.innerWidth > window.innerHeight && window.innerHeight <= 600;
+  }
+  function viewMode() {
+    if (landscape()) return 'landscape';
+    if (window.innerWidth <= 820) return 'portrait';
+    return 'desktop';
+  }
+
+  /* Игры пересчитывают поле по событию resize. После поворота телефона оно
+     приходит раньше, чем браузер обновит innerWidth/innerHeight, поэтому
+     повторяем его сами — один раз, когда размеры уже устоялись. */
+  function refit() {
+    try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+  }
+
+  function bindViewport() {
+    var root = document.documentElement;
+    var lastH = window.innerHeight, lastW = window.innerWidth;
+    function mark() {
+      var mode = viewMode();
+      if (root.getAttribute('data-vg-view') !== mode) root.setAttribute('data-vg-view', mode);
+    }
+    mark();
+    window.addEventListener('resize', function () {
+      mark();
+      lastH = window.innerHeight; lastW = window.innerWidth;
+    });
+    window.addEventListener('orientationchange', function () {
+      mark();
+      setTimeout(function () { mark(); refit(); }, 180);
+      setTimeout(refit, 600);
+    });
+    /* Выезд/уход адресной строки меняет высоту на десятки пикселей: поле
+       должно подстроиться, но мелкие дребезги игнорируем. */
+    if (window.visualViewport) {
+      try {
+        window.visualViewport.addEventListener('resize', function () {
+          var h = Math.round(window.innerHeight);
+          var w = Math.round(window.innerWidth);
+          if (Math.abs(h - lastH) < 40 && Math.abs(w - lastW) < 40) return;
+          lastH = h; lastW = w;
+          mark();
+          refit();
+        });
+      } catch (e) {}
+    }
+  }
+
+  /* ------------------------------------------------------- 5. Инициализация */
+  /* Раскладка экрана — сразу при загрузке скрипта (он стоит в конце body, когда
+     панели уже разобраны): иначе первый кадр рисуется в старой колонке, и игрок
+     видит рывок при открытии игры. */
+  function fitLayout() {
+    style('vg-base-fit', BASE_CSS);
+    /* Классическая раскладка «статистика — поле — кнопки»: только её и правим. */
+    if (document.querySelector('.info') && document.querySelector('.controls')) {
+      document.documentElement.classList.add('vg-classic');
+      style('vg-classic-fit', CLASSIC_CSS);
+    }
+    bindViewport();
+  }
+
   function init() {
     // Только CSS-качество отрисовки: без вмешательства в размеры буфера.
     Array.prototype.forEach.call(document.querySelectorAll('canvas'), function (canvas) {
@@ -157,7 +297,7 @@
   }
 
   /* ============================================================================
-     5. VGReward — единый контракт награды с сервером для всех 2D-игр.
+     6. VGReward — единый контракт награды с сервером для всех 2D-игр.
      ----------------------------------------------------------------------------
      Игра считает только «единицы» события (труба, волна, 100 очков, заказ) и
      никогда не присылает сумму V. Платформа получает список единиц, сервер сам
@@ -341,7 +481,10 @@
   window.VGGame.focus = focusGame;
   window.VGGame.dpr = dpr;
   window.VGGame.noSelect = bindSelectionGuard;
+  window.VGGame.viewMode = viewMode;   // 'portrait' | 'landscape' | 'desktop'
+  window.VGGame.refit = refit;         // попросить игру пересчитать поле
 
+  fitLayout();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
