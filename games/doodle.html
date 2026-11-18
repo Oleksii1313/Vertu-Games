@@ -11,11 +11,12 @@
   function detect() {
     try {
       var query = new URLSearchParams(location.search).get('lang');
-      if (query === 'en' || query === 'ru' || query === 'lt') return query;
+      if (query === 'en' || query === 'ru') return query;
     } catch (e) {}
     try {
       var saved = localStorage.getItem('vg_lang');
-      if (saved === 'en' || saved === 'ru' || saved === 'lt') return saved;
+      if (saved === 'en' || saved === 'ru') return saved;
+      if (saved === 'lt') return 'ru';
     } catch (e) {}
     return 'ru';
   }
@@ -43,12 +44,11 @@
       return node.getAttribute(name ? 'data-' + name + '-' + code : 'data-' + code);
     }
     var text = read(lang);
-    if (text == null && lang === 'lt') text = read('en');
     return text;
   }
 
   function apply(next) {
-    lang = next === 'en' || next === 'lt' ? next : 'ru';
+    lang = next === 'en' ? 'en' : 'ru';
     document.documentElement.setAttribute('lang', lang);
     var nodes = document.querySelectorAll('[data-ru]');
     for (var i = 0; i < nodes.length; i++) {
@@ -78,7 +78,6 @@
       }
     }
     var selector = '[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]';
-    if (lang === 'lt') selector += ',[data-aria-label-lt],[data-title-lt],[data-placeholder-lt],[data-alt-lt]';
     var attrNodes = (document.body || document).querySelectorAll(selector);
     for (var j = 0; j < attrNodes.length; j++) {
       var el = attrNodes[j];

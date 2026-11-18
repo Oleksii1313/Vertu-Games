@@ -11,21 +11,15 @@
 
   function cards() { return $$('.game-card', grid); }
 
-  /* Язык карточек: литовский текст берём из *_lt, а если перевода нет —
-     английский, чтобы посреди литовской страницы не было русских абзацев. */
+  /* Язык карточек: английский текст берём из *_en, иначе русский оригинал. */
   function gameName(game) {
-    var value = VG.lang();
-    if (value === 'lt') return game.name_lt || game.name_en || game.name;
-    return value === 'en' ? (game.name_en || game.name) : game.name;
+    return VG.lang() === 'en' ? (game.name_en || game.name) : game.name;
   }
-  function gameText(game, ltKey, enKey, ruKey) {
-    var value = VG.lang();
-    if (value === 'lt') return game[ltKey] || game[enKey] || game[ruKey] || '';
-    return value === 'en' ? (game[enKey] || game[ruKey] || '') : (game[ruKey] || '');
+  function gameText(game, enKey, ruKey) {
+    return VG.lang() === 'en' ? (game[enKey] || game[ruKey] || '') : (game[ruKey] || '');
   }
   function catName(game, index) {
-    var value = VG.lang();
-    var list = (value === 'lt' ? game.cat_lt : value === 'en' ? game.cat_en : game.cat) || game.cat || [];
+    var list = (VG.lang() === 'en' ? game.cat_en : game.cat) || game.cat || [];
     return list[index] || (game.cat_en || [])[index] || (game.cat || [])[index] || '';
   }
   var CATEGORIES = {};
@@ -35,7 +29,7 @@
     var value = VG.lang();
     if (value === 'ru') return cat;
     var known = CATEGORIES[cat];
-    if (known) return (value === 'lt' ? known.lt : known.en) || known.en || cat;
+    if (known) return known.en || cat;
     for (var i = 0; i < games.length; i++) {
       var index = (games[i].cat || []).indexOf(cat);
       if (index === -1) continue;
@@ -100,7 +94,7 @@
       });
     });
     box.innerHTML = '<button class="chip' + (activeCat ? '' : ' on') + '" data-cat="">' +
-      escapeHtml(T('Все', 'All', 'Visi')) + '</button>' +
+      escapeHtml(T('Все', 'All')) + '</button>' +
       cats.map(function (cat) {
         return '<button class="chip' + (cat === activeCat ? ' on' : '') + '" data-cat="' + escapeHtml(cat) + '">' +
           escapeHtml(catLabel(cat)) + '</button>';
@@ -124,10 +118,10 @@
       modal = VG.el('div', 'modal');
       modal.id = 'gameModal';
       modal.innerHTML = '<div class="panel card">' +
-        '<button class="close" aria-label="' + escapeHtml(T('Закрыть', 'Close', 'Uždaryti')) + '">×</button>' +
+        '<button class="close" aria-label="' + escapeHtml(T('Закрыть', 'Close')) + '">×</button>' +
         '<div class="detail-head"></div><div class="detail-body"></div>' +
         '<div class="row" style="margin-top:16px"><button class="btn btn-primary" data-play></button>' +
-        '<button class="btn btn-ghost" data-close>' + escapeHtml(T('Закрыть', 'Close', 'Uždaryti')) + '</button></div></div>';
+        '<button class="btn btn-ghost" data-close>' + escapeHtml(T('Закрыть', 'Close')) + '</button></div></div>';
       document.body.appendChild(modal);
       modal.addEventListener('click', function (event) {
         if (event.target === modal || event.target.closest('[data-close]') || event.target.closest('.close')) {
@@ -140,26 +134,25 @@
       '<span style="width:62px;height:62px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(140deg,rgba(139,92,246,.35),rgba(255,45,149,.25));border:1px solid var(--line-2)">' +
       VG.icon(game.icon, 34) + '</span><div><span class="eyebrow">' + escapeHtml(catName(game, 0)) +
       '</span><h2 style="font-size:22px;margin:4px 0 0">' + escapeHtml(gameName(game)) + '</h2></div></div>';
-    var longer = gameText(game, 'long_lt', 'long_en', 'long_ru');
+    var longer = gameText(game, 'long_en', 'long_ru');
     modal.querySelector('.detail-body').innerHTML =
       '<p class="muted" style="font-size:13.5px;white-space:pre-line">' + escapeHtml(longer) + '</p>' +
       '<div class="grid grid-2" style="gap:10px;margin-top:14px">' +
-      '<div class="stat-card"><span>' + escapeHtml(T('Награда', 'Reward', 'Atlygis')) + '</span>' +
+      '<div class="stat-card"><span>' + escapeHtml(T('Награда', 'Reward')) + '</span>' +
       '<b style="font-size:19px">+' + game.reward + ' V</b>' +
-      '<small class="muted" style="font-size:11.5px">' + escapeHtml(gameText(game, 'how_lt', 'how_en', 'how_ru')) + '</small></div>' +
-      '<div class="stat-card"><span>' + escapeHtml(T('Управление', 'Controls', 'Valdymas')) + '</span>' +
+      '<small class="muted" style="font-size:11.5px">' + escapeHtml(gameText(game, 'how_en', 'how_ru')) + '</small></div>' +
+      '<div class="stat-card"><span>' + escapeHtml(T('Управление', 'Controls')) + '</span>' +
       '<b style="font-size:13px;font-family:var(--body)">' +
-      escapeHtml(gameText(game, 'controls_lt', 'controls_en', 'controls_ru')) + '</b>' +
-      '<small class="muted" style="font-size:11.5px">' + escapeHtml(T('Суточный лимит: ', 'Daily limit: ', 'Paros limitas: ')) +
+      escapeHtml(gameText(game, 'controls_en', 'controls_ru')) + '</b>' +
+      '<small class="muted" style="font-size:11.5px">' + escapeHtml(T('Суточный лимит: ', 'Daily limit: ')) +
       fmt(game.daily) + ' V</small></div></div>';
     var playBtn = modal.querySelector('[data-play]');
-    playBtn.innerHTML = VG.icon('play', 17) + ' ' + T('Играть', 'Play', 'Žaisti');
+    playBtn.innerHTML = VG.icon('play', 17) + ' ' + T('Играть', 'Play');
     playBtn.onclick = function () {
       modal.classList.remove('open');
       if (!VG.user()) {
         VG.toast(T('Войдите, чтобы играть и получать V-монеты.',
-          'Sign in to play and earn V-coins.',
-          'Prisijunkite, kad žaistumėte ir rinktumėte V monetas.'), 'bad');
+          'Sign in to play and earn V-coins.'), 'bad');
         setTimeout(function () { location.href = 'login.html?next=catalog'; }, 600);
         return;
       }

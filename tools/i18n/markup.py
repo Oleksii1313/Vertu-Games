@@ -18,11 +18,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from ui_en import UI_EN  # noqa: E402
 
-try:  # литовский словарь не обязателен: без него страница покажет английский
-    from ui_lt import UI_LT  # noqa: E402
-except ImportError:  # pragma: no cover
-    UI_LT = {}
-
 CYRILLIC = re.compile(r'[А-Яа-яЁё]')
 TEXT_ATTRS = ('placeholder', 'aria-label', 'title', 'alt', 'content')
 # Теги, внутри которых текст не переводим (код, стили, скрипты).
@@ -48,21 +43,6 @@ def translate(text: str) -> str:
     if '{games}' in key:
         return key.replace('{games}', games_count('en'))
     _MISSING.add(key)
-    return ''
-
-
-def translate_lt(text: str) -> str:
-    """Литовский перевод строки. Пустая строка — перевода нет, разметка
-    останется с data-ru/data-en и в литовском режиме покажет английский текст."""
-    key = text.strip()
-    if key in UI_LT:
-        return UI_LT[key]
-    for template, lithuanian in UI_LT.items():
-        if '{n}' in template:
-            pattern = '^' + re.escape(template).replace(re.escape('{n}'), r'(\d+)') + '$'
-            match = re.match(pattern, key)
-            if match:
-                return lithuanian.replace('{n}', match.group(1))
     return ''
 
 
@@ -112,12 +92,8 @@ class Localizer(HTMLParser):
             escaped_title = self.title_en.replace('&', '&amp;').replace('"', '&quot;')
             # Генератор страниц уже ставит data-title-en — второй такой же
             # атрибут был бы невалидным HTML (браузер молча взял бы первый).
-            new_raw = re.sub(r'\s*data-title-(en|lt)="[^"]*"', '', raw)
+            new_raw = re.sub(r'\s*data-title-en="[^"]*"', '', raw)
             new_raw = new_raw.replace('>', f' data-title-en="{escaped_title}">', 1)
-            title_lt = translate_lt(self.title_ru)
-            if title_lt:
-                escaped_lt = title_lt.replace('&', '&amp;').replace('"', '&quot;')
-                new_raw = new_raw.replace('>', f' data-title-lt="{escaped_lt}">', 1)
             self.out.append(new_raw)
             return
         if tag in ('meta', 'link'):
@@ -132,10 +108,7 @@ class Localizer(HTMLParser):
                 continue
             marker = f'{name}="{value}"'
             if marker in new_raw:
-                lithuanian = translate_lt(value)
-                extra = f' data-{name}-lt="{lithuanian}"' if lithuanian else ''
-                new_raw = new_raw.replace(
-                    marker, f'{name}="{value}" data-{name}-en="{english}"{extra}', 1)
+                new_raw = new_raw.replace(marker, f'{name}="{value}" data-{name}-en="{english}"', 1)
         self.out.append(new_raw)
 
     def handle_startendtag(self, tag, attrs):
@@ -171,17 +144,11 @@ class Localizer(HTMLParser):
                 raw = self.out[self.option_at]
                 if raw.rstrip().endswith('>'):
                     head = raw.rstrip()[:-1]
-                    lithuanian = translate_lt(core)
-                    extra = f' data-lt="{lithuanian}"' if lithuanian else ''
-                    self.out[self.option_at] = f'{head} data-ru="{core}" data-en="{english}"{extra}>'
+                    self.out[self.option_at] = f'{head} data-ru="{core}" data-en="{english}">'
             self.out.append(data)
             return
         escaped = english.replace('&', '&amp;').replace('"', '&quot;')
-        lithuanian = translate_lt(core)
-        extra = ''
-        if lithuanian:
-            extra = ' data-lt="' + lithuanian.replace('&', '&amp;').replace('"', '&quot;') + '"'
-        self.out.append(f'{lead}<span data-ru="{core}" data-en="{escaped}"{extra}>{core}</span>{trail}')
+        self.out.append(f'{lead}<span data-ru="{core}" data-en="{escaped}">{core}</span>{trail}')
 
     def handle_entityref(self, name):
         self.out.append(f'&{name};')
