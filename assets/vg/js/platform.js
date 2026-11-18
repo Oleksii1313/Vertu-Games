@@ -41,9 +41,110 @@
      больше нет на колесе (x0.5, x0.25, x3, x4, x10): миграция помечает такие
      ставки как «past», а интерфейс показывает их как архив, чтобы на странице
      не было несуществующих секторов. */
+  var SLOT_NAME_RU = {
+    v: 'V', spark: 'искра', dice: 'кубик', star: 'звезда', gem: 'самоцвет',
+    wheel: 'колесо', crown: 'корона'
+  };
   function casinoOutcome(label) {
     var text = label == null ? '' : String(label);
-    return text === 'past' ? T('архив', 'archived') : text;
+    if (text === 'past') return T('архив', 'archived');
+    // Исход слотов сервер пишет по-английски («triple star», «pair v»,
+    // «no win») — на русской странице это выглядело как непереведённый текст.
+    var match = /^(triple|pair)\s+(\w+)$/i.exec(text);
+    if (match) {
+      var symbol = match[2].toLowerCase();
+      var ru = SLOT_NAME_RU[symbol] || symbol;
+      return match[1].toLowerCase() === 'triple'
+        ? T('три в ряд: ' + ru, 'triple ' + symbol)
+        : T('пара: ' + ru, 'pair ' + symbol);
+    }
+    if (/^no win$/i.test(text)) return T('без выигрыша', 'no win');
+    return text;
+  }
+
+  /* ------------------------------------------------------- история операций
+     Сервер пишет причину операции по-русски в момент начисления («Игра: …»,
+     «Достижение: …»), и эта строка уже лежит в базе — перевести её на сервере
+     задним числом нельзя. Поэтому известные шаблоны переводим в интерфейсе:
+     английская страница не должна показывать русские подписи. Ники и
+     комментарии администратора — пользовательский текст, он остаётся как есть.
+     Названия игр и предметов берём из каталога (у них уже есть name_en). */
+  var KIND_LABELS = {
+    game: ['Награда за игру', 'Game reward'],
+    'game-units': ['Награда за игру', 'Game reward'],
+    shop: ['Покупка в магазине', 'Shop purchase'],
+    casino: ['Ставка в казино', 'Casino bet'],
+    'casino-win': ['Выигрыш в казино', 'Casino win'],
+    task: ['Награда за задание', 'Quest reward'],
+    achievement: ['Достижение', 'Achievement'],
+    welcome: ['Приветственный бонус', 'Welcome bonus'],
+    admin: ['Изменение администратора', 'Admin adjustment'],
+    other: ['Операция', 'Transaction']
+  };
+  function catalogLookup(list, key, ru, wanted) {
+    var rows = (typeof window !== 'undefined' && window.VG_DATA && window.VG_DATA[list]) || [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i][key] && String(rows[i][key]).toLowerCase() === String(ru).toLowerCase()) {
+        return rows[i][wanted] || rows[i][key];
+      }
+    }
+    return '';
+  }
+  /* Название игры: в каталоге есть пара name/name_en — на английской странице
+     показываем то же имя, что и в каталоге игр. */
+  function gameLabel(name) {
+    var text = String(name == null ? '' : name).trim();
+    if (!text) return '';
+    if (lang() !== 'en') return text;
+    return catalogLookup('games', 'name', text, 'name_en') || text;
+  }
+  function casinoGameLabel(name) {
+    var key = String(name == null ? '' : name).trim().toLowerCase();
+    if (key === 'slots' || key === 'slot') return T('Слоты', 'Slots');
+    if (key === 'wheel' || key === 'roulette') return T('Колесо', 'Wheel');
+    return gameLabel(name);
+  }
+  function ledgerReason(row) {
+    if (!row) return '';
+    var raw = row.reason == null ? '' : String(row.reason).trim();
+    var kind = String(row.kind == null ? '' : row.kind).trim();
+    var ru = lang() !== 'en';
+    if (ru) return raw || (KIND_LABELS[kind] ? KIND_LABELS[kind][0] : '');
+    if (!raw) return KIND_LABELS[kind] ? KIND_LABELS[kind][1] : KIND_LABELS.other[1];
+    var m;
+    // Причина совпадает с русской подписью категории — берём готовый перевод
+    // («Приветственный бонус», «Изменение администратора» и т. п.).
+    if (KIND_LABELS[kind] && raw === KIND_LABELS[kind][0]) return KIND_LABELS[kind][1];
+    // «Игра: Космокухня»
+    if ((m = raw.match(/^Игра:\s*(.+)$/i))) return 'Game: ' + gameLabel(m[1]);
+    // «Космокухня: 12 ед. × 5 V» — награда за единицы события
+    if ((m = raw.match(/^(.+?):\s*(\d+)\s*ед\.\s*×\s*(\d+)\s*V$/i))) {
+      return gameLabel(m[1]) + ': ' + m[2] + ' units × ' + m[3] + ' V';
+    }
+    // «Snake: 3 обычных и 1 золотых яблок»
+    if ((m = raw.match(/^Snake:\s*(\d+)\s*обычных и\s*(\d+)\s*золотых яблок$/i))) {
+      return 'Snake: ' + m[1] + (m[1] === '1' ? ' apple' : ' apples') + ' and ' + m[2] +
+        (m[2] === '1' ? ' golden apple' : ' golden apples');
+    }
+    // «С MiniCraft: 24 монет»
+    if ((m = raw.match(/^С MiniCraft:\s*(\d+)\s*монет/i))) return 'From MiniCraft: ' + m[1] + ' coins';
+    // «Ставка: slots» / «Выигрыш: wheel»
+    if ((m = raw.match(/^Ставка:\s*(.+)$/i))) return 'Bet: ' + casinoGameLabel(m[1]);
+    if ((m = raw.match(/^Выигрыш:\s*(.+)$/i))) return 'Win: ' + casinoGameLabel(m[1]);
+    // «Достижение: Добро пожаловать» → имя из каталога на нужном языке
+    if ((m = raw.match(/^Достижение:\s*(.+)$/i))) {
+      var ach = catalogLookup('achievements', 'name_ru', m[1], 'name_en') || m[1];
+      return 'Achievement: ' + ach;
+    }
+    // «Задание #3: награда»
+    if ((m = raw.match(/^Задание\s*#(\d+):\s*награда$/i))) return 'Quest #' + m[1] + ': reward';
+    // «Бонус: Ракета» — покупка с бонусными V
+    if ((m = raw.match(/^Бонус:\s*(.+)$/i))) {
+      var item = catalogLookup('shop', 'name_ru', m[1], 'name_en') || m[1];
+      return 'Bonus: ' + item;
+    }
+    // Неизвестный шаблон (например, комментарий администратора) — как есть.
+    return raw;
   }
 
   function fmt(n) {
@@ -1475,7 +1576,7 @@
   VG.escapeHtml = escapeHtml; VG.debounce = debounce; VG.storage = storage;
   VG.user = user; VG.coins = coins; VG.setUser = setUser; VG.refreshSession = refreshSession;
   VG.updateCoins = updateCoins; VG.refreshCoins = refreshCoins; VG.onChange = onChange;
-  VG.casinoOutcome = casinoOutcome;
+  VG.casinoOutcome = casinoOutcome; VG.ledgerReason = ledgerReason;
   VG.onSessionChange = onSessionChange; VG.onLangChange = onLangChange;
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;

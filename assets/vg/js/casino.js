@@ -276,34 +276,48 @@
 
   /* ----------------------------------------------------------------- history */
   var currentGame = '';
+  var lastHistory = null;
+  /* Таблица истории строится из уже полученных данных: при смене языка она
+     перерисовывается без нового запроса к серверу. */
+  function paintHistory(items) {
+    var box = $('#historyBody');
+    if (!box) return;
+    if (!items.length) {
+      box.innerHTML = '<div class="empty">' + T('История пуста — сделайте первую ставку.', 'History is empty — place your first bet.') + '</div>';
+      return;
+    }
+    // Ставка и выплата — разные колонки: видно, сколько списали на старте и
+    // сколько вернули в конце. «Итог» — их разница.
+    box.innerHTML = '<div class="table-wrap"><table><thead><tr>' +
+      '<th>' + T('Игра', 'Game') + '</th><th>' + T('Ставка', 'Stake') + '</th>' +
+      '<th>' + T('Выплата', 'Payout') + '</th>' +
+      '<th>' + T('Итог', 'Net') + '</th><th>' + T('Результат', 'Result') + '</th>' +
+      '<th>' + T('Время', 'When') + '</th></tr></thead><tbody>' + items.map(function (row) {
+        var rowNet = Number(row.payout) - Number(row.stake);
+        return '<tr><td>' + (row.game === 'slots' ? T('Слоты', 'Slots') : row.game === 'wheel' ? T('Колесо', 'Wheel') : escapeHtml(row.game)) + '</td>' +
+          '<td>' + '−' + fmt(row.stake) + ' V</td>' +
+          '<td class="' + (row.payout > 0 ? 'pos' : 'muted') + '">' + '+' + fmt(row.payout) + ' V</td>' +
+          '<td class="' + (rowNet > 0 ? 'pos' : rowNet < 0 ? 'neg' : 'muted') + '">'
+            + (rowNet > 0 ? '+' : '') + fmt(rowNet) + ' V</td>' +
+          '<td class="muted">' + escapeHtml(VG.casinoOutcome(row.outcome)) + '</td>' +
+          '<td class="muted">' + VG.timeAgo(row.created) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
   function loadHistory(game) {
     var box = $('#historyBody');
     if (!box) return;
     var panel = $('#panel-history');
     if (panel && panel.classList.contains('hidden')) return;   // грузим только когда вкладка видима
     if (!VG.user()) {
+      lastHistory = null;
       box.innerHTML = '<div class="empty">' + T('Войдите, чтобы увидеть историю ставок.', 'Sign in to see your bet history.') + '</div>';
       return;
     }
     var query = '/api/casino/history?limit=30' + (game ? '&game=' + encodeURIComponent(game) : '');
     VG.api(query).then(function (data) {
-      if (!data.items.length) {
-        box.innerHTML = '<div class="empty">' + T('История пуста — сделайте первую ставку.', 'History is empty — place your first bet.') + '</div>';
-        return;
-      }
-      // Ставка и выплата — разные колонки: видно, сколько списали на старте и
-      // сколько вернули в конце. «Итог» — их разница.
-      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Игра</th><th>Ставка</th><th>Выплата</th>'
-        + '<th>Итог</th><th>Результат</th><th>Время</th></tr></thead><tbody>' + data.items.map(function (row) {
-          var rowNet = Number(row.payout) - Number(row.stake);
-          return '<tr><td>' + (row.game === 'slots' ? 'Слоты' : row.game === 'wheel' ? 'Колесо' : escapeHtml(row.game)) + '</td>' +
-            '<td>' + '−' + fmt(row.stake) + ' V</td>' +
-            '<td class="' + (row.payout > 0 ? 'pos' : 'muted') + '">' + '+' + fmt(row.payout) + ' V</td>' +
-            '<td class="' + (rowNet > 0 ? 'pos' : rowNet < 0 ? 'neg' : 'muted') + '">'
-              + (rowNet > 0 ? '+' : '') + fmt(rowNet) + ' V</td>' +
-            '<td class="muted">' + escapeHtml(VG.casinoOutcome(row.outcome)) + '</td>' +
-            '<td class="muted">' + VG.timeAgo(row.created) + '</td></tr>';
-        }).join('') + '</tbody></table></div>';
+      lastHistory = data.items || [];
+      paintHistory(lastHistory);
     }).catch(function (error) {
       box.innerHTML = '<div class="empty">' + escapeHtml(error.message) + '</div>';
     });
@@ -326,23 +340,36 @@
     VG.api('/api/casino/history?limit=1').then(function (data) { updateStats(data.stats); }).catch(function () {});
   }
 
+  var lastRules = null;
+  /* Подпись лимитов строится из уже полученных правил: при смене языка
+     перерисовывается без нового запроса. */
+  function paintLimits(data) {
+    if (!data) return;
+    var label = $('#limitText');
+    if (label) {
+      var parts = [];
+      if (data.limits && data.limits.daily) {
+        parts.push(T('дневной лимит ' + fmt(data.limits.daily) + ' V',
+                     'daily limit ' + fmt(data.limits.daily) + ' V'));
+      }
+      if (data.limits && data.limits.excludeUntil > Date.now() / 1000) {
+        var until = new Date(data.limits.excludeUntil * 1000).toLocaleString();
+        parts.push(T('пауза до ' + until, 'paused until ' + until));
+      }
+      label.textContent = parts.length ? parts.join(' · ') : T('Не заданы', 'Not set');
+    }
+    var daily = $('#dailyLimit');
+    if (daily && data.limits) daily.value = data.limits.daily || 0;
+    var note = $('#freeSpinNote');
+    if (note) note.textContent = data.freeSpin ? T('бесплатный спин доступен', 'free spin available') : '';
+  }
+
   function loadLimits() {
     VG.api('/api/casino/rules').then(function (data) {
       minStake = data.min_stake || 5;
       maxStake = data.max_stake || 100;
-      var label = $('#limitText');
-      if (label) {
-        var parts = [];
-        if (data.limits && data.limits.daily) parts.push('дневной лимит ' + fmt(data.limits.daily) + ' V');
-        if (data.limits && data.limits.excludeUntil > Date.now() / 1000) {
-          parts.push('пауза до ' + new Date(data.limits.excludeUntil * 1000).toLocaleString());
-        }
-        label.textContent = parts.length ? parts.join(' · ') : T('Не заданы', 'Not set');
-      }
-      var daily = $('#dailyLimit');
-      if (daily && data.limits) daily.value = data.limits.daily || 0;
-      var note = $('#freeSpinNote');
-      if (note) note.textContent = data.freeSpin ? T('бесплатный спин доступен', 'free spin available') : '';
+      lastRules = data;
+      paintLimits(data);
     }).catch(function () {});
   }
 
@@ -433,6 +460,12 @@
       loadLimits();
       loadHistory(currentGame);
       loadStats();
+    });
+    // Смена языка: подписи и таблица истории перерисовываются из кэша.
+    VG.onLangChange(function () {
+      updateStats();
+      paintLimits(lastRules);
+      if (lastHistory) paintHistory(lastHistory);
     });
     loadStats();
     loadLimits();
