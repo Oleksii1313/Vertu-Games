@@ -21,24 +21,21 @@
     if (html != null) node.innerHTML = html;
     return node;
   }
-  /* Языки сайта: русский, английский и литовский. Значение хранится в атрибуте
-     lang у <html>, поэтому его видят и вложенные страницы, и игры в iframe. */
-  var LANGS = ['ru', 'en', 'lt'];
-  var LOCALE = { ru: 'ru-RU', en: 'en-US', lt: 'lt-LT' };
-  var DATE_LOCALE = { ru: 'ru-RU', en: 'en-GB', lt: 'lt-LT' };
+  /* Языки сайта: русский и английский. Значение хранится в атрибуте lang у
+     <html>, поэтому его видят и вложенные страницы, и игры в iframe. */
+  var LANGS = ['ru', 'en'];
+  var LOCALE = { ru: 'ru-RU', en: 'en-US' };
+  var DATE_LOCALE = { ru: 'ru-RU', en: 'en-GB' };
   function lang() {
     try {
       var value = document.documentElement.getAttribute('lang');
-      return value === 'en' ? 'en' : value === 'lt' ? 'lt' : 'ru';
+      return value === 'en' ? 'en' : 'ru';
     } catch (e) { return 'ru'; }
   }
-  /* Перевод строки: третий аргумент — литовский вариант. Если для литовского
-     текста нет, показываем английский (а не пустоту), чтобы интерфейс не
-     превращался в русские подписи посреди литовской страницы. */
-  function T(ru, en, lt) {
-    var value = lang();
-    if (value === 'lt') return lt != null ? lt : (en != null ? en : ru);
-    return value === 'en' ? (en != null ? en : ru) : ru;
+  /* Перевод строки: русский и английский варианты; английский — запасной,
+     чтобы на английской странице не появлялись русские подписи. */
+  function T(ru, en) {
+    return lang() === 'en' && en != null ? en : ru;
   }
   /* Результат ставки для истории. В старых базах остались множители, которых
      больше нет на колесе (x0.5, x0.25, x3, x4, x10): миграция помечает такие
@@ -66,69 +63,53 @@
     if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
     return many;
   }
-  /* Литовские формы: 1 valandą / 2 valandas / 10 valandų. */
-  function pluralLt(n, one, few, many) {
-    var mod10 = n % 10, mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return one;
-    if (mod10 >= 2 && (mod100 < 10 || mod100 >= 20)) return few;
-    return many;
-  }
-  function agoLt(n, one, few, many) {
-    return 'Prieš ' + n + ' ' + pluralLt(n, one, few, many);
-  }
   /* Относительное время: «Только что», «5 минут назад», «2 часа назад»,
      «3 дня назад». Отсутствующая или испорченная метка — «Дата неизвестна»,
      а не «20775 дней назад» из 1970 года. Метка из будущего (рассинхрон
      часов клиента) тоже не превращается в отрицательное число. */
   function timeAgo(ts) {
-    if (ts === null || ts === undefined || ts === '') return T('Дата неизвестна', 'Unknown date', 'Data nežinoma');
+    if (ts === null || ts === undefined || ts === '') return T('Дата неизвестна', 'Unknown date');
     var value = Number(ts);
-    if (!isFinite(value) || value <= 0) return T('Дата неизвестна', 'Unknown date', 'Data nežinoma');
+    if (!isFinite(value) || value <= 0) return T('Дата неизвестна', 'Unknown date');
     var diff = Date.now() / 1000 - value;
-    if (diff < -300) return T('Дата неизвестна', 'Unknown date', 'Data nežinoma');
+    if (diff < -300) return T('Дата неизвестна', 'Unknown date');
     if (diff < 0) diff = 0;
     diff = Math.floor(diff);
-    if (diff < 45) return T('Только что', 'Just now', 'Ką tik');
-    if (diff < 60) return T('1 минуту назад', '1 minute ago', 'Prieš 1 minutę');
+    if (diff < 45) return T('Только что', 'Just now');
+    if (diff < 60) return T('1 минуту назад', '1 minute ago');
     if (diff < 3600) {
       var m = Math.floor(diff / 60);
       return T(m + ' ' + plural(m, 'минуту', 'минуты', 'минут') + ' назад',
-               m + (m === 1 ? ' minute ago' : ' minutes ago'),
-               agoLt(m, 'minutę', 'minutes', 'minučių'));
+               m + (m === 1 ? ' minute ago' : ' minutes ago'));
     }
     if (diff < 86400) {
       var h = Math.floor(diff / 3600);
       return T(h + ' ' + plural(h, 'час', 'часа', 'часов') + ' назад',
-               h + (h === 1 ? ' hour ago' : ' hours ago'),
-               agoLt(h, 'valandą', 'valandas', 'valandų'));
+               h + (h === 1 ? ' hour ago' : ' hours ago'));
     }
     if (diff < 7 * 86400) {
       var d = Math.floor(diff / 86400);
       return T(d + ' ' + plural(d, 'день', 'дня', 'дней') + ' назад',
-               d + (d === 1 ? ' day ago' : ' days ago'),
-               agoLt(d, 'dieną', 'dienas', 'dienų'));
+               d + (d === 1 ? ' day ago' : ' days ago'));
     }
     if (diff < 30 * 86400) {
       var w = Math.floor(diff / (7 * 86400));
       return T(w + ' ' + plural(w, 'неделю', 'недели', 'недель') + ' назад',
-               w + (w === 1 ? ' week ago' : ' weeks ago'),
-               agoLt(w, 'savaitę', 'savaites', 'savaičių'));
+               w + (w === 1 ? ' week ago' : ' weeks ago'));
     }
     if (diff < 365 * 86400) {
       var mo = Math.floor(diff / (30 * 86400));
       return T(mo + ' ' + plural(mo, 'месяц', 'месяца', 'месяцев') + ' назад',
-               mo + (mo === 1 ? ' month ago' : ' months ago'),
-               agoLt(mo, 'mėnesį', 'mėnesius', 'mėnesių'));
+               mo + (mo === 1 ? ' month ago' : ' months ago'));
     }
     var y = Math.floor(diff / (365 * 86400));
     return T(y + ' ' + plural(y, 'год', 'года', 'лет') + ' назад',
-             y + (y === 1 ? ' year ago' : ' years ago'),
-             agoLt(y, 'metus', 'metus', 'metų'));
+             y + (y === 1 ? ' year ago' : ' years ago'));
   }
   /* Абсолютная метка для подсказки: «11 нояб. 2026, 18:42» (локальное время). */
   function stamp(ts) {
     var value = Number(ts);
-    if (!isFinite(value) || value <= 0) return T('Дата неизвестна', 'Unknown date', 'Data nežinoma');
+    if (!isFinite(value) || value <= 0) return T('Дата неизвестна', 'Unknown date');
     var d = new Date(value * 1000);
     var loc = DATE_LOCALE[lang()] || 'ru-RU';
     return d.toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' +
@@ -231,7 +212,7 @@
     't:new': ['Новичок', 'Beginner', 'Pradedantysis'],
     't:vet': ['Ветеран', 'Veteran', 'Veteranas'],
     't:ace': ['Ас', 'Ace', 'Asas'],
-    't:legend': ['Легенда', 'Legend', 'Legenda']
+    't:legend': ['Легенда', 'Legend']
   };
   function avatarHtml(user, size) {
     var s = size || 32;
@@ -242,30 +223,13 @@
   }
   function titleLabel(user) {
     var pair = TITLES[(user && user.title) || 't:new'] || TITLES['t:new'];
-    var value = lang();
-    if (value === 'lt') return pair[2] != null ? pair[2] : pair[1];
-    return value === 'en' ? pair[1] : pair[0];
+    return lang() === 'en' ? pair[1] : pair[0];
   }
-  /* Названия достижений на трёх языках. Ключ — английское имя из каталога,
-     поэтому сами записи в базе не меняются: сервер по-прежнему хранит
-     name_ru и name_en, а литовский вариант подставляется на клиенте. */
-  var ACH_LT = {
-    'Welcome': 'Sveiki atvykę',
-    'First launch': 'Pirmasis paleidimas',
-    'Getting hooked': 'Įsitraukęs',
-    'Hardcore player': 'Uolus žaidėjas',
-    'Shopper': 'Pirkinėtojas',
-    'First bet': 'Pirmasis statymas',
-    'Big win': 'Didelis laimėjimas',
-    'Collector': 'Kolekcininkas',
-    'Wealthy': 'Turtingasis',
-    'Wheel master': 'Rato meistras'
-  };
+  /* Названия достижений: сервер хранит name_ru и name_en, клиент выбирает
+     вариант по текущему языку. */
   function achievementName(item) {
     if (!item) return '';
-    var value = lang();
-    if (value === 'lt') return ACH_LT[item.name_en] || item.name_en || item.name_ru || '';
-    return value === 'en' ? (item.name_en || item.name_ru || '') : (item.name_ru || item.name_en || '');
+    return lang() === 'en' ? (item.name_en || item.name_ru || '') : (item.name_ru || item.name_en || '');
   }
   VG.avatarHtml = avatarHtml;
   VG.titleLabel = titleLabel;
@@ -328,8 +292,7 @@
       });
     }, function (error) {
       if (error && error.name === 'AbortError') throw error;
-      throw new ApiError(T('Нет соединения с сервером.', 'Cannot reach the server.',
-        'Nepavyksta prisijungti prie serverio.'), 'NETWORK', 0);
+      throw new ApiError(T('Нет соединения с сервером.', 'Cannot reach the server.'), 'NETWORK', 0);
     });
   }
   VG.api = api;
@@ -440,12 +403,12 @@
 
   /* ----------------------------------------------------------------- header */
   var NAV = [
-    { href: 'index.html', key: 'home', ru: 'Главная', en: 'Home', lt: 'Pradžia', icon: 'gamepad' },
-    { href: 'top.html', key: 'catalog', ru: 'Каталог игр', en: 'Games', lt: 'Žaidimai', icon: 'grid' },
-    { href: 'casino.html', key: 'casino', ru: 'Казино', en: 'Casino', lt: 'Kazino', icon: 'wheel' },
-    { href: 'roulette.html', key: 'roulette', ru: 'Рулетка Vert', en: 'Vert Roulette', lt: 'Vert ruletė', icon: 'spark' },
-    { href: 'shop.html', key: 'shop', ru: 'Магазин', en: 'Shop', lt: 'Parduotuvė', icon: 'bag' },
-    { href: 'profile.html', key: 'profile', ru: 'Профиль', en: 'Profile', lt: 'Profilis', icon: 'user' }
+    { href: 'index.html', key: 'home', ru: 'Главная', en: 'Home', icon: 'gamepad' },
+    { href: 'top.html', key: 'catalog', ru: 'Каталог игр', en: 'Games', icon: 'grid' },
+    { href: 'casino.html', key: 'casino', ru: 'Казино', en: 'Casino', icon: 'wheel' },
+    { href: 'roulette.html', key: 'roulette', ru: 'Рулетка Vert', en: 'Vert Roulette', icon: 'spark' },
+    { href: 'shop.html', key: 'shop', ru: 'Магазин', en: 'Shop', icon: 'bag' },
+    { href: 'profile.html', key: 'profile', ru: 'Профиль', en: 'Profile', icon: 'user' }
   ];
 
   function logoHtml() {
@@ -465,7 +428,7 @@
     var active = header.getAttribute('data-page') || '';
     var links = NAV.map(function (item) {
       return '<a href="' + item.href + '" class="' + (item.key === active ? 'active' : '') + '">' +
-        icon(item.icon, 16) + T(item.ru, item.en, item.lt) + '</a>';
+        icon(item.icon, 16) + T(item.ru, item.en) + '</a>';
     }).join('');
     var adminLink = state.user && state.user.isAdmin
       ? '<a href="admin.html" class="' + (active === 'admin' ? 'active' : '') + '">' + icon('shield', 16) + T('Админ', 'Admin') + '</a>'
@@ -479,7 +442,6 @@
       '<div class="lang" role="group" aria-label="Language">' +
       '<button type="button" data-lang="ru" aria-pressed="' + (langValue === 'ru') + '">RU</button>' +
       '<button type="button" data-lang="en" aria-pressed="' + (langValue === 'en') + '">EN</button>' +
-      '<button type="button" data-lang="lt" aria-pressed="' + (langValue === 'lt') + '">LT</button></div>' +
       (u
         ? '<button type="button" class="balance-pill" data-action="balance" title="' + T('Ваш баланс V-монет', 'Your V-coin balance') + '">' +
           icon('coin', 16) + '<span data-coins>' + fmt(u.coins) + '</span> V</button>' +
@@ -572,10 +534,8 @@
   var TRANSLATABLE_ATTRS = ['aria-label', 'title', 'placeholder', 'alt'];
   var BASE_TITLE = '';
 
-  /* Текст элемента на выбранном языке. Порядок источников: собственный язык
-     элемента (data-ru / data-en / data-lt), затем английский как запасной,
-     затем русский оригинал — так литовская страница не остаётся без подписей
-     там, где перевод ещё не добавлен. */
+  /* Текст элемента на выбранном языке: собственный вариант (data-ru/data-en),
+     затем английский как запасной, затем русский оригинал. */
   function langText(node, next) {
     var own = node.getAttribute('data-' + next);
     if (own != null) return own;
@@ -602,9 +562,9 @@
       else node.removeAttribute('lang');
     });
 
-    // Подписи полей и подсказки доступности: data-placeholder-en, data-title-lt и т. п.
+    // Подписи полей и подсказки доступности: data-placeholder-en, data-title-en и т. п.
     TRANSLATABLE_ATTRS.forEach(function (name) {
-      var selector = ['[data-' + name + '-en]', '[data-' + name + '-lt]'].join(',');
+      var selector = '[data-' + name + '-en]';
       $$(selector).forEach(function (node) {
         // Запоминаем исходное значение атрибута, чтобы вернуть его при RU.
         var store = 'data-' + name + '-ru';
@@ -619,7 +579,7 @@
       });
     });
 
-    // Заголовок вкладки: data-title-ru / data-title-en / data-title-lt.
+    // Заголовок вкладки: data-title-ru / data-title-en.
     if (!BASE_TITLE) BASE_TITLE = document.title;
     var root = document.documentElement;
     var title = root.getAttribute('data-title-' + next);
@@ -731,8 +691,7 @@
       if (data.balance != null) updateCoins(data.balance);
       (data.achievements || []).forEach(function (entry) {
         var ach = entry.achievement || entry;
-        toast(T('Достижение: ' + (ach.name_ru || ach.name_en), 'Achievement: ' + (ach.name_en || ach.name_ru),
-          'Pasiekimas: ' + achievementName(ach)) +
+        toast(T('Достижение: ' + (ach.name_ru || ach.name_en), 'Achievement: ' + (ach.name_en || ach.name_ru)) +
           (ach.coins ? ' +' + ach.coins + ' V' : ''));
       });
       toast(data.already ? T('Этот предмет уже куплен.', 'You already own this item.')
@@ -915,9 +874,7 @@
     var rewardChip = overlay.querySelector('.reward-chip');
     rewardChip.textContent = '+' + (game.reward || 0) + ' V ' + T('за событие', 'per event');
     /* Литовское название есть не у всех игр — тогда показываем английское. */
-    overlay.querySelector('h3').textContent = lang() === 'lt'
-      ? (game.name_lt || game.name_en || game.name)
-      : lang() === 'en' ? (game.name_en || game.name) : game.name;
+    overlay.querySelector('h3').textContent = lang() === 'en' ? (game.name_en || game.name) : game.name;
     overlay.querySelector('[data-close]').innerHTML = icon('chev', 15) + '<span>' + T('Назад', 'Back') + '</span>';
     var frame = overlay.querySelector('.play-frame');
     var langParam = lang();
@@ -1480,13 +1437,13 @@
     var clear = document.createElement('button');
     clear.type = 'button';
     clear.className = 'search-clear';
-    clear.setAttribute('aria-label', T('Очистить поиск', 'Clear search', 'Išvalyti paiešką'));
-    clear.setAttribute('title', T('Очистить поиск', 'Clear search', 'Išvalyti paiešką'));
+    clear.setAttribute('aria-label', T('Очистить поиск', 'Clear search'));
+    clear.setAttribute('title', T('Очистить поиск', 'Clear search'));
     clear.innerHTML = icon('x', 14);
     field.appendChild(clear);
     if (VG.onLangChange) {
       VG.onLangChange(function () {
-        var label = T('Очистить поиск', 'Clear search', 'Išvalyti paiešką');
+        var label = T('Очистить поиск', 'Clear search');
         clear.setAttribute('aria-label', label);
         clear.setAttribute('title', label);
       });
@@ -1514,7 +1471,13 @@
 
   function boot() {
     var saved = storage('vg_lang');
-    if (saved === 'en' || saved === 'ru' || saved === 'lt') {
+    if (saved === 'lt') {
+      // Литовский язык убран с платформы: у таких игроков включаем русский.
+      saved = 'ru';
+      storage('vg_lang', saved);
+      document.documentElement.setAttribute('lang', 'ru');
+    }
+    if (saved === 'en' || saved === 'ru') {
       // Разметка уже двуязычная: применяем сохранённый язык до первой отрисовки.
       applyLangToDom(saved);
     }

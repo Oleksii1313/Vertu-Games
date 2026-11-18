@@ -151,7 +151,7 @@
     }
     (data.achievements || []).forEach(function (entry) {
       var ach = entry.achievement || entry;
-      VG.toast(T('Достижение: ' + ach.name_ru, 'Achievement: ' + ach.name_en, 'Pasiekimas: ' + VG.achievementName(ach)));
+      VG.toast(T('Достижение: ' + ach.name_ru, 'Achievement: ' + ach.name_en));
     });
     loadHistory(currentGame);
     loadStats();
@@ -267,7 +267,7 @@
     }
     (data.achievements || []).forEach(function (entry) {
       var ach = entry.achievement || entry;
-      VG.toast(T('Достижение: ' + ach.name_ru, 'Achievement: ' + ach.name_en, 'Pasiekimas: ' + VG.achievementName(ach)));
+      VG.toast(T('Достижение: ' + ach.name_ru, 'Achievement: ' + ach.name_en));
     });
     loadLimits();
     loadHistory(currentGame);

@@ -53,9 +53,8 @@
     if (!box) return;
     if (!VG.user()) {
       box.innerHTML = '<div class="empty">' +
-        T('Войдите, чтобы увидеть покупки.', 'Sign in to see your purchases.',
-          'Prisijunkite, kad matytumėte pirkinius.') +
-        ' <a href="login.html" style="color:var(--lime)">' + T('Войти', 'Sign in', 'Prisijungti') + '</a></div>';
+        T('Войдите, чтобы увидеть покупки.', 'Sign in to see your purchases.') +
+        ' <a href="login.html" style="color:var(--lime)">' + T('Войти', 'Sign in') + '</a></div>';
       return;
     }
     VG.api('/api/me').then(function (data) {

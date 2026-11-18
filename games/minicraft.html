@@ -11,11 +11,12 @@
   function detect() {
     try {
       var query = new URLSearchParams(location.search).get('lang');
-      if (query === 'en' || query === 'ru' || query === 'lt') return query;
+      if (query === 'en' || query === 'ru') return query;
     } catch (e) {}
     try {
       var saved = localStorage.getItem('vg_lang');
-      if (saved === 'en' || saved === 'ru' || saved === 'lt') return saved;
+      if (saved === 'en' || saved === 'ru') return saved;
+      if (saved === 'lt') return 'ru';   // литовский убран: переходим на русский
     } catch (e) {}
     return 'ru';
   }
@@ -36,19 +37,15 @@
     node.innerHTML = value;
   }
 
-  /* Литовских строк в играх пока нет: для LT берём английские, чтобы вместо
-     русского текста был хотя бы понятный английский. */
   function textFor(node, name) {
     function read(code) {
       return node.getAttribute(name ? 'data-' + name + '-' + code : 'data-' + code);
     }
-    var text = read(lang);
-    if (text == null && lang === 'lt') text = read('en');
-    return text;
+    return read(lang);
   }
 
   function apply(next) {
-    lang = next === 'en' || next === 'lt' ? next : 'ru';
+    lang = next === 'en' ? 'en' : 'ru';
     document.documentElement.setAttribute('lang', lang);
     var nodes = document.querySelectorAll('[data-ru]');
     for (var i = 0; i < nodes.length; i++) {
@@ -78,7 +75,6 @@
       }
     }
     var selector = '[data-aria-label-en],[data-title-en],[data-placeholder-en],[data-alt-en]';
-    if (lang === 'lt') selector += ',[data-aria-label-lt],[data-title-lt],[data-placeholder-lt],[data-alt-lt]';
     var attrNodes = (document.body || document).querySelectorAll(selector);
     for (var j = 0; j < attrNodes.length; j++) {
       var el = attrNodes[j];
@@ -7787,6 +7783,131 @@ function mcxRestVillager(mesh) {
   if (arms) { arms[0].rotation.x *= .85; arms[1].rotation.x *= .85; }
 }
 
+/* --------------------------------------------------------- навигация NPC */
+/* Житель занимает одну клетку по X/Z и два блока по высоте: тело и голова.
+   Поэтому проверяем опору под ногами, свободное место в теле и над головой,
+   а не только «есть ли блок прямо перед носом». Дверь (DW) считается
+   проходимой — житель её открывает, иначе он не смог бы выйти из дома.
+   Вода, стены, заборы и мебель непроходимы; подъём — не больше блока,
+   спуск — до трёх (с обрыва житель прыгает, но не в пропасть). */
+var MCX_NPC_STEP = 1, MCX_NPC_DROP = 3, MCX_NPC_BODY = 2, MCX_NPC_REACH = 20, MCX_NPC_BUDGET = 600;
+
+/* Свободна ли клетка для тела: воздух или дверной проём. */
+function mcxOpenCell(x, y, z) {
+  var m = cs(x, y, z);
+  return m === Ai || m === DW;
+}
+
+/* Можно ли поставить жителя в точку (x,z) на высоте y. */
+function mcxStandAt(x, z, y) {
+  var bx = Math.floor(x), bz = Math.floor(z), by = Math.round(y), k;
+  if (bx < 3 || bz < 3 || bx >= ct - 4 || bz >= ct - 4) return false;
+  if (mcxWaterAt(bx, bz)) return false;                 // в воду не заходим
+  if (!Rt(bx, by - 1, bz)) return false;                // под ногами твёрдая опора
+  for (k = 0; k < MCX_NPC_BODY; k++) if (!mcxOpenCell(bx, by + k, bz)) return false;
+  return true;
+}
+
+/* Свободная площадка рядом с точкой: сам центр, затем кольца до radius. */
+function mcxFreeSpot(x, z, radius) {
+  var y = ir(Math.floor(x), Math.floor(z));
+  if (mcxStandAt(x, z, y)) return { x: x, z: z, y: y };
+  for (var r = 1; r <= (radius || 8); r++) {
+    for (var dx = -r; dx <= r; dx++) {
+      for (var dz = -r; dz <= r; dz++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        var px = x + dx, pz = z + dz, py = ir(Math.floor(px), Math.floor(pz));
+        if (mcxStandAt(px, pz, py)) return { x: px, z: pz, y: py };
+      }
+    }
+  }
+  return null;
+}
+
+/* Маршрут по сетке блоков (A*). Узлы — клетки пола, шаг — в том числе
+   диагональный, но без срезания углов. Поиск ограничен квадратом вокруг
+   старта: житель не должен прокладывать путь через полмира, а если цель
+   недостижима — вернём null, и вызывающий код выберет безопасное поведение. */
+function mcxPathTo(sx, sz, sy, tx, tz, budget) {
+  var sxCell = Math.floor(sx), szCell = Math.floor(sz);
+  var goalX = Math.floor(tx), goalZ = Math.floor(tz);
+  var open = [{ x: sxCell, z: szCell, y: Math.round(sy), g: 0, f: 0, parent: null }];
+  var gScore = {}, visits = 0, limit = budget || MCX_NPC_BUDGET;
+  gScore[sxCell + ',' + szCell] = 0;
+  var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  function heightTo(from, nx, nz) {
+    var ny = ir(nx, nz), dy = ny - from.y;
+    if (dy > MCX_NPC_STEP || dy < -MCX_NPC_DROP) return null;
+    if (!mcxStandAt(nx + .5, nz + .5, ny)) return null;
+    return ny;
+  }
+  while (open.length && visits < limit) {
+    var bi = 0;
+    for (var i = 1; i < open.length; i++) if (open[i].f < open[bi].f) bi = i;
+    var node = open.splice(bi, 1)[0];
+    visits++;
+    if (Math.abs(node.x - goalX) <= 1 && Math.abs(node.z - goalZ) <= 1) {
+      var path = [];
+      while (node && node.parent) { path.push({ x: node.x + .5, z: node.z + .5, y: node.y }); node = node.parent; }
+      return path.reverse();
+    }
+    for (var d = 0; d < dirs.length; d++) {
+      var nx = node.x + dirs[d][0], nz = node.z + dirs[d][1];
+      if (Math.abs(nx - sxCell) > MCX_NPC_REACH || Math.abs(nz - szCell) > MCX_NPC_REACH) continue;
+      var ny = heightTo(node, nx, nz);
+      if (ny === null) continue;
+      // Диагональ: обе прямые клетки тоже должны быть проходимы, иначе житель
+      // «цеплялся» бы углом за стену и застревал.
+      if (dirs[d][0] && dirs[d][1] &&
+          (heightTo(node, node.x + dirs[d][0], node.z) === null ||
+           heightTo(node, node.x, node.z + dirs[d][1]) === null)) continue;
+      var g = node.g + (dirs[d][0] && dirs[d][1] ? 1.4142 : 1);
+      var key = nx + ',' + nz;
+      if (gScore[key] !== undefined && gScore[key] <= g) continue;
+      gScore[key] = g;
+      open.push({ x: nx, z: nz, y: ny, g: g, f: g + Math.hypot(goalX - nx, goalZ - nz), parent: node });
+    }
+  }
+  return null;
+}
+
+/* Один шаг к точке. Если по прямой мешает стена, житель скользит вдоль неё
+   по одной оси — так он не застревает в углах и не проходит сквозь блоки. */
+function mcxVillagerStep(v, tx, tz, dt) {
+  var dx = tx - v.x, dz = tz - v.z, dist = Math.hypot(dx, dz);
+  if (dist < .001) return 'arrived';
+  var step = Math.min(dist, v.speed * dt);
+  var tries = [[dx / dist, dz / dist], [dx / dist, 0], [0, dz / dist]];
+  for (var i = 0; i < tries.length; i++) {
+    if (!tries[i][0] && !tries[i][1]) continue;
+    var nx = v.x + tries[i][0] * step, nz = v.z + tries[i][1] * step;
+    var ny = ir(Math.floor(nx), Math.floor(nz));
+    if (Math.abs(ny - v.y) > MCX_NPC_STEP + .55) continue;   // слишком высокий уступ
+    if (!mcxStandAt(nx, nz, ny)) continue;                    // тело упрётся в блок
+    v.x = nx; v.z = nz;
+    v.mesh.rotation.y = Math.atan2(tries[i][0], tries[i][1]);
+    return dist <= step + 1e-6 ? 'arrived' : 'moved';
+  }
+  return 'blocked';
+}
+
+/* Куда бежать от монстра: перебираем восемь направлений и выбираем то, где
+   дальше от угрозы и куда действительно можно шагнуть. Прямой побег «в стену»
+   раньше оставлял жителя на месте, и он выглядел застрявшим. */
+function mcxFleeDir(v, threat) {
+  var best = null, bestScore = -1e9;
+  for (var i = 0; i < 8; i++) {
+    var a = i * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a);
+    var nx = v.x + dx * .8, nz = v.z + dz * .8;
+    var ny = ir(Math.floor(nx), Math.floor(nz));
+    if (Math.abs(ny - v.y) > MCX_NPC_STEP + .55) continue;
+    if (!mcxStandAt(nx, nz, ny)) continue;
+    var score = Math.hypot(nx - threat.x, nz - threat.z) - Math.abs(ny - v.y) * .5;
+    if (score > bestScore) { bestScore = score; best = { x: nx, z: nz }; }
+  }
+  return best;
+}
+
 function mcxSpawnVillagers() {
   F.villagers = [];
   var palette = [0x3f7f52, 0x2f6f7a, 0x6b5b8f, 0x8a6a3a];
@@ -7795,17 +7916,20 @@ function mcxSpawnVillagers() {
     var count = Math.min(village.villagers.length, 3);
     for (var i = 0; i < count; i++) {
       var spot = village.villagers[i];
-      var x = mcxClamp(Math.round(spot.x + mcxInt(-1, 1)), 3, ct - 4);
-      var z = mcxClamp(Math.round(spot.z + mcxInt(-1, 1)), 3, ct - 4);
-      var y = ir(x, z);
+      // Спавн только на свободной суше: не в стене, не в воде и не в мебели.
+      var place = mcxFreeSpot(spot.x + .5, spot.z + .5, 10);
+      if (!place) place = mcxFreeSpot(village.x + .5, village.z + .5, 12);
+      if (!place) continue;
       var mesh = mcxMakeVillager(palette[(v + i) % palette.length], (v + i) % 2 ? 0xc9b26a : 0x8f9aa8);
-      mesh.position.set(x + .5, y, z + .5);
+      mesh.position.set(place.x, place.y, place.z);
       mesh.rotation.y = mcxRnd() * Math.PI * 2;
       Ht.add(mesh);
       F.villagers.push({
-        mesh: mesh, x: x + .5, y: y, z: z + .5,
-        homeX: x + .5, homeZ: z + .5,
-        targetX: x + .5, targetZ: z + .5,
+        mesh: mesh, x: place.x, y: place.y, z: place.z,
+        homeX: place.x, homeZ: place.z,
+        goalX: place.x, goalZ: place.z,
+        path: [], clock: 0, repath: 0, idle: 0, fails: 0, stuck: 0,
+        lastGoalX: place.x, lastGoalZ: place.z,
         wait: mcxRnd() * 2, speed: 1.5, village: v,
         talked: !1, flee: 0, bob: mcxRnd() * 6.28
       });
@@ -7817,55 +7941,100 @@ function mcxUpdateVillagers(dt) {
   if (!F.villagers) return;
   for (var i = 0; i < F.villagers.length; i++) {
     var v = F.villagers[i];
+    v.clock = (v.clock || 0) + dt;
+    var moved = false;
+
+    /* 1. Угроза: монстр ближе 12 блоков — бежим в противоположную сторону. */
     var threat = null, best = 12;
     for (var m = 0; m < F.monsters.length; m++) {
       var mob = F.monsters[m];
+      if (!mob || mob.dead) continue;
       var d = Math.hypot(mob.x - v.x, mob.z - v.z);
       if (d < best) { best = d; threat = mob; }
     }
     if (threat) {
-      var ax = v.x - threat.x, az = v.z - threat.z;
-      var len = Math.hypot(ax, az) || 1;
-      v.targetX = v.x + ax / len * 6;
-      v.targetZ = v.z + az / len * 6;
       v.speed = 3.1;
       v.flee = .6;
+      v.idle = 0;                     // испуг отменяет «отдых»
+      v.escape = mcxFleeDir(v, threat);
+      v.path = [];
     } else if (v.flee > 0) {
       v.flee -= dt;
       v.speed = 3.1;
     } else {
+      /* 2. Спокойная прогулка: раз в несколько секунд — новая цель у дома. */
       v.speed = 1.5;
+      v.escape = null;
       v.wait -= dt;
-      if (v.wait <= 0) {
+      if (v.wait <= 0 || Math.hypot(v.goalX - v.x, v.goalZ - v.z) < .6) {
         v.wait = 2 + mcxRnd() * 4;
-        var homeDx = (mcxRnd() - .5) * 16, homeDz = (mcxRnd() - .5) * 16;
-        v.targetX = v.homeX + homeDx;
-        v.targetZ = v.homeZ + homeDz;
+        v.goalX = v.homeX + (mcxRnd() - .5) * 16;
+        v.goalZ = v.homeZ + (mcxRnd() - .5) * 16;
+        v.path = [];
+        v.repath = 0;
       }
     }
-    var dx = v.targetX - v.x, dz = v.targetZ - v.z;
-    var dist = Math.hypot(dx, dz);
-    if (dist > .25) {
-      var step = Math.min(dist, v.speed * dt);
-      var nx = v.x + dx / dist * step, nz = v.z + dz / dist * step;
-      var ny = ir(Math.floor(nx), Math.floor(nz));
-      if (Math.abs(ny - v.y) <= 1.2 && !Rt(Math.floor(nx), Math.round(v.y), Math.floor(nz))) {
-        v.x = nx; v.z = nz;
-      } else {
-        // Препятствие (стена дома, забор): обходим его боком, иначе житель
-        // «застревал» бы у стены, убегая от монстра.
-        var side = v.bob > 3 ? 1 : -1;
-        var px = v.x + (-dz / dist) * step * side;
-        var pz = v.z + (dx / dist) * step * side;
-        if (!Rt(Math.floor(px), Math.round(v.y), Math.floor(pz))) { v.x = px; v.z = pz; }
-      }
-      v.mesh.rotation.y = Math.atan2(dx, dz);
-      mcxSwingVillager(v.mesh, Math.sin(F.elapsed * 7 + v.bob) * .5);
-    } else {
-      mcxRestVillager(v.mesh);
+
+    /* 3. Убегая, идём напрямую (важна реакция), в остальное время — по маршруту.
+       Если маршрута нет и он ещё не строился — прокладываем с паузой 0.4 с,
+       чтобы не пересчитывать A* каждый кадр. */
+    if (v.flee <= 0 && (!v.path || !v.path.length) && v.clock >= v.repath) {
+      v.repath = v.clock + .4;
+      v.path = mcxPathTo(v.x, v.z, v.y, v.goalX, v.goalZ) || [];
+      if (!v.path.length) {
+        /* 4. Цель недостижима: считаем попытки. После двух — безопасный idle
+           (постоять, отдышаться) и новая, заведомо свободная цель у дома. */
+        v.fails = (v.fails || 0) + 1;
+        if (v.fails >= 2) {
+          v.fails = 0;
+          v.idle = v.clock + 1.2 + mcxRnd() * 1.6;
+          var again = mcxFreeSpot(v.homeX, v.homeZ, 8);
+          if (again) { v.goalX = again.x; v.goalZ = again.z; }
+        }
+      } else v.fails = 0;
     }
+
+    var standing = !threat && v.flee <= 0 && v.idle && v.clock < v.idle;
+    if (!standing) {
+      if (v.flee > 0) {
+        if (!v.escape) v.escape = mcxFleeDir(v, threat || { x: v.x, z: v.z });
+        var fleeRes = v.escape ? mcxVillagerStep(v, v.escape.x, v.escape.z, dt) : 'blocked';
+        moved = fleeRes === 'moved' || fleeRes === 'arrived';
+        if (fleeRes === 'arrived') v.escape = null;
+        if (fleeRes === 'blocked') { v.escape = null; v.path = []; v.repath = 0; }
+      } else if (v.path && v.path.length) {
+        var pt = v.path[0];
+        var res = mcxVillagerStep(v, pt.x, pt.z, dt);
+        if (res === 'blocked') {
+          /* 5. Восстановление после застревания: стоп → пересчёт маршрута →
+             альтернативная цель. После трёх подряд — короткий отдых. */
+          v.path = [];
+          v.repath = 0;
+          v.stuck = (v.stuck || 0) + 1;
+          if (v.stuck >= 3) {
+            v.stuck = 0;
+            v.idle = v.clock + 1.2 + mcxRnd();
+            v.goalX = v.homeX + (mcxRnd() - .5) * 6;
+            v.goalZ = v.homeZ + (mcxRnd() - .5) * 6;
+          } else if (Math.abs(v.goalX - v.lastGoalX) < .01 && Math.abs(v.goalZ - v.lastGoalZ) < .01) {
+            v.goalX += (mcxRnd() - .5) * 6;
+            v.goalZ += (mcxRnd() - .5) * 6;
+          }
+          v.lastGoalX = v.goalX;
+          v.lastGoalZ = v.goalZ;
+        } else {
+          moved = true;
+          v.stuck = 0;
+          if (res === 'arrived' || Math.hypot(pt.x - v.x, pt.z - v.z) < .35) v.path.shift();
+        }
+      }
+    }
+    if (moved) mcxSwingVillager(v.mesh, Math.sin(v.clock * 7 + v.bob) * .5);
+    else mcxRestVillager(v.mesh);
+
+    /* 6. Высота: плавно подтягиваем к полу, но никогда не проваливаемся в блок. */
     var groundY = ir(Math.floor(v.x), Math.floor(v.z));
-    v.y += (groundY - v.y) * Math.min(1, dt * 8);
+    v.y += (groundY - v.y) * Math.min(1, dt * 10);
     v.mesh.position.set(v.x, v.y, v.z);
     // Разговор: житель подсказывает дорогу к ближайшему сундуку.
     if (!v.talked && Math.hypot(F.x - v.x, F.z - v.z) < 2.4) {
@@ -7880,7 +8049,6 @@ function mcxUpdateVillagers(dt) {
     }
   }
 }
-
 function mcxNearestChestHint(x, z) {
   var best = null, bestD = 1e9;
   for (var i = 0; i < F.chests.length; i++) {

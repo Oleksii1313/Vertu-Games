@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru" data-title-en="Admin panel — Vert Games" data-title-lt="Administravimas — Vert Games">
+<html lang="ru" data-title-en="Admin panel — Vert Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -48,9 +48,9 @@
         <button class="on" data-view="overview"><span data-ico="chart"></span> <span data-ru="Обзор" data-en="Overview">Обзор</span></button>
         <button data-view="users"><span data-ico="user"></span> <span data-ru="Пользователи" data-en="Users">Пользователи</span></button>
         <button data-view="games"><span data-ico="gamepad"></span> <span data-ru="Игры" data-en="Games">Игры</span></button>
-        <button data-view="catalog"><span data-ico="bag"></span> <span data-ru="Каталог" data-en="Catalog" data-lt="Katalogas">Каталог</span></button>
-        <button data-view="transactions"><span data-ico="coin"></span> <span data-ru="Операции" data-en="Operations" data-lt="Operacijos">Операции</span></button>
-        <button data-view="casino"><span data-ico="wheel"></span> <span data-ru="Казино" data-en="Casino" data-lt="Kazino">Казино</span></button>
+        <button data-view="catalog"><span data-ico="bag"></span> <span data-ru="Каталог" data-en="Catalog">Каталог</span></button>
+        <button data-view="transactions"><span data-ico="coin"></span> <span data-ru="Операции" data-en="Operations">Операции</span></button>
+        <button data-view="casino"><span data-ico="wheel"></span> <span data-ru="Казино" data-en="Casino">Казино</span></button>
         <button data-view="log"><span data-ico="clock"></span> <span data-ru="Журнал" data-en="Log">Журнал</span></button>
         <div class="divider"></div>
         <a href="index.html" style="display:flex;align-items:center;gap:9px;padding:10px 13px;font-size:13px;color:var(--muted)"><span data-ico="chev"></span> <span data-ru="На сайт" data-en="Back to site">На сайт</span></a>
@@ -84,8 +84,8 @@
         </div>
         <div id="view-catalog" class="hidden">
           <div class="card panel">
-            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Предметы магазина" data-en="Shop items" data-lt="Parduotuvės prekės">Предметы магазина</span></h2>
-              <p class="muted" style="font-size:12.5px;margin:4px 0 0"><span data-ru="Только косметика: аватары, цвета, титулы. Пакеты V не продаются." data-en="Cosmetics only: avatars, colours, titles. No V packs are sold." data-lt="Tik kosmetika: avatarai, spalvos, titulai. V paketai neparduodami.">Только косметика: аватары, цвета, титулы. Пакеты V не продаются.</span></p></div></div>
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Предметы магазина" data-en="Shop items">Предметы магазина</span></h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0"><span data-ru="Только косметика: аватары, цвета, титулы. Пакеты V не продаются." data-en="Cosmetics only: avatars, colours, titles. No V packs are sold.">Только косметика: аватары, цвета, титулы. Пакеты V не продаются.</span></p></div></div>
             <div id="adminItems"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
           <div class="card panel" style="margin-top:16px">
@@ -93,7 +93,7 @@
             <div id="adminAchievements"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
           <div class="card panel" style="margin-top:16px">
-            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Ежедневные задания" data-en="Daily quests" data-lt="Kasdienės užduotys">Ежедневные задания</span></h2></div></div>
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Ежедневные задания" data-en="Daily quests">Ежедневные задания</span></h2></div></div>
             <div id="adminTasks"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
         </div>
@@ -101,9 +101,9 @@
           <div class="card panel">
             <div class="toolbar" style="margin-bottom:14px">
               <label class="search"><span data-ico="search"></span>
-                <input type="search" id="txUser" placeholder="Ник игрока (пусто — все)" data-placeholder-en="Player nickname (empty — all)" data-placeholder-lt="Žaidėjo slapyvardis (tuščia – visi)" aria-label="Фильтр по нику" data-aria-label-en="Filter by nickname" data-aria-label-lt="Filtruoti pagal slapyvardį"></label>
+                <input type="search" id="txUser" placeholder="Ник игрока (пусто — все)" data-placeholder-en="Player nickname (empty — all)" aria-label="Фильтр по нику" data-aria-label-en="Filter by nickname"></label>
               <button class="btn btn-sm btn-ghost" id="txRefresh"><span data-ru="Обновить" data-en="Refresh">Обновить</span></button>
-              <span class="muted" style="font-size:12px"><span data-ru="Каждая операция — одна строка в transactions" data-en="Every operation is one row in transactions" data-lt="Kiekviena operacija – viena eilutė lentelėje transactions">Каждая операция — одна строка в transactions</span></span>
+              <span class="muted" style="font-size:12px"><span data-ru="Каждая операция — одна строка в transactions" data-en="Every operation is one row in transactions">Каждая операция — одна строка в transactions</span></span>
             </div>
             <div id="adminTx"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
@@ -128,14 +128,14 @@
       <div style="max-width:320px">
         <div class="brand"><svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" rx="11" fill="#111425"/><path d="M11 13 20 28 29 13h-5l-4 7-4-7h-5Z" fill="#C6FF3D"/><circle cx="20" cy="9.5" r="2.1" fill="#C6FF3D"/></svg><span>VERT<b>GAMES</b></span></div>
         <p class="muted" style="font-size:13px;margin-top:10px"><span data-ru="Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей." data-en="Social casino and arcades. Virtual V-coins only: no real bets, no cash-out coin purchases and no money wins.">Социальное казино и аркады. Только виртуальные V-монеты: без реальных ставок, покупок монет «на вывод» и денежных выигрышей.</span></p>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only" data-lt="Tik pramogai">Только для развлечения</span></span></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px"><span class="age" aria-label="18+">18+</span><span class="muted" style="font-size:11.5px"><span data-ru="Только для развлечения" data-en="For entertainment only">Только для развлечения</span></span></div>
       </div>
       <div class="footer-col">
-        <h5><span data-ru="Платформа" data-en="Platform" data-lt="Platforma">Платформа</span></h5>
-        <a href="index.html"><span data-ru="Главная" data-en="Home" data-lt="Pradžia">Главная</span></a>
-        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog" data-lt="Žaidimų katalogas">Каталог игр</span></a>
-        <a href="casino.html"><span data-ru="Казино" data-en="Casino" data-lt="Kazino">Казино</span></a>
-        <a href="roulette.html"><span data-ru="Рулетка Vert" data-en="Vert Roulette" data-lt="„Vert“ ruletė">Рулетка Vert</span></a>
+        <h5><span data-ru="Платформа" data-en="Platform">Платформа</span></h5>
+        <a href="index.html"><span data-ru="Главная" data-en="Home">Главная</span></a>
+        <a href="top.html"><span data-ru="Каталог игр" data-en="Game catalog">Каталог игр</span></a>
+        <a href="casino.html"><span data-ru="Казино" data-en="Casino">Казино</span></a>
+        <a href="roulette.html"><span data-ru="Рулетка Vert" data-en="Vert Roulette">Рулетка Vert</span></a>
         <a href="shop.html"><span data-ru="Магазин" data-en="Shop">Магазин</span></a>
       </div>
       <div class="footer-col">

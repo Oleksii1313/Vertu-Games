@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'tools' / 'i18n'))
 
-from markup import localize as localize_markup, translate_lt  # noqa: E402
+from markup import localize as localize_markup  # noqa: E402
 
 from game_catalog import (ACHIEVEMENTS, APP_VERSION, CASINO_CARD,  # noqa: E402
                           CASINO_STAKES, GAMES, SHOP_ITEMS,
@@ -1105,26 +1105,12 @@ def build_privacy() -> str:
 
 
 # --------------------------------------------------------------------------- #  data file
-def _lt(text: str):
-    """Литовский перевод строки каталога или None (тогда клиент берёт английский)."""
-    return translate_lt(text) or None
-
-
 def build_catalog_data() -> str:
-    games = []
-    for g in visible_games():
-        item = {k: g[k] for k in ('id', 'name', 'name_en', 'file', 'icon', 'tag', 'cat', 'cat_en',
-                                  'desc', 'desc_en', 'reward', 'daily', 'event', 'how_ru', 'how_en',
-                                  'long_ru', 'long_en', 'controls_ru', 'controls_en')}
-        item['name_lt'] = _lt(g['name'])
-        item['desc_lt'] = _lt(g['desc'])
-        item['cat_lt'] = [_lt(cat) for cat in g['cat']]
-        item['how_lt'] = _lt(g['how_ru'])
-        item['long_lt'] = _lt(g['long_ru'])
-        item['controls_lt'] = _lt(g['controls_ru'])
-        games.append(item)
+    games = [{k: g[k] for k in ('id', 'name', 'name_en', 'file', 'icon', 'tag', 'cat', 'cat_en',
+                                'desc', 'desc_en', 'reward', 'daily', 'event', 'how_ru', 'how_en',
+                                'long_ru', 'long_en', 'controls_ru', 'controls_en')} for g in visible_games()]
     # Жанры для чипов фильтра: русское значение (совпадает с data-cats
-    # карточек) плюс английская и литовская подписи.
+    # карточек) плюс английская подпись.
     categories = []
     seen = set()
     for game in list(visible_games()) + [CASINO_CARD]:
@@ -1133,7 +1119,7 @@ def build_catalog_data() -> str:
                 continue
             seen.add(cat)
             english = (game.get('cat_en') or [])[index] if index < len(game.get('cat_en') or []) else None
-            categories.append({'ru': cat, 'en': english or cat, 'lt': _lt(cat)})
+            categories.append({'ru': cat, 'en': english or cat})
     payload = {
         'categories': categories,
         'games': games,

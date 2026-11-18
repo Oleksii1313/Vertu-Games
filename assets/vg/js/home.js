@@ -39,7 +39,7 @@
     $$('[data-stat="coins"]').forEach(function (node) { node.textContent = fmt(data.totals.coins); });
     $$('[data-stat="plays"]').forEach(function (node) { node.textContent = fmt(data.totals.plays); });
     if (!data.users.length) {
-      box.innerHTML = '<div class="empty">' + T('Пока нет игроков — станьте первым.', 'No players yet — be the first.', 'Kol kas žaidėjų nėra — būk pirmas.') + '</div>';
+      box.innerHTML = '<div class="empty">' + T('Пока нет игроков — станьте первым.', 'No players yet — be the first.') + '</div>';
       return;
     }
     box.innerHTML = data.users.slice(0, 6).map(function (user, index) {
@@ -56,7 +56,7 @@
     var box = $('#achievements');
     if (!box) return;
     if (!list.length) {
-      box.innerHTML = '<div class="empty">' + T('Достижения появятся, когда игроки начнут играть.', 'Achievements will appear once players start playing.', 'Pasiekimai atsiras, kai žaidėjai pradės žaisti.') + '</div>';
+      box.innerHTML = '<div class="empty">' + T('Достижения появятся, когда игроки начнут играть.', 'Achievements will appear once players start playing.') + '</div>';
       return;
     }
     box.innerHTML = list.slice(0, 6).map(function (item) {
@@ -77,7 +77,7 @@
     var box = $('#leaderboard');
     if (box) {
       box.innerHTML = '<div class="empty">' +
-        T('Не удалось загрузить рейтинг.', 'Could not load the leaderboard.', 'Nepavyko įkelti reitingo.') + '</div>';
+        T('Не удалось загрузить рейтинг.', 'Could not load the leaderboard.') + '</div>';
     }
   }
 
@@ -124,11 +124,11 @@
       var value = window.VG.lang();
       var known = CATEGORIES[cat];
       if (!known || value === 'ru') return cat;
-      return (value === 'lt' ? known.lt : known.en) || known.en || cat;
+      return known.en || cat;
     }
     function renderChips() {
       if (!chips) return;
-      chips.innerHTML = '<button class="chip on" data-cat="">' + T('Все', 'All', 'Visi') + '</button>' + cats.map(function (cat) {
+      chips.innerHTML = '<button class="chip on" data-cat="">' + T('Все', 'All') + '</button>' + cats.map(function (cat) {
         return '<button class="chip" data-cat="' + escapeHtml(cat) + '">' + escapeHtml(catLabel(cat)) + '</button>';
       }).join('');
     }
