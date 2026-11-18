@@ -217,7 +217,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
   body>.controls button{min-height:36px;height:36px}
 }
 </style>
-<script src="/assets/vg/js/game-kit.js" defer></script>
+<script src="/assets/vg/js/game-kit.js"></script>
 </head><body>
 <header><button id="home" class="icon-btn" title="В каталог" data-title-en="To the catalog" aria-label="В каталог" data-aria-label-en="To the catalog"><svg viewBox="0 0 24 24"><path d="m10 5-7 7 7 7M3 12h17"/></svg></button><div class="brand">DOODLE JUMP<small>VERT GAMES / NOTEBOOK</small></div><div class="stats"><div class="stat"><small id="heightLabel"><span data-ru="ВЫСОТА" data-en="HEIGHT">ВЫСОТА</span></small><b><span id="score">0</span> <em><span data-ru="м" data-en="m">м</span></em></b></div><div class="stat"><small id="bestLabel"><span data-ru="РЕКОРД" data-en="BEST">РЕКОРД</span></small><b><span id="best">0</span> <em><span data-ru="м" data-en="m">м</span></em></b></div><div class="stat coin"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6" opacity=".35"/><path d="m9 9 3 6 3-6"/></svg><b id="coins">0</b></div></div><button id="pause" class="icon-btn" title="Пауза" data-title-en="Pause" aria-label="Пауза" data-aria-label-en="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button></header>
 <div class="stage"><canvas id="game" aria-label="Игровое поле Doodle Jump" data-aria-label-en="Doodle Jump playfield"></canvas><button id="sound" class="sound" title="Звук" data-title-en="Sound" aria-label="Включить звук" data-aria-label-en="Turn sound on" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4ZM16 9l5 6m0-6-5 6"/></svg></button><div class="ribbon">KEEP GOING · ONE JUMP AT A TIME</div></div>
@@ -329,7 +329,14 @@ function draw(){
  for(const p of particles){ctx.globalAlpha=Math.min(1,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y-camera,3,3)}ctx.globalAlpha=1;
  ctx.restore();
 }
-function resize(){const r=canvas.getBoundingClientRect();const oldH=H;H=Math.max(430,Math.min(820,r.height/Math.min(r.width,680)*W));dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);scale=Math.min(r.width/W,r.height/H);ox=(r.width-W*scale)/2;oy=(r.height-H*scale)/2;if(player&&mode!=='intro'){const relative=(player.y-camera)/oldH;camera=player.y-relative*H;generate()}else if(player)reset();clearInput();draw()}
+function resize(){
+  /* getBoundingClientRect может вернуть нули на первом кадре (layout ещё не
+     посчитан) — тогда берём размер окна, иначе поле осталось бы пустым. */
+  var box=canvas.getBoundingClientRect();
+  var vw=box.width||Math.max(240,(window.innerWidth||360));
+  var vh=box.height||Math.max(320,(window.innerHeight||640)-150);
+  var r={width:vw,height:vh};
+  const oldH=H;H=Math.max(430,Math.min(820,r.height/Math.min(r.width,680)*W));dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);scale=Math.min(r.width/W,r.height/H);ox=(r.width-W*scale)/2;oy=(r.height-H*scale)/2;if(player&&mode!=='intro'){const relative=(player.y-camera)/oldH;camera=player.y-relative*H;generate()}else if(player)reset();clearInput();draw()}
 function frame(now){const elapsed=Math.min(.08,Math.max(0,(now-last)/1000));last=now;if(mode==='playing'){accumulator+=elapsed;while(accumulator>=1/120){update(1/120);accumulator-=1/120;if(mode!=='playing'){accumulator=0;break}}}draw();requestAnimationFrame(frame)}
 function bind(id,key){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();if(mode!=='playing'||owners.has(id)||e.button!==0)return;owners.set(id,e.pointerId);touchInput[key]=true;b.classList.add('pressed');b.setPointerCapture(e.pointerId);if(key==='shoot')shoot()});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,e=>{if(owners.get(id)!==e.pointerId)return;owners.delete(id);touchInput[key]=false;b.classList.remove('pressed')})}
 bind('left','left');bind('right','right');bind('shoot','shoot');

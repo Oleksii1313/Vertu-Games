@@ -348,7 +348,44 @@ body[data-game="pong"] .controls{justify-content:space-between}
   body>.controls button{min-height:36px;height:36px}
 }
 </style>
-<script src="/assets/vg/js/game-kit.js" defer></script>
+<script src="/assets/vg/js/game-kit.js"></script>
+<style id="flappy-immersive">
+/* ==========================================================================
+   FLAPPY: поле занимает весь экран телефона.
+   Верхняя панель и кнопка «Взмах» остаются в потоке, но сжаты до минимума,
+   поэтому вертикальной сцене достаётся почти вся высота экрана. Мир при этом
+   остаётся вертикальным при любой ориентации устройства — поворот телефона
+   не растягивает и не обрезает поле, а лишь меняет его масштаб.
+   ========================================================================== */
+body[data-game="flappy"]{height:100vh;height:100dvh;padding:0;margin:0;
+  display:flex;flex-direction:column;overflow:hidden;
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+body[data-game="flappy"]>.info{flex:0 0 auto;min-height:0;gap:6px;
+  padding:calc(2px + env(safe-area-inset-top,0px)) 8px 2px;justify-content:center;
+  background:rgba(10,16,26,.9);border-bottom:1px solid rgba(255,255,255,.06)}
+body[data-game="flappy"]>.info .stat{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:5px}
+body[data-game="flappy"]>.info .stat .l{font-size:8px;letter-spacing:.6px;opacity:.72}
+body[data-game="flappy"]>.info .stat .v{font-size:14px;line-height:1.15}
+body[data-game="flappy"]>.stage{flex:1 1 auto;min-height:0;padding:0;margin:0;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+body[data-game="flappy"]>.stage>canvas{display:block;max-width:100%;max-height:100%;
+  margin:0 auto;border-radius:0}
+body[data-game="flappy"]>.controls{flex:0 0 auto;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(0deg,#0b1119,#0b1119);border-top:1px solid rgba(255,255,255,.06)}
+body[data-game="flappy"]>.controls #btnJump{width:min(100%,360px);padding:10px 0;font-size:15px;
+  min-height:44px;border-radius:14px}
+/* В ландшафте (телефон повёрнут) сцена всё равно вертикальная: поле вписывается
+   по высоте, а по бокам — фон, без растяжения и без принудительного поворота. */
+@media (orientation:landscape){
+  body[data-game="flappy"]>.info{position:absolute;left:0;right:0;top:0;z-index:4;
+    background:linear-gradient(180deg,rgba(5,8,14,.86),rgba(5,8,14,0));border:0;pointer-events:none}
+  body[data-game="flappy"]>.stage{position:absolute;inset:0}
+  body[data-game="flappy"]>.controls{position:absolute;left:0;right:0;bottom:0;z-index:4;
+    background:linear-gradient(0deg,rgba(5,8,14,.7),rgba(5,8,14,0));border:0;pointer-events:none}
+  body[data-game="flappy"]>.controls #btnJump{pointer-events:auto;width:min(46%,280px);
+    background:rgba(34,58,44,.62);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px)}
+}
+</style>
 </head>
 <body data-game="flappy">
 <div class="info">
@@ -390,18 +427,56 @@ const scan=document.getElementById('c'),ctx=scan.getContext('2d');
    и на широком мониторе поле остаётся вертикальным, а вокруг — пустое место.
    Физика, коллизии и координаты объектов не зависят от размера окна.
    --------------------------------------------------------------------------- */
-const W=384, H=640;          // логический портретный мир (3:5) — на 6,7 % шире прежнего 9:16
-const GROUND=64;             // высота земли в логических единицах
-const GRAVITY=0.34, FLAP=-6.8, PIPE_SPEED=2.6, PIPE_EVERY=95, GAP=150;
+/*
+ * Логический мир: ширина фиксирована (384), высота подстраивается под экран.
+ * Так поле занимает всю доступную площадь телефона — без чёрных полос и без
+ * растяжения: масштаб всегда одинаков по обеим осям, а «лишнюю» высоту мира
+ * получает сама сцена. Все вертикальные константы (гравитация, взмах, зазор,
+ * земля) пересчитываются пропорционально H, поэтому сложность остаётся той же,
+ * что и в исходном мире 384 × 640: зазор по-прежнему 23,4 % высоты поля.
+ * Ориентация не меняется: мир всегда вертикальный, даже если телефон повернуть.
+ */
+const W=384;
+let H=720;                   // текущая логическая высота мира (пересчитывается)
+const BASE_H=640;            // мир, под который настроены константы
+let GROUND=72;               // высота земли в логических единицах
+let GRAVITY=0.3825, FLAP=-7.65, GAP=169;
+const PIPE_SPEED=2.6, PIPE_EVERY=95;
 let bird,pipes,groundX,frame,stars,particles;
 let viewScale=1, viewDpr=1;
 
-/* Вписать вертикальное поле в доступную область: масштаб = min(ширина, высота). */
+/* Все вертикальные величины — в долях высоты мира, поэтому при любой высоте
+   экрана игрок видит те же пропорции и ту же сложность. */
+function applyMetrics(){
+  const k=H/BASE_H;
+  GRAVITY=0.34*k;
+  FLAP=-6.8*k;
+  GAP=Math.round(150*k);
+  GROUND=Math.round(64*k);
+}
+applyMetrics();
+
+/* Вписать вертикальное поле в доступную область без искажений. */
 function fit(){
   const host=document.querySelector('.stage')||document.body;
   const box=host.getBoundingClientRect();
   const availW=Math.max(120, Math.floor(box.width));
   const availH=Math.max(180, Math.floor(box.height));
+  /* Высоту мира выбираем так, чтобы её пропорции совпали с пропорциями
+     доступной области — тогда масштаб по ширине и по высоте совпадает и
+     поле заполняет экран целиком. */
+  const wanted=Math.round(W*(availH/availW));
+  const nextH=Math.max(560, Math.min(1100, wanted));
+  if(nextH!==H){
+    const k=nextH/H;
+    H=nextH;
+    applyMetrics();
+    /* Уже летящие объекты переводим в новую высоту, чтобы забег не ломался
+       при повороте телефона или выезде адресной строки. */
+    if(bird){bird.y*=k;}
+    if(Array.isArray(pipes)){for(const p of pipes){p.topY*=k;p.botY*=k;}}
+    if(Array.isArray(stars)){for(const st of stars){st.y*=k;}}
+  }
   const scale=Math.min(availW/W, availH/H);
   const cssW=Math.max(1, Math.round(W*scale));
   const cssH=Math.max(1, Math.round(H*scale));

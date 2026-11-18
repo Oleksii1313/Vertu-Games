@@ -346,7 +346,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
   body>.controls button{min-height:36px;height:36px}
 }
 </style>
-<script src="/assets/vg/js/game-kit.js" defer></script>
+<script src="/assets/vg/js/game-kit.js"></script>
 </head>
 <body data-game="pong">
 <div class="info">
@@ -398,7 +398,7 @@ function syncV(){
   if(typeof coinsEl!=='undefined'&&coinsEl&&coins!==shownV){shownV=coins;coinsEl.textContent=coins+' V'}
   return coins;
 }
-VGReward.on&&VGReward.on(function(st){
+window.VGReward&&VGReward.on&&VGReward.on(function(st){
   if(st.state!=='done')return;
   var el=document.getElementById('fEarn');
   if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
@@ -408,7 +408,13 @@ const scoreEl=document.getElementById('scoreVal'),levelEl=document.getElementByI
 let ac=null,muted=false;
 function beep(f,dur,type,vol,slide){if(muted)return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.value=f;if(slide)o.frequency.linearRampToValueAtTime(slide,ac.currentTime+dur);g.gain.value=0;g.gain.linearRampToValueAtTime(vol||.14,ac.currentTime+.01);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+dur);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur);}catch(e){}}
 document.getElementById('muteBtn').onclick=e=>{muted=!muted;e.target.textContent=muted?'🔇':'🔊'};
-function resize(){c.width=window.innerWidth;c.height=c.clientHeight;player.y=c.height/2-player.h/2;ai.y=c.height/2-ai.h/2;resetBall()}
+function resize(){
+  /* Высота берётся из flex-разметки; если браузер ещё не посчитал layout
+     (первый кадр после открытия игры), считаем от окна, чтобы поле не было
+     нулевой высоты. */
+  var vw=Math.max(240,window.innerWidth||document.documentElement.clientWidth||360);
+  var vh=Math.max(240,c.clientHeight||(window.innerHeight||640)-140);
+  c.width=vw;c.height=vh;player.y=c.height/2-player.h/2;ai.y=c.height/2-ai.h/2;resetBall()}
 window.addEventListener('resize',resize);
 function resetBall(){ball.x=c.width/2;ball.y=c.height/2;const s=(3+level)*spdFactor;ball.vx=(Math.random()>.5?1:-1)*s;ball.vy=(Math.random()-.5)*s*1.6;trail=[]}
 const setupBtn=(id,key)=>VGInput.hold(id,value=>keys[key]=value);

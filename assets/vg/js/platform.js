@@ -803,8 +803,21 @@
     });
   }
 
+  /*
+   * Фоновая музыка каталога на время игры выключается полностью: игрок не
+   * должен слышать аркадную петлю поверх звуков игры. Позиция петли
+   * сохраняется, поэтому после выхода мелодия продолжается с того же места,
+   * а не начинается заново. Если музыку выключили вручную — она останется
+   * выключенной (VGMusic.setGameMode уважает преференс).
+   */
+  function musicGameMode(on) {
+    if (!window.VGMusic) return;
+    if (typeof window.VGMusic.setGameMode === 'function') window.VGMusic.setGameMode(on);
+    else if (typeof window.VGMusic.duck === 'function') window.VGMusic.duck(on);
+  }
+
   function openGame(game) {
-    if (window.VGMusic) window.VGMusic.duck(true);
+    musicGameMode(true);
     var overlay = $('#playOverlay');
     // На части страниц оверлей уже есть (пустой контейнер из разметки) —
     // тогда его содержимое тоже нужно собрать.
@@ -822,37 +835,7 @@
         icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
         '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
-      overlay.querySelector('[data-fullscreen]').addEventListener('click', function () {
-        var wrap = overlay.querySelector('.play-frame-wrap');
-        if (document.fullscreenElement) {
-          if (document.exitFullscreen) document.exitFullscreen();
-          return;
-        }
-        if (overlay.classList.contains('pseudo-full')) {
-          // Второй тап по кнопке в «псевдополноэкранном» режиме — выход.
-          overlay.classList.remove('pseudo-full');
-          document.body.classList.remove('vg-pseudo-full');
-          syncFullscreenButton();
-          frameFocusSoon();
-          return;
-        }
-        // Полноэкранный режим: рамка плеера, а с ней и игра, занимает весь экран.
-        var request = wrap.requestFullscreen || wrap.webkitRequestFullscreen
-          || wrap.mozRequestFullScreen || wrap.msRequestFullscreen;
-        if (request) {
-          try {
-            var maybe = request.call(wrap, { navigationUI: 'hide' });
-            if (maybe && maybe.catch) maybe.catch(function () { pseudoFullscreen(); });
-          } catch (e) {
-            try { request.call(wrap); } catch (e2) { pseudoFullscreen(); }
-          }
-          frameFocusSoon();
-          return;
-        }
-        // iOS Safari и встроенные браузеры: Fullscreen API недоступен — игра
-        // всё равно должна занимать весь экран, поэтому включаем CSS-режим.
-        pseudoFullscreen();
-      });
+      overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
     }
     syncFullscreenButton();
     if (!overlay.querySelector('.reward-chip')) {
@@ -1193,19 +1176,85 @@
   function pseudoFullscreen() {
     var overlay = $('#playOverlay');
     if (!overlay) return;
-    overlay.classList.add('pseudo-full');
-    document.body.classList.add('vg-pseudo-full');
-    if (document.documentElement.requestFullscreen) {
-      try { document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch (e) {}
-    }
-    // Поворот в ландшафт на телефоне — лучший «полный экран» для игр.
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock('landscape').catch(function () {});
-    }
+    enterPseudoFullscreenClasses();
+    /* Ориентацию НЕ фиксируем: Flappy Bird и остальные игры сами держат
+       портретную сцену, а принудительный landscape выкидывал игрока из
+       привычного положения телефона. */
     syncFullscreenButton();
     frameFocusSoon();
     toast(T('Полный экран включён. Кнопка «Экран» выключает его.',
       'Fullscreen on. Tap Screen again to exit.'), 'ok');
+  }
+
+  /* Настоящий полноэкранный режим: просим его у самого оверлея, а не у рамки,
+     иначе вместе с рамкой с экрана уходит панель с кнопкой «Выйти» — на
+     телефоне из такого режима не выбраться. Если браузер отказывает (iOS
+     Safari умеет fullscreen только для видео, встроенные браузеры тоже), мягко
+     переходим в CSS-режим: игра занимает 100dvh, интерфейс прячется. */
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement
+      || document.mozFullScreenElement || document.msFullscreenElement || null;
+  }
+  function exitFullscreen() {
+    var call = document.exitFullscreen || document.webkitExitFullscreen
+      || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (call) { try { call.call(document); } catch (e) {} }
+  }
+  function toggleFullscreen() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    if (fullscreenElement()) { exitFullscreen(); return; }
+    if (overlay.classList.contains('pseudo-full')) { exitPseudoFullscreen(); return; }
+    var wrap = overlay.querySelector('.play-frame-wrap') || overlay;
+    var targets = [overlay, wrap, document.documentElement];
+    var request = null;
+    for (var i = 0; i < targets.length && !request; i++) {
+      var t = targets[i];
+      var fn = t.requestFullscreen || t.webkitRequestFullscreen
+        || t.mozRequestFullScreen || t.msRequestFullscreen;
+      if (fn) request = { fn: fn, el: t };
+    }
+    if (!request) { pseudoFullscreen(); return; }
+    try {
+      var maybe = request.fn.call(request.el, { navigationUI: 'hide' });
+      if (maybe && typeof maybe.then === 'function') {
+        maybe.then(function () { frameFocusSoon(); }, function () {
+          if (!fullscreenElement()) pseudoFullscreen();
+        });
+      }
+      frameFocusSoon();
+    } catch (e) {
+      try { request.fn.call(request.el); frameFocusSoon(); } catch (e2) { pseudoFullscreen(); }
+    }
+  }
+  function enterPseudoFullscreenClasses() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    overlay.classList.add('pseudo-full');
+    document.body.classList.add('vg-pseudo-full');
+  }
+  function exitPseudoFullscreen() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('pseudo-full');
+    document.body.classList.remove('vg-pseudo-full');
+    syncFullscreenButton();
+    frameFocusSoon();
+  }
+
+  /* Esc выходит из «псевдополноэкранного» режима; настоящий fullscreen Esc
+     закрывает сам браузер, поэтому дублировать не нужно. */
+  if (!toggleFullscreen.keys) {
+    toggleFullscreen.keys = true;
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      var overlay = $('#playOverlay');
+      if (!overlay || !overlay.classList.contains('open')) return;
+      if (overlay.classList.contains('pseudo-full')) { exitPseudoFullscreen(); return; }
+      if (!fullscreenElement() && overlay.classList.contains('immersive')) {
+        overlay.classList.remove('immersive');
+      }
+    });
   }
 
   function frameFocusSoon() {
@@ -1224,7 +1273,7 @@
     if (!overlay) return;
     var button = overlay.querySelector('[data-fullscreen]');
     if (!button) return;
-    var active = !!document.fullscreenElement || overlay.classList.contains('pseudo-full');
+    var active = !!fullscreenElement() || overlay.classList.contains('pseudo-full');
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
     var label = button.querySelector('span');
     if (label) label.textContent = active ? T('Выйти', 'Exit') : T('Экран', 'Screen');
@@ -1238,13 +1287,13 @@
   }
   if (!syncFullscreenButton.bound) {
     syncFullscreenButton.bound = true;
-    ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (name) {
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (name) {
       document.addEventListener(name, syncFullscreenButton);
     });
   }
 
   function closeGame() {
-    if (window.VGMusic) window.VGMusic.duck(false);
+    musicGameMode(false);
     var overlay = $('#playOverlay');
     if (!overlay) return;
     var frame = overlay.querySelector('.play-frame');

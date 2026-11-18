@@ -264,7 +264,7 @@ body:not(.playing) #mcx-hud{opacity:0}
   body>.controls button{min-height:36px;height:36px}
 }
 </style>
-<script src="/assets/vg/js/game-kit.js" defer></script>
+<script src="/assets/vg/js/game-kit.js"></script>
 </head><body>
 <div id="viewport"></div>
 <header><div class="brand panel"><svg viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10"/></svg><div>MINICRAFT <small>VERT GAMES / 3D</small></div></div><div class="meters"><div class="meter heart panel"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><div><span id="health">20 / 20</span><div class="bar"><i id="healthbar"></i></div></div></div><div class="meter panel"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="7.5" opacity=".4"/><path d="m8.5 8.5 3.5 7.5 3.5-7.5"/></svg><span id="score">0</span></div><div class="meter panel"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M10 2h4 M12 5V2 M12 9v5l3 2"/></svg><span id="timer">3:00</span></div><button id="pause" class="panel icon-button" title="Пауза" data-title-en="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button></div></header>
@@ -4623,6 +4623,118 @@ var {
       pixel: d
     }) => {
       m("#43464c"), v(68, ["#292d34", "#5b5f65", "#343840", "#73777a"], 3, 2), d(2, 5, 5, 1, "#202630"), d(6, 6, 1, 3, "#202630"), d(10, 11, 5, 1, "#202630"), d(10, 12, 1, 3, "#202630")
+    }), a("stoneBrick", 271, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Кладка: ровные ряды кирпича со швами и лёгким перепадом тона. */
+      m("#7a7f83");
+      for (let h = 0; h < 4; h++) {
+        let M = h * 4, off = h % 2 ? 4 : 0;
+        for (let S = -1; S < 4; S++) v(S * 8 + off, M, 7, 3, ["#84898d", "#7c8185", "#8a8f92", "#767b7f"][(S + h + 8) % 4]);
+        v(0, M, 16, 1, "#5d6266");
+        v(0, M + 3, 16, 1, "#5d6266");
+        for (let S = -1; S < 4; S++) v(S * 8 + off + 7, M, 1, 3, "#5d6266");
+      }
+      d(3, 1, 4, 1, "#949a9d"), d(11, 9, 3, 1, "#949a9d")
+    }), a("cobble", 283, ({
+      base: m,
+      scatter: v,
+      pixel: d,
+      random: h
+    }) => {
+      /* Булыжник: округлые камни разного размера в тёмном растворе. */
+      m("#5f6468");
+      for (let M = 0; M < 14; M++) {
+        let S = Math.floor(h() * 13), E = Math.floor(h() * 13), C = 2 + Math.floor(h() * 3);
+        v(S, E, C, C, ["#7d8286", "#8b9094", "#71767a", "#969b9e"][M % 4]);
+        v(S, E, C, 1, "#a2a7a9"), v(S, E + C - 1, C, 1, "#4e5357");
+      }
+    }), a("planks", 297, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Светлые дубовые доски: четыре полосы со швами и сучками. */
+      m("#a8824e");
+      for (let h = 0; h < 4; h++) {
+        let M = h * 4;
+        v(0, M, 16, 3, ["#b08a54", "#a07a49", "#b58e58", "#a57f4c"][h]);
+        v(0, M + 3, 16, 1, "#7c5c34");
+        d(Math.floor(d() * 12), M + 1, 2, 1, "#8e6a3e");
+      }
+      d(3, 2, 1, 1, "#6f5230"), d(11, 9, 1, 1, "#6f5230")
+    }), a("darkPlanks", 311, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Тёмное дерево (балки и рамы): глубокий орех с прожилками. */
+      m("#4a3524");
+      for (let h = 0; h < 4; h++) {
+        let M = h * 4;
+        v(0, M, 16, 3, ["#523b28", "#442f20", "#5b422c", "#4b3423"][h]);
+        v(0, M + 3, 16, 1, "#2f2015");
+        d(Math.floor(d() * 13), M + 1, 2, 1, "#3a2718");
+      }
+    }), a("roofTile", 322, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Черепица: тёплый кирпичный цвет, ряды «рыбьей чешуи» с бликами. */
+      m("#8f4132");
+      for (let h = 0; h < 4; h++) {
+        let M = h * 4, off = h % 2 ? 2 : 0;
+        for (let S = -1; S < 5; S++) {
+          v(S * 4 + off, M, 3, 3, ["#a04a38", "#94432f", "#ab5340", "#8a3d2e"][(S + h + 8) % 4]);
+          v(S * 4 + off, M, 1, 3, "#6f3025");
+        }
+        v(0, M + 3, 16, 1, "#7a3629");
+        v(0, M, 16, 1, "#b25b47");
+      }
+      d(4, 1, 2, 1, "#c26a54"), d(12, 9, 2, 1, "#c26a54")
+    }), a("slateRoof", 337, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Сланец: холодный тёмно-серый с синевой, для замков и башен. */
+      m("#3f4750");
+      for (let h = 0; h < 4; h++) {
+        let M = h * 4, off = h % 2 ? 2 : 0;
+        for (let S = -1; S < 5; S++) {
+          v(S * 4 + off, M, 3, 3, ["#49525c", "#414a54", "#525c67", "#3b434c"][(S + h + 8) % 4]);
+          v(S * 4 + off, M, 1, 3, "#2c343c");
+        }
+        v(0, M + 3, 16, 1, "#333b44");
+        v(0, M, 16, 1, "#5a6570");
+      }
+    }), a("plaster", 349, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Побелка фахверковых домов: тёплый кремовый с лёгкими пятнами. */
+      m("#e3d8bd");
+      for (let h = 0; h < 26; h++) {
+        let M = Math.floor(d() * 14), S = Math.floor(d() * 14);
+        v(M, S, 2, 1, ["#e9dfc6", "#dbcfb2", "#efe6d0"][h % 3]);
+      }
+      d(2, 12, 4, 1, "#cbbfa1"), d(10, 3, 3, 1, "#cbbfa1")
+    }), a("glassPane", 361, ({
+      base: m,
+      pixel: v,
+      random: d
+    }) => {
+      /* Стекло: светлая голубоватая плоскость с бликом и переплётом. */
+      m("#a9ccd8");
+      v(0, 0, 16, 16, "#a9ccd8");
+      for (let h = 0; h < 10; h++) v(Math.floor(d() * 12) + 2, Math.floor(d() * 12) + 2, 2, 1, "#bcdce6");
+      v(0, 0, 16, 1, "#6f8f9c"), v(0, 15, 16, 1, "#6f8f9c"), v(0, 0, 1, 16, "#6f8f9c"), v(15, 0, 1, 16, "#6f8f9c");
+      v(7, 0, 1, 16, "#7d99a4"), v(0, 7, 16, 1, "#7d99a4");
+      v(2, 2, 5, 2, "#dceff6"), v(2, 4, 2, 3, "#dceff6")
     }))
   }
 
@@ -4644,7 +4756,15 @@ var {
     4: ["sand", "sand", "sand"],
     5: ["bark", "woodTop", "woodTop"],
     6: ["leaves", "leaves", "leaves"],
-    8: ["bedrock", "bedrock", "bedrock"]
+    8: ["bedrock", "bedrock", "bedrock"],
+    9: ["stoneBrick", "stoneBrick", "stoneBrick"],
+    10: ["cobble", "cobble", "cobble"],
+    11: ["darkPlanks", "darkPlanks", "darkPlanks"],
+    12: ["planks", "planks", "planks"],
+    13: ["roofTile", "roofTile", "roofTile"],
+    14: ["plaster", "plaster", "plaster"],
+    15: ["glassPane", "glassPane", "glassPane"],
+    16: ["slateRoof", "slateRoof", "slateRoof"]
   };
 
   function p() {
@@ -4685,14 +4805,23 @@ var {
     blockIcon: u,
     disposeBlockTextures: g
   }
-})(), $e = i => document.getElementById(i), ct = 256, dn = 32, Og = 180, hi = matchMedia("(pointer:coarse)").matches ? 24 : 32, Ai = 0, Vh = 1, Gh = 2, Hh = 3, Wh = 4, Xh = 5, Bl = 6, qh = 7, Vl = 8, Bg = {
+})(), $e = i => document.getElementById(i), ct = 256, dn = 32, Og = 180, hi = matchMedia("(pointer:coarse)").matches ? 24 : 32, Ai = 0, Vh = 1, Gh = 2, Hh = 3, Wh = 4, Xh = 5, Bl = 6, qh = 7, Vl = 8,
+  SB = 9, CB = 10, DW = 11, PL = 12, RF = 13, PS = 14, GL = 15, SL = 16, Bg = {
   1: 6134586,
   2: 10188371,
   3: 9079434,
   4: 15258795,
   5: 8084282,
   6: 3901992,
-  8: 5592405
+  8: 5592405,
+  9: 8032901,
+  10: 6251372,
+  11: 4862244,
+  12: 11043406,
+  13: 9384242,
+  14: 14931645,
+  15: 11127904,
+  16: 4143952
 }, Gl = new URLSearchParams(location.search).get("lang") === "en", tt = (i, e) => Gl ? e : i, Hl = location.origin === "null" ? "*" : location.origin;
 document.documentElement.lang = Gl ? "en" : "ru";
 var zg = Gl ? ["Grass", "Dirt", "Stone", "Sand", "Wood", "Leaves"] : ["\u0422\u0440\u0430\u0432\u0430", "\u0417\u0435\u043C\u043B\u044F", "\u041A\u0430\u043C\u0435\u043D\u044C", "\u041F\u0435\u0441\u043E\u043A", "\u0414\u0435\u0440\u0435\u0432\u043E", "\u041B\u0438\u0441\u0442\u0432\u0430"],
@@ -5622,59 +5751,232 @@ function mcxPath(cx, cz, r, base) {
   }
 }
 
+/* ===========================================================================
+   Архитектура поселений. Дома больше не «коробки с плоской крышей»: у каждого
+   есть фундамент из булыжника, стены из подобранных материалов, окна со
+   стеклом и переплётом, дверь с притолокой и ступенькой, двускатная крыша с
+   коньком, свесами и фронтонами, труба. Три стиля повторяются по деревням,
+   поэтому срубы, каменные дома и фахверк не сливаются в одно пятно.
+   =========================================================================== */
+
+/* Двускатная крыша с коньком и свесом. ridgeAlongX — конёк вдоль оси X. */
+function mcxGableRoof(x0, z0, w, d, y, mat, wall, ridgeAlongX) {
+  var i, x, z;
+  if (ridgeAlongX) {
+    var ax = x0 - 1, az = z0 - 1, aw = w + 2, ad = d + 2;
+    var layers = Math.floor((ad + 1) / 2);
+    for (i = 0; i < layers; i++) {
+      for (x = ax; x < ax + aw; x++) {
+        mcxSet(x, y + i, az + i, mat);
+        if (az + ad - 1 - i !== az + i) mcxSet(x, y + i, az + ad - 1 - i, mat);
+      }
+      // Фронтоны: торцы зашиваем материалом стен, чтобы крыша не «сквозила».
+      if (i > 0)
+        for (z = az + i; z <= az + ad - 1 - i; z++) {
+          mcxSet(ax, y + i, z, wall);
+          mcxSet(ax + aw - 1, y + i, z, wall);
+        }
+    }
+    // Конёк: ряд черепицы и тёмная балка поверх — крыша читается объёмно.
+    for (x = ax; x < ax + aw; x++) mcxSet(x, y + layers, az + Math.floor(ad / 2), mat);
+    for (x = ax + 1; x < ax + aw - 1; x++) mcxSet(x, y + layers + 1, az + Math.floor(ad / 2), DW);
+    // Карнизная планка под свесом — тонкая тёмная линия по краю.
+    for (x = ax; x < ax + aw; x++) {
+      if (mcxGet(x, y - 1, az) === Ai) mcxSet(x, y - 1, az, DW);
+      if (mcxGet(x, y - 1, az + ad - 1) === Ai) mcxSet(x, y - 1, az + ad - 1, DW);
+    }
+  } else {
+    var ax2 = x0 - 1, az2 = z0 - 1, aw2 = w + 2, ad2 = d + 2;
+    var layers2 = Math.floor((aw2 + 1) / 2);
+    for (i = 0; i < layers2; i++) {
+      for (z = az2; z < az2 + ad2; z++) {
+        mcxSet(ax2 + i, y + i, z, mat);
+        if (ax2 + aw2 - 1 - i !== ax2 + i) mcxSet(ax2 + aw2 - 1 - i, y + i, z, mat);
+      }
+      if (i > 0)
+        for (x = ax2 + i; x <= ax2 + aw2 - 1 - i; x++) {
+          mcxSet(x, y + i, az2, wall);
+          mcxSet(x, y + i, az2 + ad2 - 1, wall);
+        }
+    }
+    for (z = az2; z < az2 + ad2; z++) mcxSet(ax2 + Math.floor(aw2 / 2), y + layers2, z, mat);
+    for (z = az2 + 1; z < az2 + ad2 - 1; z++) mcxSet(ax2 + Math.floor(aw2 / 2), y + layers2 + 1, z, DW);
+    for (z = az2; z < az2 + ad2; z++) {
+      if (mcxGet(ax2, y - 1, z) === Ai) mcxSet(ax2, y - 1, z, DW);
+      if (mcxGet(ax2 + aw2 - 1, y - 1, z) === Ai) mcxSet(ax2 + aw2 - 1, y - 1, z, DW);
+    }
+  }
+}
+
+/* Окно: стекло в переплёте, подоконник из дерева. Ставится только в стену. */
+function mcxWindowUnit(x, y, z, mat) {
+  mcxSet(x, y, z, GL);
+  mcxSet(x, y - 1, z, mat);
+  mcxSet(x, y + 1, z, DW);
+}
+
+/* Печная труба: булыжник с каменной шляпой над крышей. */
+function mcxChimney(x, z, from, to) {
+  for (var y = from; y <= to; y++) {
+    mcxSet(x, y, z, CB);
+    mcxSet(x + 1, y, z, CB);
+  }
+  mcxSet(x, to + 1, z, SB);
+  mcxSet(x + 1, to + 1, z, SB);
+  mcxSet(x, to + 2, z, Ai);
+}
+
 function mcxHouse(x0, z0, w, d, h, base, style, withChest) {
   var x, z, y;
-  for (x = x0; x < x0 + w; x++)
-    for (z = z0; z < z0 + d; z++) {
-      mcxSet(x, base - 1, z, Xh);                              // пол
-      for (y = 1; y <= h; y++) {
-        var edge = x === x0 || x === x0 + w - 1 || z === z0 || z === z0 + d - 1;
-        if (!edge) { mcxSet(x, base - 1 + y, z, Ai); continue; }
-        var corner = (x === x0 || x === x0 + w - 1) && (z === z0 || z === z0 + d - 1);
-        mcxSet(x, base - 1 + y, z, corner && style === 1 ? Hh : Xh);
-      }
-    }
-  // Окна: воздух в стенах на уровне 2.
-  for (x = x0 + 2; x < x0 + w - 2; x += 2) {
-    mcxSet(x, base + 1, z0, Ai);
-    mcxSet(x, base + 1, z0 + d - 1, Ai);
-  }
-  for (z = z0 + 2; z < z0 + d - 2; z += 2) {
-    mcxSet(x0, base + 1, z, Ai);
-    mcxSet(x0 + w - 1, base + 1, z, Ai);
-  }
-  // Крыша из листвы, с выступом на один блок.
+  style = ((style % 3) + 3) % 3;
+  /* 0 — дубовый сруб, 1 — каменный дом, 2 — фахверк с побелкой. */
+  var wall = style === 1 ? SB : (style === 2 ? PS : PL);
+  var corner = style === 1 ? CB : DW;
+  var roofMat = style === 1 ? SL : RF;
+  var floorMat = style === 1 ? SB : PL;
+
+  // Фундамент: на один блок шире дома, из булыжника.
   for (x = x0 - 1; x <= x0 + w; x++)
-    for (z = z0 - 1; z <= z0 + d; z++) mcxSet(x, base + h, z, Bl);
+    for (z = z0 - 1; z <= z0 + d; z++) mcxSet(x, base - 1, z, CB);
+
+  // Пол.
   for (x = x0; x < x0 + w; x++)
-    for (z = z0; z < z0 + d; z++) mcxSet(x, base + h + 1, z, style === 2 ? Xh : Bl);
-  // Дверь в стене, обращённой к центру деревни.
+    for (z = z0; z < z0 + d; z++) mcxSet(x, base, z, floorMat);
+
+  // Стены с угловыми столбами и обвязкой.
+  for (y = 1; y <= h; y++)
+    for (x = x0; x < x0 + w; x++)
+      for (z = z0; z < z0 + d; z++) {
+        var ex = x === x0 || x === x0 + w - 1, ez = z === z0 || z === z0 + d - 1;
+        if (!(ex || ez)) { mcxSet(x, base + y, z, Ai); continue; }
+        var isCorner = ex && ez;
+        if (isCorner) { mcxSet(x, base + y, z, corner); continue; }
+        var m = wall;
+        if (style === 2) {
+          // Фахверк: нижняя и верхняя обвязка, стойки по центру — тёмное дерево.
+          if (y === 1 || y === h || x === x0 + Math.floor(w / 2) || z === z0 + Math.floor(d / 2)) m = DW;
+        } else if (y === 1 || y === h) {
+          m = DW;                     // деревянная обвязка у сруба и камня
+        }
+        mcxSet(x, base + y, z, m);
+      }
+
+  // Окна: в длинных стенах, на уровне второго блока, не в углах и не у двери.
   var doorZ = z0 + Math.floor(d / 2);
-  mcxSet(x0 + w - 1, base, doorZ, Ai);
-  mcxSet(x0 + w - 1, base + 1, doorZ, Ai);
-  // Сундук в углу дома — только в «главном» доме деревни.
+  var doorX = x0 + w - 1;
+  for (x = x0 + 1; x < x0 + w - 1; x++)
+    for (var side = 0; side < 2; side++) {
+      z = side ? z0 + d - 1 : z0;
+      if ((x - x0) % 2 === 0) continue;
+      if (mcxGet(x, base + 2, z) === Ai) continue;
+      mcxWindowUnit(x, base + 2, z, wall);
+    }
+  for (z = z0 + 1; z < z0 + d - 1; z++) {
+    if ((z - z0) % 2 === 0) continue;
+    mcxWindowUnit(x0, base + 2, z, wall);
+    if (z !== doorZ) mcxWindowUnit(doorX, base + 2, z, wall);
+  }
+
+  // Дверь: полотно из тёмного дерева, притолока, ступенька и навес.
+  mcxSet(doorX, base + 1, doorZ, DW);
+  mcxSet(doorX, base + 2, doorZ, DW);
+  mcxSet(doorX, base + 3, doorZ, DW);
+  mcxSet(doorX + 1, base, doorZ, CB);
+  mcxSet(doorX + 1, base + 3, doorZ, DW);
+  mcxSet(doorX + 1, base + 4, doorZ, roofMat);
+
+  // Крыша: конёк вдоль длинной стороны, чтобы дом не выглядел кубом.
+  mcxGableRoof(x0, z0, w, d, base + h, roofMat, wall, w >= d);
+
+  // Труба у дальнего угла.
+  mcxChimney(x0 + 1, z0 + 1, base + h - 1, base + h + 2);
+
+  // Балкон у двухэтажных домов: площадка, ограждение и свой навес.
+  if (h >= 4 && w >= 6) {
+    var by = base + 2;
+    for (x = doorX; x <= doorX + 2; x++)
+      for (z = doorZ - 1; z <= doorZ + 1; z++) mcxSet(x, by, z, PL);
+    mcxSet(doorX + 2, by + 1, doorZ - 1, DW);
+    mcxSet(doorX + 2, by + 1, doorZ + 1, DW);
+    mcxSet(doorX + 2, by + 1, doorZ, DW);
+    mcxSet(doorX + 1, by + 2, doorZ, Ai);
+  }
+
+  // Фонарь у входа.
+  mcxSet(doorX + 1, base + 1, doorZ - 1, Xh);
+  mcxSet(doorX + 1, base + 2, doorZ - 1, Wh);
+
   if (withChest) mcxChestSpots.push({ x: x0 + 1.5, y: base, z: z0 + 1.5, kind: 'house' });
+}
+
+/* ===========================================================================
+   Сельская площадь: мостовая, колодец, скамьи, фонари, клумбы и низкая
+   декоративная стена — центр деревни, вокруг которого ставятся дома.
+   =========================================================================== */
+function mcxSquare(cx, cz, base, r) {
+  var x, z;
+  for (x = -r; x <= r; x++)
+    for (z = -r; z <= r; z++) {
+      if (Math.hypot(x, z) > r + 0.2) continue;
+      var pave = ((x + z) % 2 === 0) ? SB : CB;
+      mcxSet(cx + x, base - 1, cz + z, pave);
+    }
+  // Низкая стена по краю площади с проходами по четырём сторонам.
+  for (var t = -r; t <= r; t++) {
+    if (Math.abs(t) < 2) continue;
+    if (Math.abs(t) === r || Math.abs(t) === r - 1) {
+      mcxSet(cx + t, base, cz - r, CB);
+      mcxSet(cx + t, base, cz + r, CB);
+      mcxSet(cx - r, base, cz + t, CB);
+      mcxSet(cx + r, base, cz + t, CB);
+    }
+  }
+  // Столбы с фонарями по углам площади.
+  [[-r + 1, -r + 1], [r - 1, -r + 1], [-r + 1, r - 1], [r - 1, r - 1]].forEach(function (p) {
+    mcxSet(cx + p[0], base, cz + p[1], DW);
+    mcxSet(cx + p[0], base + 1, cz + p[1], DW);
+    mcxSet(cx + p[0], base + 2, cz + p[1], Wh);
+  });
+  mcxWell(cx, cz, base);
+  mcxBench(cx - 2, cz + 2, base);
+  mcxBench(cx + 2, cz - 2, base);
+  // Клумбы: трава и цветы по краям мостовой.
+  for (var f = 0; f < 6; f++) {
+    var fx = cx + ((f % 3) - 1) * 2, fz = cz + (f % 2 ? r - 2 : -r + 2);
+    mcxSet(fx, base, fz, Vh);
+    mcxSet(fx + 1, base, fz, Bl);
+  }
+  mcxCoinSpots.push({ x: cx + 1, y: base + 1, z: cz + 1 });
 }
 
 function mcxFarm(x0, z0, w, d, base) {
   var x, z;
+  // Поле: вспаханная земля рядами, между рядами — всходы.
   for (x = x0; x < x0 + w; x++)
     for (z = z0; z < z0 + d; z++) {
       mcxSet(x, base - 1, z, Gh);
-      var crop = ((x - x0) + (z - z0)) % 2 === 0;
-      mcxSet(x, base, z, crop ? Bl : Ai);
+      var row = (z - z0) % 2 === 0;
+      mcxSet(x, base, z, row ? Bl : Ai);
     }
-  // Забор по периметру с проходом посередине.
+  // Забор: столбы с перекладиной, проход посередине.
   for (x = x0 - 1; x <= x0 + w; x++) {
-    mcxSet(x, base, z0 - 1, Xh);
-    mcxSet(x, base, z0 + d, Xh);
+    mcxSet(x, base, z0 - 1, (x - x0) % 2 === 0 ? PL : Ai);
+    mcxSet(x, base + 1, z0 - 1, (x - x0) % 2 === 0 ? Ai : Ai);
+    mcxSet(x, base, z0 + d, (x - x0) % 2 === 0 ? PL : Ai);
   }
   for (z = z0 - 1; z <= z0 + d; z++) {
-    mcxSet(x0 - 1, base, z, Xh);
-    mcxSet(x0 + w, base, z, Xh);
+    mcxSet(x0 - 1, base, z, (z - z0) % 2 === 0 ? PL : Ai);
+    mcxSet(x0 + w, base, z, (z - z0) % 2 === 0 ? PL : Ai);
   }
   mcxSet(x0 + Math.floor(w / 2), base, z0 + d, Ai);
-  // Пара монет на грядках.
+  // Пугало: столб, поперечина и «шляпа» из листвы.
+  var sx = x0 + 1, sz = z0 + Math.floor(d / 2);
+  mcxSet(sx, base, sz, DW);
+  mcxSet(sx, base + 1, sz, DW);
+  mcxSet(sx - 1, base + 1, sz, PL);
+  mcxSet(sx + 1, base + 1, sz, PL);
+  mcxSet(sx, base + 2, sz, Wh);
+  mcxSet(sx, base + 3, sz, Bl);
   mcxCoinSpots.push({ x: x0 + 1, y: base + 1, z: z0 + 1 });
   mcxCoinSpots.push({ x: x0 + w - 2, y: base + 1, z: z0 + d - 2 });
 }
@@ -5886,23 +6188,40 @@ function mcxDock(x, z, dx, dz, len, level) {
 /* ---------------------------------------------------------- архитектура */
 function mcxTower(cx, cz, base, h) {
   mcxCount('towers');
-  for (var y = 1; y <= h; y++)
-    for (var dx = -1; dx <= 1; dx++)
-      for (var dz = -1; dz <= 1; dz++) {
-        var edge = Math.abs(dx) === 1 || Math.abs(dz) === 1;
-        if (edge) mcxSet(cx + dx, base + y, cz + dz, y > h * .6 ? Hh : Xh);
-        else mcxSet(cx + dx, base + y, cz + dz, Ai);
+  var y, dx, dz;
+  // Круглая в плане башня из каменной кладки на булыжном цоколе.
+  for (y = 1; y <= h; y++)
+    for (dx = -2; dx <= 2; dx++)
+      for (dz = -2; dz <= 2; dz++) {
+        var dist = Math.hypot(dx, dz);
+        if (dist > 2.3) continue;
+        if (dist < 1.25) { mcxSet(cx + dx, base + y, cz + dz, Ai); continue; }
+        var mat = y <= 1 ? CB : SB;
+        if (y === Math.floor(h / 2) + 1 || y === h) mat = y === h ? CB : DW;
+        mcxSet(cx + dx, base + y, cz + dz, mat);
       }
-  for (var dx2 = -2; dx2 <= 2; dx2++)
-    for (var dz2 = -2; dz2 <= 2; dz2++) {
-      mcxSet(cx + dx2, base + h, cz + dz2, Xh);
-      if (Math.abs(dx2) === 2 || Math.abs(dz2) === 2) mcxSet(cx + dx2, base + h + 1, cz + dz2, Hh);
-    }
-  mcxSet(cx, base + 3, cz, Ai);          // вход
-  mcxSet(cx, base + 2, cz, Ai);
-  mcxSet(cx + 2, base + h + 2, cz, Bl);  // флажок
-  mcxChestSpots.push({ x: cx + .5, y: base + h + 1, z: cz + .5, kind: 'treasure' });
-  mcxCoinSpots.push({ x: cx + 1, y: base + h + 1, z: cz + 1 });
+  // Бойницы: узкие окна через каждые два блока.
+  for (y = 2; y < h; y += 2) {
+    mcxSet(cx, base + y, cz - 2, GL);
+    mcxSet(cx + 2, base + y, cz, GL);
+    mcxSet(cx - 2, base + y, cz, GL);
+  }
+  // Кровля: конус из сланца с флюгером.
+  for (var i = 0; i < 3; i++) {
+    var rr = 2 - i;
+    for (dx = -rr; dx <= rr; dx++)
+      for (dz = -rr; dz <= rr; dz++)
+        if (Math.hypot(dx, dz) <= rr + 0.4) mcxSet(cx + dx, base + h + 1 + i, cz + dz, SL);
+  }
+  mcxSet(cx, base + h + 4, cz, DW);
+  mcxSet(cx, base + h + 5, cz, Wh);
+  // Дверь входа и фонарь над ней.
+  mcxSet(cx, base + 1, cz - 2, Ai);
+  mcxSet(cx, base + 2, cz - 2, Ai);
+  mcxSet(cx, base + 3, cz - 2, DW);
+  mcxSet(cx + 1, base + 1, cz - 2, DW);
+  mcxChestSpots.push({ x: cx + 0.5, y: base + 1, z: cz + 0.5, kind: 'treasure' });
+  mcxCoinSpots.push({ x: cx + 1, y: base + 1, z: cz + 1 });
 }
 
 function mcxWindmill(cx, cz, base) {
@@ -5929,41 +6248,79 @@ function mcxWindmill(cx, cz, base) {
 
 function mcxMarket(cx, cz, base) {
   mcxCount('markets');
+  /* Рыночная площадь: четыре прилавка с полосатыми навесами, ящики, вывеска
+     и фонари. Прилавки стоят вокруг мостовой, чтобы площадь читалась как
+     торговое место, а не как случайные коробки. */
+  for (var x = -3; x <= 3; x++)
+    for (var z = -3; z <= 3; z++) mcxSet(cx + x, base - 1, cz + z, (x + z) % 2 === 0 ? CB : SB);
   for (var i = 0; i < 4; i++) {
-    var ax = cx + (i % 2) * 6 - 3, az = cz + Math.floor(i / 2) * 6 - 3;
-    for (var dx = 0; dx <= 2; dx++)
-      for (var dz = 0; dz <= 1; dz++) mcxSet(ax + dx, base, az + dz, Xh);
-    mcxSet(ax, base + 1, az, Xh); mcxSet(ax + 2, base + 1, az, Xh);
-    mcxSet(ax, base + 2, az, i % 2 ? Bl : Wh);
-    mcxSet(ax + 1, base + 2, az, i % 2 ? Bl : Wh);
-    mcxSet(ax + 2, base + 2, az, i % 2 ? Bl : Wh);
+    var ax = cx + (i % 2) * 6 - 4, az = cz + Math.floor(i / 2) * 6 - 4;
+    var canopy = i % 2 ? RF : PS;
+    var dx, dz;
+    // Стойки и столешница.
+    for (dx = 0; dx <= 3; dx++) {
+      mcxSet(ax + dx, base, az, PL);
+      mcxSet(ax + dx, base, az + 1, PL);
+    }
+    mcxSet(ax, base + 1, az, DW); mcxSet(ax + 3, base + 1, az, DW);
+    mcxSet(ax, base + 2, az, DW); mcxSet(ax + 3, base + 2, az, DW);
+    // Полосатый навес с уклоном.
+    for (dx = -1; dx <= 4; dx++)
+      for (dz = -1; dz <= 2; dz++)
+        mcxSet(ax + dx, base + 3, az + dz, (dx + dz) % 2 === 0 ? canopy : Ai);
+    for (dx = 0; dx <= 3; dx++) mcxSet(ax + dx, base + 1, az + 1, i % 2 ? Bl : Wh);
+    // Ящики у прилавка.
+    mcxSet(ax - 1, base, az + 1, PL);
+    mcxSet(ax - 1, base + 1, az + 1, (i % 2) ? DW : PL);
     mcxCoinSpots.push({ x: ax + 1, y: base + 1, z: az + 2 });
   }
   mcxBench(cx, cz, base);
   mcxBench(cx + 1, cz + 1, base);
+  mcxSet(cx - 1, base, cz - 1, DW);
+  mcxSet(cx - 1, base + 1, cz - 1, DW);
+  mcxSet(cx - 1, base + 2, cz - 1, Wh);
   for (var v = 0; v < mcxVillages.length; v++)
-    if (Math.hypot(mcxVillages[v].x - cx, mcxVillages[v].z - cz) < 24)
+    if (Math.hypot(mcxVillages[v].x - cx, mcxVillages[v].z - cz) < 34)
       mcxVillages[v].villagers.push({ x: cx + 2, z: cz - 1 }, { x: cx - 2, z: cz + 2 });
 }
 
 function mcxCastle(cx, cz, base) {
   mcxCount('castles');
-  mcxFlatten(cx, cz, 9, base);
-  for (var dx = -8; dx <= 8; dx++)
-    for (var dz = -8; dz <= 8; dz++) {
-      var wall = Math.abs(dx) === 8 || Math.abs(dz) === 8;
-      if (!wall) { mcxSet(cx + dx, base, cz + dz, Gh); continue; }
-      for (var y = 1; y <= 5; y++) mcxSet(cx + dx, base + y - 1, cz + dz, Hh);
-      if ((dx + dz) % 2 === 0) mcxSet(cx + dx, base + 5, cz + dz, Hh);   // зубцы
+  mcxFlatten(cx, cz, 10, base);
+  var x, z, y, dx, dz;
+  // Двор: каменная мостовая с дорожкой к воротам.
+  for (dx = -8; dx <= 8; dx++)
+    for (dz = -8; dz <= 8; dz++) {
+      var edge = Math.abs(dx) === 8 || Math.abs(dz) === 8;
+      if (edge) continue;
+      mcxSet(cx + dx, base - 1, cz + dz, Math.abs(dx) === Math.abs(dz) || dx === 0 ? SB : CB);
     }
-  for (var g = -1; g <= 1; g++) {                                    // ворота
+  // Крепостная стена: цоколь из булыжника, кладка, зубцы через блок.
+  for (dx = -8; dx <= 8; dx++)
+    for (dz = -8; dz <= 8; dz++) {
+      if (Math.abs(dx) !== 8 && Math.abs(dz) !== 8) continue;
+      for (y = 1; y <= 6; y++) mcxSet(cx + dx, base + y - 1, cz + dz, y === 1 ? CB : SB);
+      if ((dx + dz) % 2 === 0) mcxSet(cx + dx, base + 6, cz + dz, SB);
+      else mcxSet(cx + dx, base + 6, cz + dz, Ai);
+    }
+  // Ворота: арка из тёмного дерева, над ней — каменная перемычка и флаги.
+  for (var g = -1; g <= 1; g++) {
     for (var gy = 1; gy <= 3; gy++) mcxSet(cx + g, base + gy - 1, cz - 8, Ai);
-    mcxSet(cx + g, base + 4, cz - 8, Hh);
+    mcxSet(cx + g, base + 4, cz - 8, DW);
+    mcxSet(cx + g, base + 5, cz - 8, SB);
+    mcxSet(cx + g, base + 6, cz - 8, g === 0 ? RF : SB);
   }
+  mcxSet(cx - 2, base + 2, cz - 8, DW);
+  mcxSet(cx + 2, base + 2, cz - 8, DW);
+  // Угловые башни с шатровыми кровлями.
   var corners = [[-8, -8], [8, -8], [-8, 8], [8, 8]];
-  for (var c = 0; c < corners.length; c++) mcxTower(cx + corners[c][0], cz + corners[c][1], base + 4, 4);
-  mcxHouse(cx - 5, cz + 1, 5, 4, 3, base, 1, true);
-  mcxHouse(cx + 1, cz + 1, 4, 4, 3, base, 2, false);
+  for (var c = 0; c < corners.length; c++) mcxTower(cx + corners[c][0], cz + corners[c][1], base + 5, 3);
+  // Внутренние постройки: дом стражи, кузня, склад.
+  mcxHouse(cx - 6, cz + 2, 6, 5, 4, base, 1, true);
+  mcxHouse(cx + 1, cz + 2, 5, 4, 3, base, 2, false);
+  mcxSet(cx - 1, base, cz + 6, PL); mcxSet(cx, base, cz + 6, PL); mcxSet(cx + 1, base, cz + 6, PL);
+  mcxBench(cx - 3, cz + 5, base);
+  mcxSet(cx + 3, base, cz - 4, DW); mcxSet(cx + 3, base + 1, cz - 4, DW); mcxSet(cx + 3, base + 2, cz - 4, Wh);
   mcxChestSpots.push({ x: cx + .5, y: base, z: cz + 5.5, kind: 'treasure' });
   for (var v = 0; v < mcxVillages.length; v++)
     if (mcxVillages[v].index === 2) mcxVillages[v].villagers.push({ x: cx + 1, z: cz + 4 });
@@ -6179,31 +6536,63 @@ function mcxBakeVillage(def, index) {
   mcxPath(cx, cz, r, base);
 
   var village = { x: cx, z: cz, base: base, r: r, style: def.style, index: index, name: mcxName(index), villagers: [] };
-  var houses = [
-    [cx - r + 3, cz - r + 3], [cx + r - 9, cz - r + 4],
-    [cx - r + 4, cz + r - 8], [cx + r - 8, cz + r - 7]
+  /* Площадь в центре: мостовая, колодец, скамьи, фонари и клумбы. */
+  mcxSquare(cx, cz, base, 4);
+
+  /* Дома по периметру: каждый в своём стиле, разного размера и высоты.
+     Угловые пятна подобраны так, чтобы дома не перекрывались дорогами. */
+  var plots = [
+    [cx - r + 3, cz - r + 4], [cx + r - 10, cz - r + 3],
+    [cx - r + 3, cz + r - 8], [cx + r - 9, cz + r - 7],
+    [cx - 8, cz - r + 5]
   ];
-  var count = 2 + (index % 2);
-  for (var h = 0; h < count; h++) {
-    var spot = houses[(h + (index % 3)) % houses.length];
-    var w = 5 + (h % 2 === 0 ? 1 : 0), d = 4 + (h % 3 === 0 ? 1 : 0);
-    mcxHouse(spot[0], spot[1], w, d, 3, base, (def.style + h) % 3, h === 0);
+  var count = 3 + (index % 2);
+  for (var h = 0; h < count && h < plots.length; h++) {
+    var spot = plots[h];
+    var w = 5 + ((h + index) % 2) + (h === 4 ? 2 : 0);
+    var d = 4 + ((h + index) % 3 === 0 ? 1 : 0) + (h === 4 ? 1 : 0);
+    var floors = h === 4 ? 4 : 3;
+    var style = (def.style + h) % 3;
+    mcxHouse(spot[0], spot[1], w, d, floors, base, style, h === 0);
     village.villagers.push({ x: spot[0] + 1, z: spot[1] - 1.6 });
   }
-  mcxFarm(cx + 2, cz - r + 3, 5, 4, base);
-  if (index % 2 === 0) mcxWell(cx + r - 4, cz + r - 4, base);
+
+  /* Хозяйство: поле с пугалом и загон, склад у дороги, фонари вдоль улиц. */
+  mcxFarm(cx - r + 3, cz + 2, 6, 5, base);
+  mcxFarm(cx + 4, cz + r - 8, 5, 4, base);
+  // Склад: навес на столбах с ящиками.
+  var sx = cx + r - 6, sz = cz + 2;
+  for (var q = 0; q < 3; q++) {
+    mcxSet(sx + q, base, sz, PL);
+    mcxSet(sx + q, base + 3, sz, RF);
+    mcxSet(sx + q, base, sz + 3, PL);
+    mcxSet(sx + q, base + 3, sz + 3, RF);
+  }
+  mcxSet(sx, base + 1, sz, DW); mcxSet(sx, base + 2, sz, DW);
+  mcxSet(sx + 2, base + 1, sz, DW); mcxSet(sx + 2, base + 2, sz, DW);
+  mcxSet(sx + 1, base, sz + 2, PL);
+  mcxSet(sx + 1, base + 1, sz + 2, DW);
+  mcxChestSpots.push({ x: sx + 1.5, y: base, z: sz + 2.5, kind: 'coins' });
+
   mcxLantern(cx + 2, cz + 3, base);
   mcxLantern(cx - 3, cz - 2, base);
+  mcxLantern(cx + 3, cz - 3, base);
   mcxBench(cx - 1, cz + 4, base);
-  if (def.style === 2) {                              // «богатая» деревня: башня
-    for (var ty = 1; ty <= 5; ty++) {
-      for (var bx = -1; bx <= 1; bx++)
-        for (var bz = -1; bz <= 1; bz++)
-          if (Math.abs(bx) === 1 || Math.abs(bz) === 1) mcxSet(cx + bx + 4, base + ty, cz + bz - 4, ty > 3 ? Hh : Xh);
-    }
-    mcxSet(cx + 4, base + 6, cz - 4, Bl);
-    mcxChestSpots.push({ x: cx + 5.5, y: base + 1, z: cz - 2.5, kind: 'treasure' });
+
+  /* «Богатая» деревня: сторожевая башня и каменный дом старосты. */
+  if (def.style === 2) {
+    mcxTower(cx + 6, cz - 6, base, 7);
+    mcxHouse(cx - 9, cz + 3, 6, 5, 4, base, 1, false);
   }
+  if (def.style === 1) {
+    // Каменная деревня: колодец обложен кладкой, у дороги — низкая стена.
+    for (var w2 = -6; w2 <= 6; w2++) {
+      if (Math.abs(w2) < 2) continue;
+      mcxSet(cx + w2, base, cz + 6, CB);
+      if (w2 % 2 === 0) mcxSet(cx + w2, base + 1, cz + 6, CB);
+    }
+  }
+
   // Лесные и скрытые сундуки рядом с деревней.
   mcxChestSpots.push({ x: cx - r + 1.5, y: base, z: cz + 2.5, kind: 'coins' });
   if (index % 3 === 1) mcxChestSpots.push({ x: cx + r - 2.5, y: base, z: cz - r + 2.5, kind: 'treasure' });

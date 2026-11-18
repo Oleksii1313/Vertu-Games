@@ -157,6 +157,40 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   check('во время игры громкость приглушается', ducked < restored && ducked > 0, [ducked, restored]);
   check('громкость умеренная', restored <= 0.12 && restored > 0.02, [restored, gainsBefore[0]]);
 
+  /* ------------------------------- 7b. игровой режим: полная остановка */
+  const D = bootstrap();
+  D.w.document.dispatchEvent(new D.w.Event('pointerdown'));
+  await wait(240);
+  const stepBeforeGame = D.w.VGMusic.debug().step;
+  check('до входа в игру музыка играет', D.w.VGMusic.isPlaying() === true, D.w.VGMusic.debug());
+  D.w.VGMusic.setGameMode(true);
+  check('вход в игру полностью останавливает музыку', D.w.VGMusic.isPlaying() === false && D.w.VGMusic.inGame() === true,
+    D.w.VGMusic.debug());
+  const startedInGame = D.log.started;
+  await wait(220);
+  check('пока открыта игра новые ноты не планируются', D.log.started === startedInGame,
+    [startedInGame, D.log.started]);
+  check('в игре мастер-гейн равен нулю (тишина, а не «потише»)', D.log.gains[0].gain.value === 0,
+    D.log.gains[0].gain.value);
+  D.w.VGMusic.setGameMode(false);
+  check('выход из игры возвращает музыку', D.w.VGMusic.isPlaying() === true, D.w.VGMusic.debug());
+  check('после игры петля продолжается с того же места, а не с нуля',
+    Math.abs(D.w.VGMusic.debug().step - stepBeforeGame) <= 2,
+    [stepBeforeGame, D.w.VGMusic.debug().step]);
+  check('повторный вход/выход не создаёт второй плеер',
+    D.w.document.querySelectorAll('[data-vg-music]').length === 1);
+  D.w.VGMusic.setGameMode(false);
+  check('повторный вызов gameMode(false) безопасен', D.w.VGMusic.isPlaying() === true);
+
+  /* выключенная музыка не включается после выхода из игры */
+  const E = bootstrap({ storage: { vg_music: '0' } });
+  E.w.VGMusic.setGameMode(true);
+  E.w.VGMusic.setGameMode(false);
+  check('если музыку выключили вручную, игра её не включает', E.w.VGMusic.isPlaying() === false,
+    E.w.VGMusic.debug());
+  check('преференс OFF сохраняется после игры', E.w.localStorage.getItem('vg_music') === '0',
+    E.w.localStorage.getItem('vg_music'));
+
   /* ------------------------------------- 8. непрерывность между страницами */
   const phase = B.w.sessionStorage.getItem('vg_music_phase');
   check('позиция петли запоминается для перехода между страницами', !!Number(phase), phase);
@@ -179,7 +213,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   })();
   check('без Web Audio скрипт не падает и кнопка остаётся', noAudio.hasButton && noAudio.errs.length === 0, noAudio.errs);
 
-  const allErrors = [...A.errors, ...B.errors, ...C.errors];
+  const allErrors = [...A.errors, ...B.errors, ...C.errors, ...D.errors, ...E.errors];
   check('нет ошибок в консоли', allErrors.length === 0, allErrors.slice(0, 3));
 
   console.log(results.join('\n'));

@@ -224,13 +224,56 @@ def main():
         # Портретное поле стало шире (3:5 вместо 9:16), но осталось вертикальным:
         # мир по-прежнему вписывается по min() и не зависит от поворота экрана.
         check('Flappy: вертикальная сцена 3:5', 'aspect-ratio:3/5' in flappy and 'class="stage"' in flappy)
-        check('Flappy: логический мир 384×640 и вписывание по min()',
-              'const W=384, H=640' in flappy and 'Math.min(availW/W, availH/H)' in flappy)
-        check('Flappy: поле шире прежнего и без лишних боковых полей',
-              'padding:6px calc(2px + env(safe-area-inset-right,0px))' in flappy)
+        # Мир Flappy подстраивает высоту под экран: пропорции мира совпадают с
+        # пропорциями доступной области, масштаб всё равно считается по min(),
+        # а вертикальные константы масштабируются вместе с высотой.
+        check('Flappy: мир подстраивается под экран и вписывается по min()',
+              'const W=384' in flappy and 'const BASE_H=640' in flappy
+              and 'Math.min(availW/W, availH/H)' in flappy
+              and 'Math.round(W*(availH/availW))' in flappy
+              and 'applyMetrics()' in flappy)
+        check('Flappy: сцена и управление занимают весь экран без боковых полей',
+              'id="flappy-immersive"' in flappy
+              and 'body[data-game="flappy"]>.stage{flex:1 1 auto' in flappy
+              and 'body[data-game="flappy"]>.controls #btnJump{width:min(100%,360px)' in flappy)
         check('Flappy: реакция на поворот и resize',
               "addEventListener('orientationchange'" in flappy and "addEventListener('resize',onViewportChange)" in flappy)
         check('Flappy: фиксированный шаг физики 60 Гц', 'const STEP=1000/60' in flappy)
+        # Запуск игр: game-kit грузится ДО инлайн-кода игры, а обращения к
+        # VGReward всегда защищены проверкой на существование. Раньше
+        # платформер и шутер падали на верхнем уровне с ReferenceError.
+        game_pages = sorted((ROOT / 'games').glob('*.html'))
+        kit_order = []
+        bad_reward = []
+        for page in game_pages:
+            text = page.read_text(encoding='utf-8')
+            kit = text.find('<script src="/assets/vg/js/game-kit.js"')
+            if kit < 0 or 'game-kit.js" defer' in text:
+                kit_order.append(page.name)
+            first_inline = text.find('<script>', 0)
+            if kit > 0 and 0 < first_inline < kit:
+                kit_order.append(page.name + ':inline')
+            raw = text.count('VGReward.on&&VGReward.on(')
+            guarded = text.count('window.VGReward&&VGReward.on&&VGReward.on(')
+            if raw != guarded:
+                bad_reward.append(page.name)
+        check('во всех играх game-kit подключён до кода игры', not kit_order, str(kit_order))
+        check('обращения к VGReward защищены проверкой', not bad_reward, str(bad_reward))
+
+        # Музыка каталога глушится на входе в игру и возвращается на выходе.
+        platform_js = (ROOT / 'assets/vg/js/platform.js').read_text(encoding='utf-8')
+        music_js = (ROOT / 'assets/vg/js/music.js').read_text(encoding='utf-8')
+        check('платформа включает игровой режим музыки при открытии игры',
+              'function musicGameMode' in platform_js and 'VGMusic.setGameMode' in platform_js
+              and 'musicGameMode(true);' in platform_js and 'musicGameMode(false);' in platform_js)
+        check('музыка полностью останавливается в игре и продолжается после',
+              'setGameMode: setGameMode' in music_js and 'gameMode = on' in music_js
+              and 'setPhaseStart(Date.now() - Math.round(step * STEP * 1000))' in music_js)
+        check('ориентация экрана не блокируется принудительно',
+              'screen.orientation.lock' not in platform_js)
+        check('полноэкранный режим просит оверлей, а не только рамку',
+              'function toggleFullscreen' in platform_js and 'var targets = [overlay, wrap, document.documentElement]' in platform_js)
+
         game_kit = (ROOT / 'assets/vg/js/game-kit.js').read_text(encoding='utf-8')
         check('в игре запрещено выделение текста (кроме полей ввода)',
               'vg-no-select' in game_kit and '-webkit-user-select:none' in game_kit
