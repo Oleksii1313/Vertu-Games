@@ -274,6 +274,40 @@ def main():
         check('полноэкранный режим просит оверлей, а не только рамку',
               'function toggleFullscreen' in platform_js and 'var targets = [overlay, wrap, document.documentElement]' in platform_js)
 
+        # MiniCraft: новые блоки деревень (кладка, булыжник, балки, доски,
+        # черепица, побелка, стекло, сланец) раньше не попадали в список
+        # InstancedMesh и не рисовались вовсе — дома выглядели прозрачными.
+        mini = (ROOT / 'games/minicraft.html').read_text(encoding='utf-8')
+        check('MiniCraft: меш есть у всех 15 блоков',
+              'for (let t of [Vh, Gh, Hh, Wh, Xh, Bl, Vl, SB, CB, DW, PL, RF, PS, GL, SL])' in mini)
+        check('MiniCraft: твёрдые блоки непрозрачные и пишут глубину',
+              'transparent: !1,' in mini and 'depthWrite: !0,' in mini and 'depthTest: !0' in mini)
+        check('MiniCraft: прозрачным осталось только стекло',
+              "h === 'glassPane'" in mini and 'opacity: .55' in mini)
+        check('MiniCraft: лимит инстансов берётся из меша, а не из константы',
+              'i[l] >= c.instanceMatrix.count' in mini)
+        check('MiniCraft: водопады строятся на обрывах у воды',
+              'function mcxBakeWaterfalls()' in mini and 'mcxBakeWaterfalls();' in mini)
+        check('MiniCraft: подъём только в водопаде, в воде — обычный гребок',
+              'function mcxPlayerWater' in mini
+              and 'F.vy = Math.min(6.4, F.vy + 46 * dt)' in mini
+              and 'F.vy = Math.max(F.vy, 8.2)' in mini)
+
+        # Поиск в каталоге: те же input#gameSearch и логика фильтра, но с
+        # читаемой иконкой, высотой 48–52 px и кнопкой очистки.
+        pcss = (ROOT / 'assets/vg/css/platform.css').read_text(encoding='utf-8')
+        check('поиск каталога: иконка 20 px и высота поля 50 px',
+              '.search--lg .search-ico{' in pcss and 'width:20px;height:20px' in pcss
+              and 'height:50px' in pcss)
+        check('поиск каталога: подсветка фокуса и кнопка очистки',
+              '.search--lg input[type=search]:focus{' in pcss
+              and 'box-shadow:0 0 0 3px rgba(139,92,246,.22)' in pcss
+              and '.search--lg .search-clear{' in pcss)
+        check('поиск каталога: кнопка очистки создаётся скриптом, разметка не менялась',
+              'function enhanceGameSearch' in platform_js
+              and "clear.className = 'search-clear'" in platform_js
+              and "field.querySelector('span')" in platform_js)
+
         game_kit = (ROOT / 'assets/vg/js/game-kit.js').read_text(encoding='utf-8')
         check('в игре запрещено выделение текста (кроме полей ввода)',
               'vg-no-select' in game_kit and '-webkit-user-select:none' in game_kit

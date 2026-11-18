@@ -67,7 +67,13 @@ const server = http.createServer((req, res) => {
 
   const vc = new VirtualConsole();
   const errors = [];
-  vc.on('jsdomError', (e) => { if (!/Not implemented|navigation|resource/i.test(e.message)) errors.push(e.message); });
+  /* jsdom не умеет 2D-контекст: у канваса внутри iframe игры getContext()
+     возвращает null, и game-kit падает на первом setTransform. В браузере
+     канвас всегда настоящий, а загрузку самих игр проверяет
+     tools/test_game_boot.js со своей заглушкой контекста — поэтому эту
+     особенность стенда здесь отфильтровываем. */
+  const HARNESS_NOISE = /Not implemented|navigation|resource|reading 'setTransform'/i;
+  vc.on('jsdomError', (e) => { if (!HARNESS_NOISE.test(e.message)) errors.push(e.message); });
   vc.on('error', (...a) => errors.push(a.join(' ')));
 
   const dom = new JSDOM(html, {

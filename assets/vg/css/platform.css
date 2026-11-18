@@ -257,6 +257,40 @@ input::placeholder,textarea::placeholder{color:var(--dim)}
 .search input{padding-left:40px}
 .search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
 
+/* ---------------------------------------------------------------------------
+   Поиск игр в каталоге (.search--lg). Класс ставит platform.js на поле
+   #gameSearch, поэтому оформление не задевает другие страницы и не меняет
+   общие стили: здесь только сам поиск. Разметка и логика фильтра прежние.
+   --------------------------------------------------------------------------- */
+.search--lg{position:relative;display:flex;align-items:center;flex:1 1 260px;max-width:420px;min-width:200px}
+.search--lg .search-ico{position:absolute;left:16px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;pointer-events:none;color:#94a3b8;transition:color .2s ease,transform .2s ease}
+.search--lg .search-ico svg{position:static;transform:none;width:20px;height:20px;color:inherit;stroke-width:2}
+.search--lg input[type=search]{width:100%;height:50px;line-height:50px;padding:0 46px 0 48px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02)),#0c111a;
+  color:var(--text);font-size:14.5px;
+  transition:border-color .22s ease,box-shadow .25s ease,background .22s ease}
+.search--lg input[type=search]::placeholder{color:rgba(226,232,240,.56);opacity:1}
+.search--lg input[type=search]:hover{border-color:rgba(255,255,255,.24);background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.03)),#0d1320}
+.search--lg input[type=search]:focus{outline:none;border-color:rgba(139,92,246,.72);background:#0e1421;
+  box-shadow:0 0 0 3px rgba(139,92,246,.22),0 10px 34px rgba(139,92,246,.18)}
+.search--lg:focus-within .search-ico{color:#c4b5fd}
+.search--lg:focus-within .search-ico svg{color:#c4b5fd}
+.search--lg .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:none;align-items:center;justify-content:center;
+  width:32px;height:32px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.09);color:#cbd5e1;cursor:pointer;
+  transition:background .18s ease,color .18s ease,transform .18s ease}
+.search--lg .search-clear:hover{background:rgba(255,255,255,.18);color:#fff;transform:translateY(-50%) scale(1.05)}
+.search--lg .search-clear:active{transform:translateY(-50%) scale(.94)}
+.search--lg .search-clear:focus-visible{outline:2px solid rgba(139,92,246,.8);outline-offset:2px}
+.search--lg.has-value .search-clear{display:inline-flex}
+/* Скрытый нативный крестик Safari/Chrome: у нас своя кнопка очистки. */
+.search--lg input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+@media (max-width:640px){
+  .search--lg{flex:1 1 100%;max-width:none}
+  .search--lg input[type=search]{height:48px;line-height:48px;font-size:16px;padding:0 44px 0 46px}
+  .search--lg .search-ico{left:15px}
+}
+
 /* ---------- tables / lists ---------- */
 .table-wrap{overflow:auto;border-radius:14px;border:1px solid var(--line)}
 table{width:100%;border-collapse:collapse;font-size:13px}

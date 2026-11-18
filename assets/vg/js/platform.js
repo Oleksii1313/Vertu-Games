@@ -1382,6 +1382,57 @@
     (document.head || document.documentElement).appendChild(script);
   }
 
+  /*
+   * Поле поиска в каталоге. Разметку не меняем: тот же <label class="search">
+   * и тот же input#gameSearch, поэтому фильтрация в home.js/catalog.js
+   * продолжает работать как раньше. Скрипт только добавляет класс-обёртку
+   * .search--lg (стили ограничены им), увеличивает иконку и вставляет кнопку
+   * очистки. Страницы админки и поддержки используют .search без этого
+   * класса, поэтому их внешний вид не меняется.
+   */
+  function enhanceGameSearch() {
+    var input = document.getElementById('gameSearch');
+    if (!input) return null;
+    var field = input.closest ? input.closest('.search') : null;
+    if (!field || field.classList.contains('search--lg')) return field;
+    field.classList.add('search--lg');
+    var holder = field.querySelector('span');
+    var svg = holder && holder.querySelector('svg');
+    if (holder) holder.classList.add('search-ico');
+    if (svg) {
+      svg.setAttribute('width', '20');
+      svg.setAttribute('height', '20');
+      svg.style.width = '20px';
+      svg.style.height = '20px';
+    }
+    var clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'search-clear';
+    clear.setAttribute('aria-label', T('Очистить поиск', 'Clear search'));
+    clear.setAttribute('title', T('Очистить поиск', 'Clear search'));
+    clear.innerHTML = icon('x', 14);
+    field.appendChild(clear);
+    function sync() {
+      var has = input.value.replace(/\s+/g, '') !== '';
+      field.classList.toggle('has-value', has);
+      clear.hidden = !has;
+    }
+    input.addEventListener('input', sync);
+    clear.addEventListener('click', function (event) {
+      // Клик по кнопке внутри label не должен сам открывать клавиатуру дважды.
+      event.preventDefault();
+      event.stopPropagation();
+      if (!input.value) return;
+      input.value = '';
+      sync();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+    });
+    sync();
+    return field;
+  }
+  VG.enhanceGameSearch = enhanceGameSearch;
+
   function boot() {
     var saved = storage('vg_lang');
     if (saved === 'en' || saved === 'ru') {
@@ -1390,6 +1441,7 @@
     }
     paintHeader();
     hydrateIcons();
+    enhanceGameSearch();
     applyGuestOnly();
     refreshSession();
     loadMusic();
