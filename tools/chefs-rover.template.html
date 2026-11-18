@@ -85,10 +85,99 @@ body[data-input=desktop][data-view=drive][data-mode=playing][data-sheet=''] .des
 <div class="desktop-hint"><span data-en="WASD · Move   /   Shift · Run   /   Mouse · Look   /   R · Reset">WASD · Движение   /   Shift · Бег   /   Мышь · Обзор   /   R · Камера</span><b id="desktopContext"></b><small data-en="M · Map   /   J · Order   /   I · Inventory">M · Карта   /   J · Заказ   /   I · Рюкзак</small></div><div class="action-dock"><p id="nearText"></p><button id="action" class="pill primary">Собрать · E</button><button id="vehicle" class="pill">В машину · F</button></div>
 <div class="camera-tools"><button class="icon" id="resetCamera" aria-label="Вернуть камеру · R" title="Вернуть камеру · R"><svg aria-hidden="true"><use href="#i-reset"/></svg></button><button class="icon" id="helpCamera" aria-label="Управление камерой" title="Камера: вверх, вниз, поворот и масштаб"><svg aria-hidden="true"><use href="#i-help"/></svg></button></div>
 <section class="kitchen-panel panel"><div class="kitchen-tools"><button id="openBook" data-en="Recipe book">Книга рецептов</button><button id="useOrder" data-en="Customer’s recipe">Рецепт заказчика</button></div><div class="station-select"><select id="stationPicker" aria-label="Кухонная станция"></select></div><div id="chosenName"></div><div class="station-heading"><h3 id="stationTitle"></h3><span id="stepCount"></span></div><p id="stationHint"></p><div class="track"><div id="workProgress"></div></div><div id="heatTrack" hidden><i id="heatNeedle"></i></div><div class="work-actions"><button id="work" class="pill primary"></button><button id="nextStep" class="pill" hidden data-en="Take off">Снять</button></div><div id="qualityInfo"></div><div class="mistake-actions"><button id="skipStep" hidden data-en="Skip step (spoils dish)">Пропустить (ошибка)</button><button id="discard" hidden data-en="Discard dish">Выбросить блюдо</button></div><div class="gravity-note"><span id="gravityNote"></span><button id="catchFood" hidden data-en="Bring back">Притянуть</button></div></section>
-<section id="cameraHelp" class="book-overlay" hidden><div class="book-sheet help-sheet"><header><div><small>CAMERA / CONTROLS</small><h2 data-en="Look around freely">Смотри во все стороны</h2></div><button id="closeHelp" class="icon" aria-label="Закрыть помощь">×</button></header><p data-en="Mouse: hold the left button and drag sideways, up or down — the pointer is captured while dragging, so the cursor never hits the window edge. Hold the right button to pan. Scroll the wheel to zoom.">Мышь: зажми левую кнопку и тяни в стороны, вверх или вниз — указатель при этом захватывается, так что курсор не упирается в край окна. Правая кнопка — сдвиг камеры. Колесо — ближе и дальше.</p><p data-en="Touch: drag the scene with one finger. Pinch with two fingers to zoom, twist to turn and move both fingers to pan. You can use the joystick or hold heat with your other hand.">Телефон: тяни сцену одним пальцем. Два пальца: сведение — масштаб, вращение — поворот, совместное движение — сдвиг. Другой рукой можно двигать джойстик или удерживать нагрев.</p><p data-en="Drag up to look at the sky; drag down to look at the ground. R or the circular-arrow button resets the camera. WASD: move · E: gather/talk · F: enter/exit rover · K: kitchen.">Тяни вверх, чтобы посмотреть на небо, вниз — на землю. R или круговая стрелка возвращают камеру. WASD — движение · E — сбор/разговор · F — вход/выход из машины · K — кухня.</p></div></section>
+<section id="cameraHelp" class="book-overlay" hidden><div class="book-sheet help-sheet"><header><div><small>CAMERA / CONTROLS</small><h2 data-en="Look around freely">Смотри во все стороны</h2></div><button id="closeHelp" class="icon" aria-label="Закрыть помощь">×</button></header><p data-en="Mouse: hold the right button and move the mouse — the view turns the same way; release the button and the rotation stops at once. The left button does game actions: gather, talk, pick a station. The wheel zooms, the middle button pans.">Мышь: зажми правую кнопку и веди мышью — камера поворачивается туда же, куда идёт курсор, а когда кнопку отпускаешь, вращение сразу прекращается. Левая кнопка — игровые действия: сбор, разговор, выбор станции. Колесо — ближе и дальше, средняя кнопка — сдвиг камеры.</p><p data-en="Touch: drag the scene with one finger. Pinch with two fingers to zoom, twist to turn and move both fingers to pan. You can use the joystick or hold heat with your other hand.">Телефон: тяни сцену одним пальцем. Два пальца: сведение — масштаб, вращение — поворот, совместное движение — сдвиг. Другой рукой можно двигать джойстик или удерживать нагрев.</p><p data-en="Drag up to look at the sky; drag down to look at the ground. R or the circular-arrow button resets the camera. WASD: move · E: gather/talk · F: enter/exit rover · K: kitchen.">Тяни вверх, чтобы посмотреть на небо, вниз — на землю. R или круговая стрелка возвращают камеру. WASD — движение · E — сбор/разговор · F — вход/выход из машины · K — кухня.</p></div></section>
 <section id="cookbook" class="book-overlay" hidden><div class="book-sheet"><header><div><small data-en="ONBOARD LIBRARY · 16 RECIPES">БОРТОВАЯ БИБЛИОТЕКА · 16 РЕЦЕПТОВ</small><h2 data-en="A taste of the whole planet">Вкус целой планеты</h2></div><button id="closeBook" aria-label="Закрыть">×</button></header><p id="bookOrder"></p><div id="recipeCards"></div><p class="book-note" data-en="Wrong recipe, raw or burnt food, wrong seasoning: 1 coin compensation on serving. Discarding wastes ingredients. Cooking pauses while this book is open.">Не тот рецепт, сырое или сгоревшее блюдо, неверные специи: компенсация 1 монета при подаче. Выбрасывание тратит продукты. Пока книга открыта, готовка приостановлена.</p></div></section><div id="toast" role="status"></div>
 <section id="intro" class="intro"><div class="intro-back">VERT GAMES / ORIGINAL WORLDS</div><div class="intro-card"><div class="expedition"><i></i><span data-en="ROADS OF AURELIA">ДОРОГИ АУРЕЛИИ</span></div><div class="eyebrow" data-en="A SMALL KITCHEN. A WHOLE NEW WORLD.">МАЛЕНЬКАЯ КУХНЯ. БОЛЬШОЙ НОВЫЙ МИР.</div><h1 id="introTitle">Космо<br><em>кухня.</em></h1><p id="introDesc" data-en="Forest roads, villages, markets and gardens across four biomes. Gather ingredients, cook in your rover and deliver meals to Aurelia’s residents. Eight alien species await their favorite dishes. Choose carefully: correct orders earn up to 15 coins; mistakes cost compensation.">Лесные дороги, деревни, рынки и сады четырёх биомов. Собирай продукты, готовь в своём вездеходе и доставляй обеды жителям Аурелии. Восемь видов жителей ждут свои любимые блюда. Выбирай рецепт внимательно: правильный заказ — до 15 монет, ошибка — компенсация.</p><div class="steps"><span><b data-en="01 / EXPLORE">01 / ИССЛЕДУЙ</b><span data-en="WASD · walk / E · gather">WASD · идти / E · сбор</span></span><span><b data-en="02 / COOK">02 / ГОТОВЬ</b><span data-en="F · get in / K · kitchen">F · сесть / K · кухня</span></span><span><b data-en="03 / DELIVER">03 / УГОЩАЙ</b><span data-en="+2–15 coins · mistake −1">+2–15 монет · ошибка −1</span></span></div><button id="start" data-en="Start the expedition →">Отправиться в путь →</button><p class="footnote" id="saveNote" data-en="Local autosave · No rush">Автосохранение на устройстве · Без спешки</p></div></section>
 <section id="error" class="error" hidden><h2 data-en="A little technical pit stop">Техническая остановка</h2><p data-en="The 3D renderer could not start. Try a browser with WebGL enabled.">Не удалось запустить 3D. Попробуй браузер с включённым WebGL.</p><p id="errorText"></p></section>
-<script>window.addEventListener('error',function(e){document.getElementById('error').hidden=false;document.getElementById('errorText').textContent=e.message||'WebGL error'});</script>
+<script id="rover-boot-guard">
+/* Экран «Техническая остановка» — настоящий сигнал о сбое запуска 3D, а не
+   реакция на любую строчку в консоли. Пока сцена ни разу не отрисовалась
+   (window.__roverReady), любая ошибка означает, что игра не запустилась, и мы
+   показываем её текст. После старта одиночный сбой одного обработчика больше
+   не превращает живую игру в мёртвый экран — он уходит в консоль. */
+(function () {
+  var en = /(^|[?&])lang=en(&|$)/.test(location.search);
+  var shown = false;
+  function stop(reason) {
+    if (shown) return;
+    shown = true;
+    var box = document.getElementById('error');
+    var text = document.getElementById('errorText');
+    if (text) text.textContent = reason || '';
+    if (box) box.hidden = false;
+    if (window.console && console.error) console.error('[rover] boot stopped:', reason);
+  }
+  window.__roverStop = stop;
+  function describe(e) {
+    if (!e) return 'WebGL error';
+    if (e.message) return e.message + (e.filename ? ' · ' + e.filename + ':' + (e.lineno || 0) : '');
+    var t = e.target;
+    if (t && t.tagName) return (en ? 'Failed to load ' : 'Не удалось загрузить ') + (t.src || t.href || t.tagName);
+    return 'WebGL error';
+  }
+  window.addEventListener('error', function (e) {
+    if (window.__roverReady) { console.error('[rover] runtime error', describe(e)); return; }
+    stop(describe(e));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var reason = e && e.reason;
+    var text = (reason && (reason.message || reason)) || 'WebGL error';
+    if (window.__roverReady) { console.error('[rover] runtime rejection', text); return; }
+    stop(String(text));
+  });
+  /* Если сцена так и не отрисовалась — честно говорим об этом, а не оставляем
+     пустой чёрный экран без объяснений. */
+  setTimeout(function () {
+    if (window.__roverReady || window.roverGame) return;
+    stop(en ? 'The 3D scene did not render in 12 seconds. Check WebGL and reload the page.'
+            : 'Сцена 3D не отрисовалась за 12 секунд. Проверьте WebGL и обновите страницу.');
+  }, 12000);
+})();
+</script>
+<script id="rover-pointer-guard">
+/* Захват указателя здесь — только удобство: он нужен, чтобы отпускание кнопки
+   дошло до элемента, когда курсор ушёл в сторону. Браузер бросает
+   InvalidStateError («Failed to execute 'setPointerCapture' on 'Element'»),
+   если указатель уже отпущен, элемент вне документа или захват забрал другой
+   документ. Раньше это исключение всплывало в window.onerror и включало экран
+   «Техническая остановка» вместо игры. Теперь захват всегда в try/catch, а
+   отпускание страхует слушатель на window: состояние кнопок и джойстика не
+   залипает, даже если захват не удался. */
+(function () {
+  function lost(el, id) {
+    var ev;
+    try {
+      ev = new PointerEvent('lostpointercapture', {bubbles: true, pointerId: id});
+    } catch (err) {
+      ev = document.createEvent('Event');
+      ev.initEvent('lostpointercapture', true, false);
+      ev.pointerId = id;
+    }
+    try { el.dispatchEvent(ev); } catch (err) {}
+  }
+  window.__vgHold = function (el, id) {
+    if (!el || id == null) return false;
+    var ok = true;
+    try {
+      if (typeof el.setPointerCapture !== 'function' || el.isConnected === false) ok = false;
+      else if (typeof el.hasPointerCapture !== 'function' || !el.hasPointerCapture(id)) el.setPointerCapture(id);
+    } catch (err) { ok = false; }
+    if (!el.__vgNet) {
+      el.__vgNet = true;
+      var release = function (e) { if (e && e.pointerId != null) lost(el, e.pointerId); };
+      window.addEventListener('pointerup', release, true);
+      window.addEventListener('pointercancel', release, true);
+      window.addEventListener('blur', function () { lost(el, 1); });
+    }
+    return ok;
+  };
+  window.__vgDrop = function (el, id) {
+    try {
+      if (el && typeof el.releasePointerCapture === 'function' && id != null &&
+        (typeof el.hasPointerCapture !== 'function' || el.hasPointerCapture(id))) el.releasePointerCapture(id);
+    } catch (err) {}
+  };
+})();
+</script>
 <!-- ROVER_RUNTIME -->
 </body></html>

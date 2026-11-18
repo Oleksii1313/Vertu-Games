@@ -116,6 +116,9 @@ button{font:inherit;color:inherit}
 .avatar-btn .who{display:flex;flex-direction:column;line-height:1.15;text-align:left}
 .avatar-btn .who b{font-size:13px;font-weight:700;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .avatar-btn .who small{font-size:10px;color:var(--muted)}
+/* Гость (не вошёл): плитка профиля всё равно есть и открывает меню входа. */
+.avatar-btn.guest .who b{color:var(--muted);font-weight:600}
+.avatar.guest{color:var(--muted);border-radius:9px;background:rgba(255,255,255,.05)}
 .burger{display:none;width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);place-items:center;cursor:pointer}
 .mobile-nav{display:none}
 
@@ -475,6 +478,10 @@ body.vg-pseudo-full .site-header,body.vg-pseudo-full .site-footer{display:none!i
   .play-bar .reward-chip{display:none}
   .play-bar .btn{padding:6px 10px;font-size:11px}
   .play-bar .balance-pill{font-size:11px;padding:4px 8px}
+  /* Три плитки панели обязаны уместиться на телефоне. */
+  .play-bar .play-lang{gap:0;padding:2px}
+  .play-bar .play-lang button{width:28px;height:24px;font-size:10px}
+  .play-bar .play-account{padding:3px}
 }
 /* Подсказка о фокусе: клавиатура работает без клика, но если браузер не отдал
    фокус iframe — мягко предлагаем один клик по игре. */

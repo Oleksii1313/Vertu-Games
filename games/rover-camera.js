@@ -3,25 +3,36 @@ import * as T from 'three';
  * Camera rig for the rover/kitchen game.
  *
  * The rig orbits the current focus point (the chef, the rover or the kitchen
- * station) and always aims at it. Until now only the right mouse button turned
- * the view while the left one was reserved for taps, and dragging stopped as
- * soon as the cursor left the canvas — that is why the camera felt broken with
- * a mouse. Now:
+ * station) and always aims at it. Controls, in player terms:
  *
- *  - left button (or one finger) orbits: drag right turns the view right,
- *    drag left turns it left, drag up looks up, drag down looks down;
- *  - after the pointer travels a few pixels the orbit drag grabs the pointer
- *    with Pointer Lock, so the camera keeps turning even outside the canvas
- *    and the cursor never hits the window edge;
- *  - right button pans, middle button/wheel zooms, two fingers twist/pinch/pan;
+ *  - hold the right mouse button and move the mouse: the view turns the same
+ *    way the mouse goes (right → right, up → up). Release the button and the
+ *    rotation stops at once — no inertia, no stuck drag;
+ *  - the left mouse button keeps doing game actions (a click without movement
+ *    is a tap); a real left-button drag also turns the view, so nobody has to
+ *    guess which button works;
+ *  - the wheel zooms in and out, two fingers twist/pinch/pan on touch screens,
+ *    the middle button pans;
  *  - vertical gaze is clamped, so the camera never flips over the focus point.
+ *
+ * Everything that moves the view is tracked on `window`, not only on the
+ * canvas. That matters more than it sounds: `setPointerCapture` throws
+ * `InvalidStateError` as soon as the pointer is no longer active (touch that
+ * was released, pointer captured by another document, element already removed
+ * from the DOM, an iframe that lost the pointer). The old rig called it
+ * unguarded inside `pointerdown`, so a single unlucky press aborted the whole
+ * game. Now the capture is only a bonus (it keeps the events coming when the
+ * cursor leaves the canvas) and is always guarded; the real drag state lives
+ * here and is dropped on pointerup / pointercancel / window blur / hidden tab /
+ * fullscreen change.
  *
  * Everything else (collision boom, terrain limits, per-context presets) keeps
  * working as before.
  */
-const LOCK_THRESHOLD = 6;
 const ORBIT_SPEED = .005;
 const TILT_SPEED = .0048;
+const WHEEL_STEP = .0015;
+const TAP_SLOP = 4;
 
 export class RoverCamera {
   constructor({element, worldCamera, kitchenCamera, focus, terrain, solids, enabled, tap}) {
@@ -33,27 +44,38 @@ export class RoverCamera {
     this.desired = new T.Vector3();
     this.direction = new T.Vector3();
     this.activeCamera = worldCamera;
+    /* Захват указателя больше не используется: состояние драга живёт здесь,
+       а слушатели висят на window. Поле оставлено для снапшотов и отладки. */
     this.locked = false;
     this.states = {
       foot: this.makeState(5.7, -.34),
       vehicle: this.makeState(11, -.34),
       kitchen: this.makeState(2.95, -.46)
     };
-    element.addEventListener('contextmenu', (e) => e.preventDefault());
-    element.addEventListener('pointerdown', (e) => this.down(e));
-    element.addEventListener('pointermove', (e) => this.move(e));
-    for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) element.addEventListener(name, (e) => this.up(e, name));
-    element.addEventListener('wheel', (e) => {
-      if (!this.enabled()) return;
-      e.preventDefault();
-      const s = this.state();
-      s.distance *= Math.exp(T.MathUtils.clamp(e.deltaY * (e.deltaMode === 1 ? 16 : 1), -250, 250) * .0015);
-      this.clamp(s);
-    }, {passive: false});
-    /* Pointer Lock превращает движение мыши в относительные смещения: событие
-       приходит уже без привязки к канвасу, поэтому обзор не обрывается на краю. */
-    document.addEventListener('mousemove', (e) => this.relative(e));
-    document.addEventListener('pointerlockchange', () => this.lockChanged());
+    this.bind(element);
+  }
+  bind(element) {
+    if (element && typeof element.addEventListener === 'function') {
+      element.addEventListener('contextmenu', (e) => e.preventDefault());
+      element.addEventListener('pointerdown', (e) => this.down(e));
+      element.addEventListener('wheel', (e) => this.wheel(e), {passive: false});
+      element.addEventListener('dragstart', (e) => e.preventDefault());
+    }
+    /* Драг слушаем на window: он продолжается, даже когда курсор ушёл за
+       пределы канваса, и не зависит от того, удался ли захват указателя. */
+    const win = typeof window !== 'undefined' ? window : null;
+    this.win = win;
+    if (!win || typeof win.addEventListener !== 'function') return;
+    win.addEventListener('pointermove', (e) => this.move(e), {passive: false});
+    win.addEventListener('pointerup', (e) => this.up(e));
+    win.addEventListener('pointercancel', (e) => this.cancel(e));
+    win.addEventListener('blur', () => this.clear());
+    win.addEventListener('contextmenu', (e) => { if (this.pointers.size) e.preventDefault(); });
+    if (typeof document !== 'undefined' && document.addEventListener) {
+      document.addEventListener('visibilitychange', () => { if (document.hidden) this.clear(); });
+      document.addEventListener('fullscreenchange', () => this.clear());
+      document.addEventListener('webkitfullscreenchange', () => this.clear());
+    }
   }
   makeState(distance, pitch) {
     return {yaw: 0, pitch, distance, pan: new T.Vector3(), cyaw: 0, cpitch: pitch, cdistance: distance, cpan: new T.Vector3()};
@@ -75,11 +97,39 @@ export class RoverCamera {
     if (length > l.pan) { s.pan.x *= l.pan / length; s.pan.z *= l.pan / length; }
     s.pan.y = T.MathUtils.clamp(s.pan.y, -.4, this.focus().context === 'kitchen' ? .65 : 1.6);
   }
+  /* Захват указателя — необязательный бонус. Любая ошибка здесь (а браузер
+     бросает InvalidStateError, если указатель уже отпущен) не должна всплывать
+     в window.onerror: игра продолжает работать через слушатели window. */
+  capture(id) {
+    const el = this.element;
+    if (!el || typeof el.setPointerCapture !== 'function' || id == null) return false;
+    try {
+      if (el.isConnected === false) return false;
+      if (typeof el.hasPointerCapture === 'function' && el.hasPointerCapture(id)) return true;
+      el.setPointerCapture(id);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+  release(id) {
+    const el = this.element;
+    if (!el || typeof el.releasePointerCapture !== 'function' || id == null) return;
+    try {
+      if (typeof el.hasPointerCapture !== 'function' || el.hasPointerCapture(id)) el.releasePointerCapture(id);
+    } catch (err) {}
+  }
   down(e) {
-    if (!this.enabled() || !['mouse', 'touch', 'pen'].includes(e.pointerType) || e.button > 2) return;
-    e.preventDefault();
-    this.pointers.set(e.pointerId, {x: e.clientX, y: e.clientY, button: e.button, type: e.pointerType, moved: 0});
-    this.element.setPointerCapture(e.pointerId);
+    if (!this.enabled() || (e.button != null && e.button > 2)) return;
+    const pointerId = e.pointerId == null ? 1 : e.pointerId;
+    const type = e.pointerType || 'mouse';
+    const button = e.button || 0;
+    if (this.pointers.has(pointerId)) return;      // повторный pointerdown того же указателя
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    /* ПКМ — основной режим камеры, тач/перо — тоже сразу. ЛКМ остаётся
+       игровым кликом: она начнёт вращать только после заметного движения. */
+    this.pointers.set(pointerId, {x: e.clientX, y: e.clientY, button, type, moved: 0, orbit: type !== 'mouse' || button === 2});
+    this.capture(pointerId);
     this.rebase();
   }
   rebase() {
@@ -87,8 +137,13 @@ export class RoverCamera {
     if (ps.length >= 2) {
       const [a, b] = ps;
       this.two = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), a: Math.atan2(b.y - a.y, b.x - a.x)};
-      ps.forEach((p) => p.moved = Math.max(20, p.moved));
-    } else this.two = null;
+      ps.forEach((p) => { p.moved = Math.max(20, p.moved); p.skip = false; });
+    } else {
+      this.two = null;
+      /* После жеста двумя пальцами оставшийся палец не должен прыгнуть:
+         его первое движение только переустанавливает базу. */
+      if (ps.length === 1) ps[0].skip = true;
+    }
   }
   pan(dx, dy, s) {
     const k = s.distance * .0017;
@@ -96,18 +151,32 @@ export class RoverCamera {
     const up = new T.Vector3(-Math.sin(s.yaw) * Math.sin(s.pitch), Math.cos(s.pitch), Math.cos(s.yaw) * Math.sin(s.pitch));
     s.pan.addScaledVector(right, -dx * k).addScaledVector(up, dy * k);
   }
-  /* Обзор: вправо тянем — камера обходит игрока вправо (взгляд поворачивается
-     вправо), вверх тянем — взгляд поднимается. Знаки согласованы с позицией
-     камеры в update(): смещение (-sin yaw, ·, cos yaw) и взгляд (sin yaw, ·, -cos yaw). */
+  /* Обзор: вправо тянем — взгляд поворачивается вправо, вверх тянем — взгляд
+     поднимается. Знаки согласованы с позицией камеры в update(): смещение
+     (-sin yaw, ·, cos yaw) и взгляд (sin yaw, ·, -cos yaw). */
   orbit(dx, dy, s) {
     s.yaw += T.MathUtils.clamp(dx, -180, 180) * ORBIT_SPEED;
     s.pitch -= T.MathUtils.clamp(dy, -180, 180) * TILT_SPEED;
   }
+  wheel(e) {
+    if (!this.enabled()) return;
+    if (typeof e.preventDefault === 'function' && e.cancelable !== false) e.preventDefault();
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+    const s = this.state();
+    s.distance *= Math.exp(T.MathUtils.clamp((e.deltaY || 0) * unit, -240, 240) * WHEEL_STEP);
+    this.clamp(s);
+  }
   move(e) {
-    const p = this.pointers.get(e.pointerId);
+    const p = this.pointers.get(e.pointerId == null ? 1 : e.pointerId);
     if (!p) return;
     if (!this.enabled()) { this.clear(); return; }
-    e.preventDefault();
+    if (typeof e.preventDefault === 'function' && e.cancelable !== false) e.preventDefault();
+    if (p.skip) {                                  // первый кадр после жеста/смены базы
+      p.skip = false;
+      p.x = e.clientX; p.y = e.clientY;
+      p.moved = Math.max(p.moved, 20);
+      return;
+    }
     const dx = e.clientX - p.x, dy = e.clientY - p.y;
     p.x = e.clientX; p.y = e.clientY;
     p.moved += Math.hypot(dx, dy);
@@ -120,65 +189,40 @@ export class RoverCamera {
         this.pan(n.x - this.two.x, n.y - this.two.y, s);
       }
       this.two = n;
-    } else if (p.button === 2) this.pan(dx, dy, s);
-    else if (p.button === 1) s.distance *= Math.exp(dy * .008);
-    else {
-      this.orbit(dx, dy, s);
-      /* Мышь: после порога захватываем указатель, чтобы драг продолжался за
-         пределами канваса. Клик без движения остаётся кликом — tap работает. */
-      if (!this.locked && p.type === 'mouse' && p.button === 0 && p.moved > LOCK_THRESHOLD) this.requestLock();
+    } else {
+      if (!p.orbit && p.type === 'mouse' && p.button === 0 && p.moved > TAP_SLOP) p.orbit = true;
+      if (p.button === 1) s.distance *= Math.exp(dy * .008);
+      else if (p.orbit) this.orbit(dx, dy, s);
     }
     this.clamp(s);
   }
-  /* Относительные смещения приходят только при захваченном указателе. */
-  relative(e) {
-    if (!this.locked || !this.pointers.size) return;
-    if (!this.enabled()) { this.releaseLock(); return; }
-    const s = this.state();
-    const buttons = [...this.pointers.values()];
-    if (buttons.some((b) => b.button === 2)) this.pan(e.movementX || 0, e.movementY || 0, s);
-    else if (buttons.some((b) => b.button === 0)) this.orbit(e.movementX || 0, e.movementY || 0, s);
-    else return;
-    this.clamp(s);
-  }
-  requestLock() {
-    try {
-      if (!this.element.requestPointerLock) return;
-      const pending = this.element.requestPointerLock();
-      if (pending && typeof pending.catch === 'function') pending.catch(() => {});
-    } catch (e) {}
-  }
-  releaseLock() {
-    try {
-      if (typeof document.exitPointerLock === 'function') document.exitPointerLock();
-    } catch (e) {}
-    this.locked = false;
-    this.pointers.clear();
-    this.two = null;
-  }
-  lockChanged() {
-    const locked = typeof document.pointerLockElement !== 'undefined' && document.pointerLockElement === this.element;
-    if (locked === this.locked) return;
-    this.locked = locked;
-    if (!locked) { this.pointers.clear(); this.two = null; }
-  }
-  up(e, name) {
-    const p = this.pointers.get(e.pointerId);
+  up(e) {
+    const pointerId = e.pointerId == null ? 1 : e.pointerId;
+    const p = this.pointers.get(pointerId);
     if (!p) return;
-    const isTap = name === 'pointerup' && p.button === 0 && p.moved < 8 && this.pointers.size === 1;
-    this.pointers.delete(e.pointerId);
-    try { if (this.element.hasPointerCapture(e.pointerId)) this.element.releasePointerCapture(e.pointerId); } catch (err) {}
-    if (this.locked) this.releaseLock();
-    else this.rebase();
+    const isTap = p.type === 'mouse' && p.button === 0 && p.moved < TAP_SLOP && this.pointers.size === 1;
+    this.pointers.delete(pointerId);
+    this.release(pointerId);
+    this.rebase();
     if (isTap && this.enabled()) this.tap?.(e);
   }
+  cancel(e) {
+    const pointerId = e.pointerId == null ? 1 : e.pointerId;
+    if (!this.pointers.has(pointerId)) return;
+    this.pointers.delete(pointerId);
+    this.release(pointerId);
+    this.rebase();
+  }
   clear() {
-    for (const [id] of this.pointers) {
-      try { if (this.element.hasPointerCapture(id)) this.element.releasePointerCapture(id); } catch (err) {}
-    }
+    const ids = [...this.pointers.keys()];
     this.pointers.clear();
     this.two = null;
-    if (this.locked) this.releaseLock();
+    for (const id of ids) this.release(id);
+  }
+  /* Сколько указателей сейчас удерживается — нужно игре и тестам. */
+  holding(button) {
+    for (const p of this.pointers.values()) if (button === undefined || p.button === button) return true;
+    return false;
   }
   reset() {
     const f = this.focus(), s = this.state();
@@ -192,7 +236,7 @@ export class RoverCamera {
   update(dt) {
     const f = this.focus(), s = this.states[f.context], indoor = f.context === 'kitchen';
     const cam = indoor ? this.kitchenCamera : this.worldCamera;
-    if (this.locked && !this.enabled()) this.releaseLock();
+    if (this.pointers.size && !this.enabled()) this.clear();
     this.clamp(s);
     const changed = this.context !== f.context;
     if (changed) {

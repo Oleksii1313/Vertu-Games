@@ -182,6 +182,8 @@ GAMES_EN.update({
     'Найти минералку': 'Find mineral water',
     'Найти продукты →': 'Find ingredients →',
     'Не тот рецепт, сырое или сгоревшее блюдо, неверные специи: компенсация 1 монета при подаче. Выбрасывание тратит продукты. Пока книга открыта, готовка приостановлена.': 'A wrong recipe, a raw or burnt dish, wrong spices: 1 coin of compensation on serving. Discarding wastes the ingredients. Cooking pauses while the book is open.',
+    'Не удалось загрузить ': 'Failed to load ',
+    'Сцена 3D не отрисовалась за 12 секунд. Проверьте WebGL и обновите страницу.': 'The 3D scene did not render in 12 seconds. Check WebGL and reload the page.',
     'Не удалось запустить 3D. Попробуй браузер с включённым WebGL.': 'Could not start 3D. Try a browser with WebGL enabled.',
     'Отправиться в путь →': 'Set off →',
     'ПЕШКОМ': 'ON FOOT',
