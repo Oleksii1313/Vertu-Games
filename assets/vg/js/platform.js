@@ -391,6 +391,8 @@
     state.user.coins = value;
     paintHeader();
     bumpBalance();
+    // Тот же баланс виден на панели плеера, пока игра открыта.
+    syncCoinBadges();
     emit();
   }
   function bumpBalance() {
@@ -442,14 +444,24 @@
       '<div class="lang" role="group" aria-label="Language">' +
       '<button type="button" data-lang="ru" aria-pressed="' + (langValue === 'ru') + '">RU</button>' +
       '<button type="button" data-lang="en" aria-pressed="' + (langValue === 'en') + '">EN</button>' +
+      '</div>' +
+      /*
+       * Три плитки шапки есть всегда: язык, монеты и профиль. Раньше гостю
+       * вместо баланса и профиля рисовались две кнопки «Вход»/«Регистрация»,
+       * поэтому до входа панель выглядела «пустой» и не совпадала с игрой.
+       * Теперь монеты показываются всегда (у гостя 0), а плитка профиля у
+       * гостя открывает то же меню со входом и регистрацией.
+       */
+      '<button type="button" class="balance-pill" data-action="balance" title="' + T('Ваш баланс V-монет', 'Your V-coin balance') + '">' +
+      icon('coin', 16) + '<span data-coins>' + fmt(u ? u.coins : 0) + '</span> V</button>' +
       (u
-        ? '<button type="button" class="balance-pill" data-action="balance" title="' + T('Ваш баланс V-монет', 'Your V-coin balance') + '">' +
-          icon('coin', 16) + '<span data-coins>' + fmt(u.coins) + '</span> V</button>' +
-          '<button type="button" class="avatar-btn" data-action="account" aria-haspopup="menu">' +
+        ? '<button type="button" class="avatar-btn" data-action="account" aria-haspopup="menu">' +
           avatarHtml(u, 32) + '<span class="who"><b>' + escapeHtml(u.username) + '</b><small>' +
           escapeHtml(titleLabel(u)) + '</small></span></button>'
-        : '<button type="button" class="btn btn-ghost btn-sm" data-action="login">' + T('Вход', 'Sign in') + '</button>' +
-          '<button type="button" class="btn btn-primary btn-sm" data-action="register">' + T('Регистрация', 'Sign up') + '</button>') +
+        : '<button type="button" class="avatar-btn guest" data-action="account" aria-haspopup="menu" title="' +
+          T('Профиль: войти или создать аккаунт', 'Profile: sign in or create an account') + '">' +
+          '<span class="avatar guest" style="width:32px;height:32px">' + icon('user', 18) + '</span>' +
+          '<span class="who"><b>' + T('Профиль', 'Profile') + '</b><small>' + T('Войти', 'Sign in') + '</small></span></button>') +
       '<button type="button" class="burger" data-action="menu" aria-label="' + T('Меню', 'Menu') + '" aria-expanded="false">' +
       '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>' +
       '</div>' +
@@ -457,6 +469,15 @@
       links + adminLink +
       (u ? '' : '<a href="login.html" data-action="login">' + icon('lock', 16) + T('Вход / Регистрация', 'Sign in / Sign up') + '</a>') +
       '</nav>';
+    // Панель открытой игры живёт отдельно от шапки: обновляем и её.
+    var playAccount = $('#playOverlay .play-account');
+    if (playAccount) {
+      playAccount.innerHTML = u
+        ? avatarHtml(u, 28)
+        : '<span class="avatar guest" style="width:28px;height:28px">' + icon('user', 16) + '</span>';
+      playAccount.setAttribute('title', T('Профиль', 'Profile'));
+    }
+    syncCoinBadges();
     wireHeader();
   }
 
@@ -497,24 +518,39 @@
     if (panel) { panel.remove(); return; }
     panel = el('div', 'card', '');
     panel.id = 'accountMenu';
-    panel.style.cssText = 'position:fixed;z-index:130;width:236px;padding:8px;top:auto';
-    var links = [
-      { href: 'profile.html', icon: 'user', ru: 'Мой профиль', en: 'My profile' },
-      { href: 'shop.html', icon: 'bag', ru: 'Магазин', en: 'Shop' },
-      { href: 'casino.html', icon: 'wheel', ru: 'Казино', en: 'Casino' }
-    ];
-    if (state.user && state.user.isAdmin) links.push({ href: 'admin.html', icon: 'shield', ru: 'Админ-панель', en: 'Admin panel' });
+    /* z-index выше плеера (150): меню профиля должно открываться поверх
+       запущенной игры, иначе кнопка в панели плеера выглядит «мёртвой». */
+    panel.style.cssText = 'position:fixed;z-index:210;width:236px;padding:8px;top:auto';
+    var links;
+    if (state.user) {
+      links = [
+        { href: 'profile.html', icon: 'user', ru: 'Мой профиль', en: 'My profile' },
+        { href: 'shop.html', icon: 'bag', ru: 'Магазин', en: 'Shop' },
+        { href: 'casino.html', icon: 'wheel', ru: 'Казино', en: 'Casino' }
+      ];
+      if (state.user.isAdmin) links.push({ href: 'admin.html', icon: 'shield', ru: 'Админ-панель', en: 'Admin panel' });
+    } else {
+      /* Гость: плитка профиля ведёт себя как прежние кнопки входа. */
+      links = [
+        { href: 'login.html?tab=login', icon: 'lock', ru: 'Войти', en: 'Sign in' },
+        { href: 'login.html?tab=register', icon: 'user', ru: 'Регистрация', en: 'Sign up' },
+        { href: 'shop.html', icon: 'bag', ru: 'Магазин', en: 'Shop' }
+      ];
+    }
     panel.innerHTML = links.map(function (link) {
       return '<a href="' + link.href + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;font-size:13.5px;font-weight:600">' +
         icon(link.icon, 16) + T(link.ru, link.en) + '</a>';
     }).join('') +
-      '<div class="divider" style="margin:6px 0"></div>' +
-      '<button type="button" class="btn btn-ghost btn-sm btn-block" data-action="logout">' + icon('logout', 15) + T('Выйти', 'Sign out') + '</button>';
+      (state.user
+        ? '<div class="divider" style="margin:6px 0"></div>' +
+          '<button type="button" class="btn btn-ghost btn-sm btn-block" data-action="logout">' + icon('logout', 15) + T('Выйти', 'Sign out') + '</button>'
+        : '');
     document.body.appendChild(panel);
     var rect = anchor.getBoundingClientRect();
     panel.style.top = Math.min(window.innerHeight - panel.offsetHeight - 12, rect.bottom + 8) + 'px';
     panel.style.left = Math.max(12, Math.min(window.innerWidth - 248, rect.right - 236)) + 'px';
-    panel.querySelector('[data-action=logout]').addEventListener('click', logout);
+    var signOut = panel.querySelector('[data-action=logout]');
+    if (signOut) signOut.addEventListener('click', logout);
     setTimeout(function () {
       document.addEventListener('click', function close(event) {
         if (!panel.contains(event.target) && event.target !== anchor) {
@@ -844,6 +880,55 @@
     else if (typeof window.VGMusic.duck === 'function') window.VGMusic.duck(on);
   }
 
+  /* Баланс на панели плеера и в шапке — один и тот же счётчик. */
+  function syncCoinBadges() {
+    var text = fmt(coins());
+    $$('[data-coins]').forEach(function (node) {
+      if (node.textContent !== text) node.textContent = text;
+    });
+  }
+
+  /*
+   * Язык внутри плеера. Переключаем интерфейс платформы, обновляем подписи
+   * панели и отдаём язык открытой игре: её i18n-рантайм слушает сообщение
+   * player:lang и меняет тексты на лету. Перезагружать iframe не нужно —
+   * прогресс и камера остаются на месте.
+   */
+  function switchGameLang(value) {
+    setLang(value);
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var next = lang();
+    overlay.querySelectorAll('.play-lang [data-lang]').forEach(function (button) {
+      button.setAttribute('aria-pressed', String(button.getAttribute('data-lang') === next));
+    });
+    var close = overlay.querySelector('[data-close]');
+    if (close) close.innerHTML = icon('chev', 15) + '<span>' + T('Назад', 'Back') + '</span>';
+    var coins = overlay.querySelector('[data-action="play-coins"]');
+    if (coins) coins.setAttribute('title', T('Баланс V-монет · нажмите, чтобы обновить', 'V-coin balance · tap to refresh'));
+    var account = overlay.querySelector('[data-action="play-account"]');
+    if (account) account.setAttribute('title', T('Профиль', 'Profile'));
+    var title = overlay.querySelector('.play-bar h3');
+    if (title && VG.activeGame) title.textContent = next === 'en' ? (VG.activeGame.name_en || VG.activeGame.name) : VG.activeGame.name;
+    var chip = overlay.querySelector('.reward-chip');
+    if (chip && VG.activeGame) chip.textContent = '+' + (VG.activeGame.reward || 0) + ' V ' + T('за событие', 'per event');
+    /*
+     * Кадр перезагружаем с новым ?lang: часть текстов игра собирает один раз
+     * при запуске (названия рецептов, продуктов, станций), поэтому «на лету»
+     * переводится только разметка. Перезапуск с нужным языком даёт полный
+     * перевод, а прогресс не теряется — игра сохраняет его в localStorage на
+     * pagehide и восстанавливает при старте.
+     */
+    var frame = overlay.querySelector('.play-frame');
+    if (frame && VG.activeGame && VG.activeGame.file) {
+      var wanted = VG.activeGame.file + '?lang=' + next;
+      if (frame.getAttribute('src') !== wanted) frame.src = wanted;
+    }
+    syncFullscreenButton();
+    syncCoinBadges();
+    frameFocusSoon();
+  }
+
   function openGame(game) {
     musicGameMode(true);
     var overlay = $('#playOverlay');
@@ -855,15 +940,41 @@
       document.body.appendChild(overlay);
     }
     if (!overlay.querySelector('.play-bar')) {
+      /*
+       * Верхняя панель плеера повторяет шапку сайта: язык, монеты и профиль
+       * стоят на своих местах и во время игры. Раньше здесь были только
+       * «Назад», название, баланс и «Экран», поэтому в игре пропадали
+       * переключатель языка и кнопка профиля.
+       */
       overlay.innerHTML =
         '<div class="play-bar"><button type="button" class="btn btn-ghost btn-sm" data-close>' +
         icon('chev', 15) + T('Назад', 'Back') + '</button><h3></h3>' +
-        '<span class="balance-pill" style="cursor:default">' + icon('coin', 15) + '<span data-coins>' + fmt(coins()) + '</span> V</span>' +
+        '<div class="lang play-lang" role="group" aria-label="Language">' +
+        '<button type="button" data-lang="ru" aria-pressed="' + (lang() === 'ru') + '">RU</button>' +
+        '<button type="button" data-lang="en" aria-pressed="' + (lang() === 'en') + '">EN</button></div>' +
+        '<button type="button" class="balance-pill" data-action="play-coins" title="' +
+        T('Баланс V-монет · нажмите, чтобы обновить', 'V-coin balance · tap to refresh') + '">' +
+        icon('coin', 15) + '<span data-coins>' + fmt(coins()) + '</span> V</button>' +
+        '<button type="button" class="avatar-btn play-account" data-action="play-account" aria-haspopup="menu" title="' +
+        T('Профиль', 'Profile') + '">' +
+        (state.user ? avatarHtml(state.user, 28) : '<span class="avatar guest" style="width:28px;height:28px">' + icon('user', 16) + '</span>') +
+        '</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-pressed="false" title="' + T('На весь экран', 'Fullscreen') + '">' +
         icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
         '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
+      overlay.querySelector('[data-action="play-account"]').addEventListener('click', function (event) {
+        event.stopPropagation();
+        openAccountMenu(event.currentTarget);
+      });
+      overlay.querySelector('[data-action="play-coins"]').addEventListener('click', function () {
+        if (state.user) { refreshCoins(); return; }
+        location.href = 'login.html?tab=login';
+      });
+      overlay.querySelectorAll('.play-lang [data-lang]').forEach(function (button) {
+        button.addEventListener('click', function () { switchGameLang(button.getAttribute('data-lang')); });
+      });
     }
     syncFullscreenButton();
     if (!overlay.querySelector('.reward-chip')) {
