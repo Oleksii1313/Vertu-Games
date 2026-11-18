@@ -108,6 +108,10 @@ window.__world = () => ({
   ids: { air: Ai, grass: Vh, ground: Gh, stone: Hh, sand: Wh, wood: Xh, leaf: Bl, coin: qh, bed: Vl },
   ids2: { brick: SB, cobble: CB, beam: DW, plank: PL, tile: RF, plaster: PS, glass: GL, slate: SL },
   roof: mcxGableRoof, square: mcxSquare,
+  /* Блоки и вода: меши по id, водопады и шаг физики — чтобы проверить
+     непрозрачность новых блоков и подъём по водопаду. */
+  blocks: is, falls: mcxFalls, fallAt: mcxFallAt, fallMesh: () => mcxFallMesh,
+  step: $g, keys: Vn,
   CT: ct, DN: dn
 });
 ` + runtime.slice(idx);
@@ -322,6 +326,104 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   frames(40);
   check('поверхность воды анимируется', Math.abs(mesh.position.y - beforeY) > 1e-4 || Math.abs(mesh.position.y) > 1e-4,
     [beforeY, mesh.position.y]);
+
+  /* --------------------------------- новые блоки: непрозрачность и рисование */
+  const blocks = W.blocks;
+  const SOLID_NEW = [9, 10, 11, 12, 13, 14, 16];
+  check('у всех 15 блоков есть свой меш', Object.keys(blocks).length === 15, Object.keys(blocks).join(','));
+  for (const id of SOLID_NEW) {
+    const bm = blocks[id] && blocks[id].material;
+    check(`блок ${id}: материал полностью непрозрачный`,
+      !!bm && bm.transparent === false && bm.opacity === 1 &&
+      bm.depthWrite === true && bm.depthTest === true,
+      bm && { transparent: bm.transparent, opacity: bm.opacity, depthWrite: bm.depthWrite, depthTest: bm.depthTest });
+    check(`блок ${id}: текстура подключена`, !!bm && !!bm.map && !!bm.map.image,
+      bm && !!bm.map);
+  }
+  const glassMat = blocks[15] && blocks[15].material;
+  check('стекло осталось прозрачным',
+    !!glassMat && glassMat.transparent === true && glassMat.opacity < 1, glassMat && glassMat.opacity);
+  check('стекло не пишет глубину и рисуется после блоков',
+    !!glassMat && glassMat.depthWrite === false && blocks[15].renderOrder === 1,
+    glassMat && [glassMat.depthWrite, blocks[15].renderOrder]);
+
+  // Новые блоки реально попадают в InstancedMesh рядом с деревней.
+  const tSaved = W.F.time;
+  const v0 = W.mcxVillages[0];
+  W.F.x = v0.x + 0.5; W.F.z = v0.z + 0.5; W.F.dirty = true;
+  W.step(0.016);
+  const drawn = SOLID_NEW.concat([15]).map((id) => (blocks[id] ? blocks[id].count : 0));
+  check('новые блоки деревни действительно рисуются',
+    drawn.every((n) => n > 0), Object.fromEntries(SOLID_NEW.concat([15]).map((id, i) => [id, drawn[i]])));
+  const glassDrawn = blocks[15].count;
+  check('стекло попадает в свой меш отдельно', glassDrawn > 0, glassDrawn);
+
+  /* ------------------------------------------------ водопады и подъём по ним */
+  const falls = W.falls;
+  check('водопады найдены на карте', falls.length >= 3, falls.length);
+  const fall = falls[0];
+  check('у водопада реальный перепад высоты', !!fall && fall.top - fall.bottom >= 3,
+    fall && { top: fall.top, bottom: fall.bottom });
+  check('столб водопада свободен (в него можно войти)',
+    !!fall && (() => {
+      for (let y = fall.bottom; y < fall.top; y++) if (W.mcxGet(fall.x, y, fall.z)) return false;
+      return true;
+    })());
+  const fallMesh = W.fallMesh();
+  check('падающая вода нарисована', !!fallMesh && fallMesh.count === falls.length, !!fallMesh);
+  check('вода водопада полупрозрачная',
+    !!fallMesh && fallMesh.material.transparent === true && fallMesh.material.opacity < 1,
+    fallMesh && fallMesh.material.opacity);
+
+  const F = W.F;
+  // Подъём с удержанием прыжка: снизу до самой кромки.
+  F.x = fall.x + 0.5; F.z = fall.z + 0.5; F.y = fall.bottom + 0.2; F.vy = 0; F.onGround = false;
+  W.keys.jump = true;
+  let reached = F.y;
+  for (let i = 0; i < 240; i++) { W.step(0.016); reached = Math.max(reached, F.y); }
+  W.keys.jump = false;
+  check('по водопаду поднимаемся до верхней кромки',
+    reached >= fall.top - 0.5, [Number(reached.toFixed(2)), fall.top]);
+
+  // Без прыжка водопад не поднимает.
+  F.x = fall.x + 0.5; F.z = fall.z + 0.5; F.y = fall.bottom + 0.2; F.vy = 0;
+  for (let i = 0; i < 90; i++) W.step(0.016);
+  check('без прыжка водопад не поднимает игрока',
+    F.y < fall.top - 1, Number(F.y.toFixed(2)));
+
+  /* Выход наверх: поднявшись по водопаду, игрок стоит у кромки верхнего
+     водоёма. Проверяем, что хотя бы в одну сторону от кромки можно выйти на
+     сушу не ниже уровня воды — то есть из водопада не «запирает». */
+  const DIRS = [['+x', -Math.PI / 2], ['-x', Math.PI / 2], ['+z', Math.PI], ['-z', 0]];
+  let escaped = null;
+  for (const [name, yaw] of DIRS) {
+    F.time = 180;
+    F.x = fall.lx + 0.5; F.z = fall.lz + 0.5; F.y = fall.top; F.vy = 0; F.yaw = yaw;
+    W.keys.jump = true; W.keys.w = true;
+    for (let i = 0; i < 220; i++) {
+      W.step(0.016);
+      const cx = Math.floor(F.x), cz = Math.floor(F.z);
+      const isFallCell = cx === fall.x && cz === fall.z;
+      if (!W.mcxWaterAt(cx, cz) && !isFallCell && F.y >= fall.top - 0.5) {
+        escaped = { dir: name, x: cx, z: cz, y: Number(F.y.toFixed(2)) };
+        break;
+      }
+    }
+    W.keys.jump = false; W.keys.w = false;
+    if (escaped) break;
+  }
+  check('с кромки водопада можно выйти на верхний берег', !!escaped, escaped);
+
+  // В стоячей воде автоматического подъёма нет: гребок ограничен поверхностью.
+  const lake = W.mcxWaterList.find((c) => c.level > 8 && !W.fallAt(c.x, c.z));
+  F.x = lake.x + 0.5; F.z = lake.z + 0.5; F.y = lake.level - 1.5; F.vy = 0;
+  W.keys.jump = true;
+  let lakeTop = 0;
+  for (let i = 0; i < 120; i++) { W.step(0.016); lakeTop = Math.max(lakeTop, F.y); }
+  W.keys.jump = false;
+  check('в обычной воде нет лифта — только гребок до поверхности',
+    lakeTop <= lake.level + 1.2, [Number(lakeTop.toFixed(2)), lake.level]);
+  F.time = tSaved;
 
   /* ------------------------------------------------ новая карта = новая вода */
   W.mcxClearEntities();

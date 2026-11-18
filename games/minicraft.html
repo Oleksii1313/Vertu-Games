@@ -4769,10 +4769,35 @@ var {
 
   function p() {
     let m = new Map,
-      v = h => (m.has(h) || m.set(h, new zn({
-        map: c(h),
-        color: 16777215
-      })), m.get(h)),
+      v = h => {
+        if (!m.has(h)) {
+          /* Материал каждого блока задаётся явно. Раньше здесь был только
+             {map, color} — этого мало: у блоков, добавленных в деревни
+             (кладка, булыжник, балки, доски, черепица, побелка, сланец),
+             не был задан ни depthWrite, ни режим прозрачности, поэтому они
+             попадали в прозрачный проход и просвечивали. Теперь все твёрдые
+             блоки — полностью непрозрачные, пишут глубину и проходят
+             depth-тест; прозрачным остаётся только стекло. */
+          let glass = h === 'glassPane';
+          m.set(h, new zn(glass ? {
+            map: c(h),
+            color: 16777215,
+            transparent: !0,
+            opacity: .55,
+            depthWrite: !1,
+            depthTest: !0,
+            side: 2
+          } : {
+            map: c(h),
+            color: 16777215,
+            transparent: !1,
+            opacity: 1,
+            depthWrite: !0,
+            depthTest: !0
+          }));
+        }
+        return m.get(h);
+      },
       d = {};
     for (let [h, [M, S, E]] of Object.entries(f)) {
       let C = v(M);
@@ -5030,7 +5055,7 @@ function Jh() {
       for (let o = 0; o < dn; o++) {
         let l = cs(r, o, a),
           c = is[l];
-        !c || !Vg(r, o, a) || i[l] >= 45e3 || (tr.identity().setPosition(r + .5, o + .5, a + .5), c.setMatrixAt(i[l]++, tr))
+        !c || !Vg(r, o, a) || i[l] >= c.instanceMatrix.count || (tr.identity().setPosition(r + .5, o + .5, a + .5), c.setMatrixAt(i[l]++, tr))
       }
   for (let r in is) is[r].count = i[r], is[r].instanceMatrix.needsUpdate = !0;
   F.lastX = F.x, F.lastZ = F.z, F.dirty = !1
@@ -5059,10 +5084,22 @@ function Xg() {
   let i = new zs(16777215, 1.8);
   i.position.set(1, 3, 2), Ht.add(i);
   let e = Ng();
-  for (let t of [Vh, Gh, Hh, Wh, Xh, Bl, Vl]) {
+  /*
+   * Меш на каждый блок. Раньше в списке были только базовые блоки
+   * (1–6 и 8), а кладка, булыжник, балки, доски, черепица, побелка, стекло и
+   * сланец (9–16) в нём отсутствовали: они записывались в мир, но не
+   * рисовались вовсе — дома деревень выглядели «просвечивающими» каркасами.
+   * Теперь все 15 блоков получают собственный InstancedMesh.
+   * Базовым блокам нужен большой запас инстансов (трава, камень, листва),
+   * декоративным хватает шести тысяч — это экономит память на телефонах.
+   */
+  for (let t of [Vh, Gh, Hh, Wh, Xh, Bl, Vl, SB, CB, DW, PL, RF, PS, GL, SL]) {
     let n = e[t],
-      s = new Zi(new cn(1, 1, 1), n, 45e3);
-    s.count = 0, s.frustumCulled = !1, Ht.add(s), is[t] = s
+      cap = t >= SB ? 6e3 : 45e3,
+      s = new Zi(new cn(1, 1, 1), n, cap);
+    s.count = 0, s.frustumCulled = !1, Ht.add(s), is[t] = s;
+    // Стекло рисуется после непрозрачных блоков, но до воды.
+    if (n && n.transparent) s.renderOrder = 1
   }
   mcxCreateCoins(), er = new wt(new cn(1.01, 1.01, 1.01), new ti({
     color: 16777215,
@@ -5229,6 +5266,42 @@ function nr(i = !1) {
   } else e && cs(e.x, e.y, e.z) !== Vl && (ui(e.x, e.y, e.z, Ai), F.dirty = !0)
 }
 
+/*
+ * Вода и водопады.
+ * В стоячей воде игрок плавает: падение замедлено, прыжок даёт гребок вверх,
+ * но подъём ограничен уровнем поверхности — автоматического лифта нет.
+ * В водопаде (узкий столб воды на обрыве) удержание прыжка даёт постоянный
+ * подъём против течения: так можно добраться до кромки и выйти на верхний
+ * берег. Отпустил прыжок — медленно опускаешься. На суше физика прежняя.
+ */
+function mcxPlayerWater(dt) {
+  let want = !!(Vn.jump || (ss && ss.jumping)),
+    fall = mcxFallAt(F.x, F.z),
+    lvl = mcxWaterAt(Math.floor(F.x), Math.floor(F.z)),
+    inFall = !!fall && F.y >= fall.bottom - .6 && F.y <= fall.top + .35,
+    inWater = lvl > 0 && F.y <= lvl + .35;
+  F.inWater = inFall || inWater;
+  if (inFall) {
+    F.onGround = !1;
+    if (want) F.vy = Math.min(6.4, F.vy + 46 * dt);
+    else F.vy = Math.max(F.vy - 6 * dt, -2.4);
+    return
+  }
+  if (inWater) {
+    /* Гребок вверх достаточно сильный, чтобы выпрыгнуть из воды на низкий
+       берег (как в Minecraft). Это не подъём «лифтом»: скорость задаётся один
+       раз на кадр и ограничена поверхностью водоёма. */
+    if (want) F.vy = Math.max(F.vy, 8.2), F.onGround = !1;
+    else F.vy = Math.max(F.vy, -3.2);
+    return
+  }
+  if (want && F.onGround) {
+    F.vy = 9, F.onGround = !1;
+    return
+  }
+  F.vy = Math.max(-40, F.vy - 28 * dt)
+}
+
 function $g(i, e = i) {
   if (F.time -= e, F.elapsed += e, F.time <= 0) {
     Jg();
@@ -5240,7 +5313,8 @@ function $g(i, e = i) {
     s = -Math.sin(F.yaw) * t + Math.cos(F.yaw) * n,
     r = -Math.cos(F.yaw) * t - Math.sin(F.yaw) * n,
     a = Math.hypot(s, r);
-  a && (s = s / Math.max(1, a) * 5.5 * i, r = r / Math.max(1, a) * 5.5 * i), F.x += s, ro(F.x, F.y, F.z) && (F.x -= s), F.z += r, ro(F.x, F.y, F.z) && (F.z -= r), (Vn.jump || ss?.jumping) && F.onGround && (F.vy = 9, F.onGround = !1), F.vy = Math.max(-40, F.vy - 28 * i);
+  a && (s = s / Math.max(1, a) * 5.5 * i, r = r / Math.max(1, a) * 5.5 * i), F.x += s, ro(F.x, F.y, F.z) && (F.x -= s), F.z += r, ro(F.x, F.y, F.z) && (F.z -= r);
+  mcxPlayerWater(i);
   let o = F.vy * i,
     l = Math.max(1, Math.ceil(Math.abs(o) / .15));
   F.onGround = !1;
@@ -6111,6 +6185,79 @@ function mcxAnimateWater(elapsed) {
   mcxWaterMesh.position.y = Math.sin(elapsed * 1.4) * .045;
 }
 
+/* ============================================================= водопады ===
+   Водопад — это не «вода вообще», а узкий вертикальный объём на обрыве:
+   клетка, где рядом с водоёмом начинается перепад высотой от трёх блоков.
+   Внутри него игрок может подниматься против течения, удерживая прыжок,
+   и выходить на верхний берег. В стоячей воде такого подъёма нет — там
+   прыжок даёт только обычный гребок.
+   ========================================================================= */
+var mcxFalls = [];        // [{x, z, top, bottom}] — клетки водопадов
+var mcxFallCells = {};    // "x,z" -> объём водопада
+var mcxFallMesh = null;   // вертикальные столбы воды (один InstancedMesh)
+
+/* Объём водопада в точке (есть ли здесь падающая вода). */
+function mcxFallAt(x, z) {
+  return mcxFallCells[Math.floor(x) + ',' + Math.floor(z)] || null;
+}
+
+/* Поиск обрывов у воды: у кромки водоёма клетка, где суша ниже уровня воды
+   минимум на три блока, а столбец над ней свободен. */
+function mcxBakeWaterfalls() {
+  mcxFalls.length = 0;
+  mcxFallCells = {};
+  if (mcxFallMesh) { Ht.remove(mcxFallMesh); mcxFallMesh = null; }
+  var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (var i = 0; i < mcxWaterList.length; i++) {
+    if (mcxFalls.length >= 10) break;
+    var c = mcxWaterList[i];
+    for (var d = 0; d < 4; d++) {
+      if (mcxFalls.length >= 10) break;
+      var nx = c.x + dirs[d][0], nz = c.z + dirs[d][1];
+      if (mcxWaterAt(nx, nz)) continue;
+      if (mcxInVillage(nx, nz, 2)) continue;
+      var bottom = ir(nx, nz);
+      if (c.level - bottom < 3) continue;
+      var near = false;
+      for (var k = 0; k < mcxFalls.length; k++)
+        if (Math.abs(mcxFalls[k].x - nx) + Math.abs(mcxFalls[k].z - nz) < 9) { near = true; break; }
+      if (near) continue;
+      var free = true;
+      for (var y = bottom; y < c.level; y++) if (Rt(nx, y, nz)) { free = false; break; }
+      if (!free) continue;
+      // lx/lz — клетка водоёма, откуда льётся вода (нужна камере и тестам).
+      var fall = { x: nx, z: nz, top: c.level, bottom: bottom, lx: c.x, lz: c.z };
+      mcxFalls.push(fall);
+      mcxFallCells[nx + ',' + nz] = fall;
+      mcxCount('waterfalls');
+    }
+  }
+  mcxBuildFallMesh();
+}
+
+/* Столбы падающей воды: одна геометрия на все водопады карты. */
+function mcxBuildFallMesh() {
+  if (mcxFallMesh) { Ht.remove(mcxFallMesh); mcxFallMesh = null; }
+  if (!mcxFalls.length) return;
+  if (!mcxWaterMat)
+    mcxWaterMat = new zn({ color: 0x2f86c8, transparent: true, opacity: .66,
+                           emissive: 0x081f36, depthWrite: false });
+  var mesh = new Zi(new cn(1, 1, 1), mcxWaterMat, mcxFalls.length);
+  var m = new st();
+  for (var i = 0; i < mcxFalls.length; i++) {
+    var f = mcxFalls[i], h = Math.max(1, f.top - f.bottom);
+    m.identity();
+    m.makeScale(.9, h, .9);
+    m.setPosition(f.x + .5, f.bottom + h / 2, f.z + .5);
+    mesh.setMatrixAt(i, m);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.userData.mcxFall = true;
+  mesh.renderOrder = 2;
+  Ht.add(mesh);
+  mcxFallMesh = mesh;
+}
+
 /* ------------------------------------------------ мосты, причалы, дороги */
 function mcxDeck(x, z, level, along, rail) {
   mcxSet(x, level, z, Xh);
@@ -6641,6 +6788,7 @@ function mcxBakeVillages() {
   /* Второй слой карты: вода, дороги, архитектура и растительность. */
   mcxBakeLandmarks();
   mcxBakeFlora();
+  mcxBakeWaterfalls();
   mcxBuildWaterMesh();
 }
 
@@ -6673,6 +6821,9 @@ function mcxDrop(mesh) {
 
 function mcxClearEntities() {
   if (mcxWaterMesh) { Ht.remove(mcxWaterMesh); mcxWaterMesh = null; }
+  if (mcxFallMesh) { Ht.remove(mcxFallMesh); mcxFallMesh = null; }
+  mcxFallCells = {};
+  mcxFalls.length = 0;
   mcxWaterCells = {};
   mcxWaterList.length = 0;
   for (var k in mcxWorldStats) mcxWorldStats[k] = 0;
