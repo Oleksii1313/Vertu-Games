@@ -118,19 +118,36 @@ GAMES = [
         'id': 'minicraft', 'name': 'MiniCraft 3D', 'name_en': 'MiniCraft 3D',
         'file': 'games/minicraft.html', 'icon': 'cube', 'tag': 'NEW',
         'cat': ['Песочницы', 'Популярное'], 'cat_en': ['Sandbox', 'Popular'],
-        'desc': 'Кубический мир 256 × 256', 'desc_en': 'A 256 × 256 voxel world',
+        'desc': 'Деревни, жители и монстры в мире 256 × 256',
+        'desc_en': 'Villages, villagers and monsters in a 256 × 256 world',
         'reward': 3, 'daily': 450, 'event': 'coin',
-        'how_ru': 'Строй, исследуй мир и сражайся с зомби. Каждая собранная монета — 3 V '
-                  '(лимит 450 V в сутки).',
-        'how_en': 'Build, explore and fight zombies. Each coin collected pays 3 V (450 V daily cap).',
-        'long_ru': 'Кубический мир 256 × 256: строй из шести видов блоков, исследуй ландшафт и сражайся '
-                   'с зомби мечом.\n\nWASD — движение, мышь — обзор, пробел — прыжок. ЛКМ — ломать / '
-                   'атаковать, ПКМ — строить, 1–6 — выбор блока. На телефоне доступны сенсорные кнопки '
-                   'и обзор свайпом.\n\nРаунд длится 3 минуты. Esc — пауза.',
-        'long_en': 'Explore a 256 × 256 voxel world, build with six block types and battle zombies with '
-                   'a sword.\n\nWASD to move, mouse to look, Space to jump. Left click to break / '
-                   'attack, right click to build, 1–6 to select a block. Touch controls and '
-                   'swipe-to-look are available on mobile.\n\nEach round lasts 3 minutes. Esc pauses.',
+        # Итоговая награда за сессию: игра присылает число собранных зелёных монет,
+        # сервер платит coins × reward. Флаг включает отдельный эндпоинт только
+        # для этой игры; другим играм он по-прежнему недоступен.
+        'session_claim': True, 'session_max_coins': 150,
+        'how_ru': 'Собирай зелёные V-монеты в деревнях, на фермах и в лесах: каждая монета — '
+                  'ровно 3 V (до 150 монет за сессию, лимит 450 V в сутки).',
+        'how_en': 'Collect green V coins in villages, farms and forests: each coin pays exactly '
+                  '3 V (up to 150 coins per session, 450 V daily cap).',
+        'long_ru': 'Кубический мир 256 × 256: шесть деревень с домами, дорогами, фермами, '
+                   'колодцами и заборами, дружелюбные жители, которые подсказывают дорогу к '
+                   'сундукам, и монстры трёх видов — зомби, скелеты и пауки.\n\n'
+                   'Каждая зелёная монета V даёт ровно 3 V. Монеты лежат на дорогах, фермах, '
+                   'в лесах, у деревень и в опасных окраинах мира; сундуки открываются один '
+                   'раз за сессию. Каждую минуту врагов становится больше, а в конце — экран '
+                   'результатов с числом монет, V, побед, сундуков и временем.\n\n'
+                   'WASD — движение, мышь — обзор, пробел — прыжок, ЛКМ — ломать / атаковать, '
+                   'ПКМ — строить, 1–6 — выбор блока. Раунд длится 3 минуты, Esc — пауза.',
+        'long_en': 'A 256 × 256 voxel world: six villages with houses, roads, farms, wells and '
+                   'fences, friendly villagers who point the way to chests, and three kinds of '
+                   'monsters — zombies, skeletons and spiders.\n\n'
+                   'Every green V coin pays exactly 3 V. Coins lie along roads, on farms, in '
+                   'forests, around villages and in the dangerous edges of the map; chests can '
+                   'be opened once per session. Every minute brings more enemies, and at the '
+                   'end a results screen shows coins, V, kills, chests and time.\n\n'
+                   'WASD to move, mouse to look, Space to jump, left click to break / attack, '
+                   'right click to build, 1–6 to select a block. Each round lasts 3 minutes, '
+                   'Esc pauses.',
         'controls_ru': 'WASD, мышь, ЛКМ / ПКМ, 1–6',
         'controls_en': 'WASD, mouse, LMB / RMB, 1–6',
     },
