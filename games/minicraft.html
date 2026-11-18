@@ -223,6 +223,12 @@ body:not(.playing) #mcx-hud{opacity:0}
   #mcx-hud{top:70px;left:12px}
   #mcx-toast{font-size:11.5px;bottom:150px}
 }
+/* Холст сам объявляет touch-action:none: тогда браузер не отбирает жест на
+   прокрутку, «pull-to-refresh» или масштабирование и не шлёт pointercancel
+   посреди свайпа — именно из-за такого перехвата камера дёргалась, а страница
+   уезжала. Соседние свойства убирают подсветку нажатия и меню долгого
+   удержания. */
+#viewport,#viewport canvas{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 </style><style id="vg-landscape-fullscreen">
 /* ==========================================================================
    Мобильный ландшафт: игра занимает весь экран, без чёрных полос и без
@@ -5001,6 +5007,10 @@ var Wl, Ht, Wt, Xe, is = {},
   Mt = "intro",
   Ol = !1,
   yt = null;
+/* Все касания, которые сейчас есть на экране (pointerId). Нужно, чтобы отличить
+   «палец всё ещё на экране» от потерянного pointerup: браузер не присылает up,
+   если жест перехватил системный интерфейс или окно потеряло фокус. */
+var mcxTouches = new Set();
 var lo = !0,
   Xl = !1,
   ls = 0,
@@ -5322,7 +5332,7 @@ function fo() {
 
 function po() {
   for (let i in Vn) delete Vn[i];
-  yt = null, ss?.reset()
+  yt = null, mcxTouches.clear(), ss?.reset()
 }
 
 function hs(i, e, t, n) {
@@ -5523,7 +5533,12 @@ function jh(i) {
    • Знаки подобраны так, чтобы движение мыши вправо поворачивало камеру
      вправо, влево — влево, вверх — поднимало взгляд, вниз — опускало.
      Это проверяет tools/test_camera_controls.js по реальному вектору взгляда.
-   • На тач-устройствах свайп по экрану работает как раньше (fn === true).
+   • На тач-устройствах обзор — свайп пальцем по зоне обзора (вся площадь, кроме
+     площадки джойстика и элементов интерфейса): правая часть экрана, где лежит
+     большой палец, поворачивает камеру влево/вправо, вверх/вниз. У пальца своя
+     чувствительность (MCX_LOOK_TOUCH), свои проверки на сбой координат и свой
+     pointerId на каждое касание, поэтому второй палец не крутит камеру, а
+     отпускание одного пальца не прерывает обзор другим.
    ======================================================================== */
 var mcxSun = null, mcxSkyLight = null;
 /* Координаты храма и малого замка: их проверяют автотесты и по ним строятся
@@ -5531,15 +5546,114 @@ var mcxSun = null, mcxSkyLight = null;
    фактическое место постройки. */
 var mcxTempleSpot = null, mcxKeepSpot = null;
 var MCX_LOOK_BUTTON = 2,      // какая кнопка мыши вращает камеру
-  MCX_LOOK_SENS = .002,       // радиан на пиксель движения
+  MCX_LOOK_SENS = .002,       // радиан на пиксель движения (мышь)
   MCX_LOOK_DRAG = 1.5,        // множитель для режима без захвата мыши
   MCX_LOOK_TAP = 5,           // пикселей: до этого считаем нажатие кликом
   MCX_LOOK_TAP_MS = 400,      // мс: дольше — это уже удержание обзора
+  /* Палец и мышь чувствуют себя по-разному: у мыши точный курсор и мелкие
+     движения, у пальца — крупные и быстрые. Раньше тач крутился теми же
+     0.003 рад/px (0.17° на пиксель): свайп на всю ширину телефона поворачивал
+     камеру всего на ~65°, поэтому игрок вёл палец всё быстрее и резче, а каждый
+     сбой отсчёта превращался в рывок. 0.0075 рад/px даёт ~170° за свайп по
+     ширине экрана — как в Minecraft PE. */
+  MCX_LOOK_TOUCH = .0075,
+  /* Защита от рывка камеры: за одно событие палец физически не может пройти
+     больше 240 px (это 10 000 px/с при 24 мс между событиями). Всё, что больше
+     и пришло почти мгновенно, — сбой координат указателя, а не движение. */
+  MCX_LOOK_TOUCH_STEP = 240,
+  MCX_LOOK_TOUCH_FAST = 24,
+  /* Запас вокруг площадки джойстика: касание рядом с ним — это движение, а не
+     обзор, иначе палец, промахнувшийся мимо джойстика, крутил камеру. */
+  MCX_LOOK_PAD = 18,
   mcxHintTimer = 0;
 
-function Qh(i, e) {
-  F.yaw -= i * MCX_LOOK_SENS,
-  F.pitch = Math.max(-Math.PI / 2 + .01, Math.min(Math.PI / 2 - .01, F.pitch - e * MCX_LOOK_SENS))
+function Qh(i, e, t) {
+  let n = Number.isFinite(t) ? t : MCX_LOOK_SENS;
+  F.yaw -= i * n,
+  F.pitch = Math.max(-Math.PI / 2 + .01, Math.min(Math.PI / 2 - .01, F.pitch - e * n))
+}
+
+/* Зона обзора: вся площадь экрана, кроме площадки джойстика и элементов
+   интерфейса (кнопки, хотбар, панели перехватывают свои касания сами, они выше
+   по z-index). Правая часть экрана — основная зона обзора, левый нижний угол
+   отдан джойстику движения. */
+function mcxInLookZone(i) {
+  let e = $e("joystick");
+  if (!e || !e.getBoundingClientRect) return !0;
+  let t = e.getBoundingClientRect();
+  if (!(t.width > 0) || !(t.height > 0)) return !0;
+  return !(i.clientX >= t.left - MCX_LOOK_PAD && i.clientX <= t.right + MCX_LOOK_PAD &&
+    i.clientY >= t.top - MCX_LOOK_PAD && i.clientY <= t.bottom + MCX_LOOK_PAD)
+}
+
+/* Начало обзора пальцем. Каждое касание живёт по своему pointerId, поэтому
+   второй палец (кнопка, джойстик, второй свайп) не сбивает камеру. */
+function mcxTouchLookStart(i) {
+  if (i.preventDefault) i.preventDefault();
+  mcxTouches.add(i.pointerId);
+  if (yt) {
+    /* Другой палец уже ведёт обзор — новое касание его не перебивает. */
+    if (yt.touch && yt.id !== i.pointerId && mcxTouches.has(yt.id)) return;
+    /* Всё остальное — новый жест. Браузер не присылает pointerdown для пальца,
+       который уже на экране, значит прежний обзор либо завершился, либо его
+       pointerup потерялся. Если не переснять отсчёт, pointerId нового касания
+       совпадёт со старым и первый pointermove даст рывок на сотни пикселей. */
+    yt = null
+  }
+  if (!mcxInLookZone(i)) return;
+  let e = performance.now();
+  yt = {
+    id: i.pointerId,
+    x: i.clientX,
+    y: i.clientY,
+    distance: 0,
+    touch: !0,
+    button: i.button,
+    at: e,
+    mv: e
+  };
+  try {
+    Xe.domElement.setPointerCapture(i.pointerId)
+  } catch (e) {}
+}
+
+/* Один отсчёт движения пальца: обрезаем невозможные скачки и применяем поворот. */
+function mcxTouchLookSample(i) {
+  let e = i.clientX,
+    t = i.clientY;
+  if (!Number.isFinite(e) || !Number.isFinite(t)) return;
+  let n = e - yt.x,
+    s = t - yt.y;
+  if (!n && !s) return;
+  /* Обнулившиеся координаты (браузер так сообщает о потерянном указателе и об
+     отмене жеста) дали бы мгновенный разворот — просто пропускаем отсчёт:
+     следующий pointermove придёт с настоящей точкой и посчитается от прежней. */
+  if (!e && !t) return;
+  let r = performance.now(),
+    a = Math.hypot(n, s);
+  if (a > MCX_LOOK_TOUCH_STEP && r - (yt.mv || yt.at) < MCX_LOOK_TOUCH_FAST) {
+    yt.x = e, yt.y = t, yt.mv = r;
+    return
+  }
+  if (a > MCX_LOOK_TOUCH_STEP) {
+    let o = MCX_LOOK_TOUCH_STEP / a;
+    n *= o, s *= o
+  }
+  yt.distance += Math.hypot(n, s), yt.x = e, yt.y = t, yt.mv = r, Qh(n, s, MCX_LOOK_TOUCH)
+}
+
+/* Свайп пальцем. Coalesced-события дают все промежуточные точки, поэтому даже
+   очень быстрый свайп остаётся плавным и точным. */
+function mcxTouchLookMove(i) {
+  if (i.preventDefault) i.preventDefault();
+  let e = null;
+  if (i.getCoalescedEvents) try {
+    e = i.getCoalescedEvents()
+  } catch (t) {
+    e = null
+  }
+  e && e.length || (e = [i]);
+  for (let t = 0; t < e.length; t++) mcxTouchLookSample(e[t])
 }
 
 function Kg(i) {
@@ -5547,9 +5661,17 @@ function Kg(i) {
   /* Нажатие на элементы интерфейса (кнопки, панели, хотбар, джойстик) не должно
      ни крутить камеру, ни ломать блок — иначе кнопка «пауза» двигала обзор. */
   if (i.target && i.target.closest && i.target.closest(".hud, .panel, .dialog, button, #hotbar, #joystick, #lookHint")) return;
-  if (i.pointerType === "mouse" && fn && (fn = !1, document.body.classList.remove("touch"), Yl()), i.pointerType === "touch") {
-    if (i.preventDefault(), yt) return
-  } else Xe.domElement.focus({
+  if (i.pointerType === "mouse" && fn) {
+    /* Мышь на «тач-раскладке» — возвращаем обычное управление. */
+    fn = !1, document.body.classList.remove("touch"), Yl()
+  }
+  /* Палец полностью обслуживается отдельной веткой: у него своя
+     чувствительность, свои проверки и никаких игровых кликов. */
+  if (i.pointerType === "touch") {
+    mcxTouchLookStart(i);
+    return
+  }
+  Xe.domElement.focus({
     preventScroll: !0
   });
   if (i.pointerType !== "touch" && document.pointerLockElement === Xe.domElement) {
@@ -5577,6 +5699,10 @@ function Kg(i) {
 
 function jg(i) {
   if (document.pointerLockElement === Xe?.domElement || !yt || i.pointerId !== yt.id || Mt !== "playing") return;
+  if (yt.touch) {
+    mcxTouchLookMove(i);
+    return
+  }
   let e = i.clientX - yt.x,
     t = i.clientY - yt.y;
   yt.distance += Math.hypot(e, t), Qh(e * MCX_LOOK_DRAG, t * MCX_LOOK_DRAG), yt.x = i.clientX, yt.y = i.clientY
@@ -5662,6 +5788,25 @@ ss = Dg({
 });
 addEventListener("pointerdown", i => {
   i.pointerType === "touch" && !fn && (fn = !0, document.body.classList.add("touch"), document.body.classList.remove("drag-look"), clearTimeout(ls), document.pointerLockElement && document.exitPointerLock(), Xe && Xe.setPixelRatio(Math.min(devicePixelRatio, 1)), eu())
+}, {
+  capture: !0
+});
+/* Учёт касаний на уровне документа (capture — раньше обработчиков холста).
+   Отпускание любого пальца снимает только свой pointerId, поэтому второй палец
+   продолжает вести обзор; а если up потерялся, состояние обзора всё равно
+   освобождается при следующем касании. */
+addEventListener("pointerdown", i => {
+  mcxTouches.add(i.pointerId)
+}, {
+  capture: !0
+});
+addEventListener("pointerup", i => {
+  mcxTouches.delete(i.pointerId)
+}, {
+  capture: !0
+});
+addEventListener("pointercancel", i => {
+  mcxTouches.delete(i.pointerId), yt && yt.id === i.pointerId && (yt = null)
 }, {
   capture: !0
 });
