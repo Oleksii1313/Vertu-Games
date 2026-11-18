@@ -273,7 +273,12 @@ class CatalogRewardTest(unittest.TestCase):
         from game_catalog import public_games, visible_games
         cards = {game['id']: game for game in public_games()}
         self.assertEqual(len(cards), len(visible_games()))
-        self.assertEqual(len(cards), 11, 'в каталоге должно быть 11 игр')
+        # На витрине 10 игр: Redline скрыт по требованию заказчика, но запись в
+        # GAMES осталась — вместе с историей и финансовыми транзакциями.
+        self.assertEqual(len(cards), 10, 'на витрине должно быть 10 игр')
+        self.assertEqual(len(GAMES_BY_ID), 11, 'все 11 записей каталога сохранены')
+        self.assertNotIn('redline', cards)
+        self.assertTrue(GAMES_BY_ID['redline'].get('hidden'))
         client = Client()
         name = f'Cat{os.getpid() % 1000}'
         self.assertEqual(client.register(name).status_code, 201)

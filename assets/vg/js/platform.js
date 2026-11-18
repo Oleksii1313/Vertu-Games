@@ -1039,6 +1039,71 @@
         claimSession(false);
         return;
       }
+      if (data.type === 'snakeSession' && data.game === 'snake') {
+        /*
+         * Итог забега Snake. Клиент присылает только число обычных и золотых
+         * яблок: сумму (яблоки × награда + бонусы за уровни и золото) считает
+         * сервер, он же проверяет правдоподобность, суточный лимит каталога и
+         * одноразовость сессии (ключ scs:<uid>:<sessionId>).
+         */
+        var snakeApples = Math.max(0, Math.min(400, Math.floor(Number(data.apples) || 0)));
+        var snakeGold = Math.max(0, Math.min(200, Math.floor(Number(data.gold) || 0)));
+        var snakeTime = Math.max(0, Math.min(3600, Math.floor(Number(data.time) || 0)));
+        var snakeScore = Math.max(0, Math.min(999999, Math.floor(Number(data.score) || 0)));
+        var snakeId = String(data.sessionId || '').slice(0, 60);
+        var snakeAnswer = function (result, error, guest) {
+          acknowledge(event.source, {
+            type: 'snakeSessionResult', game: 'snake', sessionId: snakeId,
+            ok: !!(result && (result.awarded > 0 || result.claimed)),
+            askedApples: snakeApples, askedGold: snakeGold, score: snakeScore,
+            apples: (result && result.applesCount != null) ? result.applesCount : snakeApples,
+            gold: (result && result.goldCount != null) ? result.goldCount : snakeGold,
+            awarded: (result && result.awarded) || 0,
+            appleReward: (result && result.appleReward) || known.reward || 1,
+            goldReward: (result && result.goldReward) || 10,
+            clamped: !!(result && result.clamped),
+            capped: !!(result && result.capped),
+            zero: !!(result && result.zero),
+            repeated: !!(result && result.repeated),
+            balance: result && result.coins,
+            dailyLeft: (result && result.dailyLeft != null) ? result.dailyLeft : null,
+            guest: !!guest,
+            error: error ? String(error.message || '').slice(0, 120) : ''
+          });
+        };
+        var claimSnake = function (retry) {
+          if (!VG.activeGame) { snakeAnswer(null); return; }
+          // Без входа начислять некуда: игра покажет итог как локальный.
+          if (!VG.user()) { snakeAnswer(null, null, true); return; }
+          if (!ticket) {   // билет ещё не пришёл — молча повторяем, без «отказа»
+            fetchTicket().then(function (fresh) { fresh && fresh.sig && claimSnake(false); });
+            return;
+          }
+          api('/api/games/session/claim', {
+            body: {
+              game: 'snake', apples: snakeApples, gold: snakeGold, time: snakeTime,
+              score: snakeScore, sessionId: snakeId, ticket: ticket
+            }
+          }).then(function (result) {
+            if (result.coins != null) updateCoins(result.coins);
+            if (result.awarded > 0) {
+              toast(T('+' + fmt(result.awarded) + ' V · итог Snake', '+' + fmt(result.awarded) + ' V · Snake run'));
+            } else if (result.capped) {
+              toast(T('Суточный лимит наград по этой игре исчерпан.', 'The daily reward cap for this game is reached.'), 'bad');
+            }
+            snakeAnswer(result);
+            return result;
+          }).catch(function (error) {
+            if (error.status === 429) toast(error.message, 'bad');
+            if (error.status === 403 && error.code === 'TICKET' && !retry) {
+              return fetchTicket().then(function (fresh) { fresh && fresh.sig && claimSnake(true); });
+            }
+            snakeAnswer(null, error);
+          });
+        };
+        claimSnake(false);
+        return;
+      }
       if (data.type === 'addCoins' || data.type === 'gameOver') {
         // Событие без собственной квитанции: начисляем одну награду за серию.
         if (data.type === 'gameOver') { toast(T('Игра окончена', 'Game over')); return; }
