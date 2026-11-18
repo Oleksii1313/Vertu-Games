@@ -1,4 +1,4 @@
-# Vertu Games
+# Vert Games
 
 Игровая платформа с 11 браузерными играми, единой виртуальной валютой **V**,
 магазином, казино (только виртуальные монеты) и админ-панелью.
@@ -31,7 +31,7 @@ tools/          генератор страниц, проверки, мигра�
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
-# вариант 1: SQLite (по умолчанию, данные в data/vertu.sqlite3)
+# вариант 1: SQLite (по умолчанию, данные в data/vert.sqlite3)
 .venv/bin/python server.py
 
 # вариант 2: PostgreSQL как в проде
@@ -47,7 +47,7 @@ export DATABASE_URL="postgres://..."
 
 | Переменная | Обязательна | Назначение |
 |---|---|---|
-| `DATABASE_URL` | в проде | PostgreSQL, напр. `postgres://user:pass@host:5432/db`. Без неё используется SQLite (`data/vertu.sqlite3`, путь можно задать через `VERTU_DB`). |
+| `DATABASE_URL` | в проде | PostgreSQL, напр. `postgres://user:pass@host:5432/db`. Без неё используется SQLite (`data/vert.sqlite3`, путь можно задать через `VERT_DB`). |
 | `ADMIN_PASSWORD` | да | Пароль администратора. Если не задан — используется прежний `219384`. |
 | `ADMIN_USERNAME` | нет | Ник администратора для журнала действий (по умолчанию `admin`). |
 | `TURNSTILE_SITE_KEY` | нет | Публичный ключ Cloudflare Turnstile. |
@@ -56,7 +56,7 @@ export DATABASE_URL="postgres://..."
 | `PUBLIC_URL` | рекомендуется | `https://ваш-домен`, нужен для https-cookie и ссылок оплаты. |
 | `SECURE_COOKIES` | нет | `1` — принудительно ставить cookie только по HTTPS. |
 | `WELCOME_COINS` | нет | Приветственный бонус новому аккаунту (по умолчанию 150). |
-| `VERTGAMES_DB` | нет | Путь к старой SQLite-базе для миграции (`data/accounts.sqlite3`). |
+| `VERT GAMES_DB` | нет | Путь к старой SQLite-базе для миграции (`data/accounts.sqlite3`). |
 | `PORT` | нет | Порт dev-сервера (по умолчанию 8000). |
 
 Секретов в репозитории нет: всё, что чувствительно, читается из окружения.
@@ -185,7 +185,7 @@ CSRF и сессия, подписанные билеты и попытки их
 С `DATABASE_URL` тот же набор выполняется в отдельной схеме PostgreSQL.
 
 Для живого деплоя (после `RENDER_DATABASE_SETUP.md`) есть дымовая проверка без
-браузера: `python tools/smoke_deploy.py https://vertu-games.onrender.com --admin-password '…'`.
+браузера: `python tools/smoke_deploy.py https://vert-games.onrender.com --admin-password '…'`.
 
 ### Производительность
 
@@ -203,7 +203,7 @@ CSRF и сессия, подписанные билеты и попытки их
 
 ## Деплой на Render
 
-1. New → **Web Service**, репозиторий `Oleksii1313/Vertu-Games`, ветка с
+1. New → **Web Service**, репозиторий `Oleksii1313/Vert-Games`, ветка с
    изменениями.
 2. Runtime: **Python 3**. Build command:
 
@@ -249,7 +249,7 @@ curl -s https://<адрес>/api/version | python3 -m json.tool
 ```
 
 * `version` — версия сборки (`game_catalog.APP_VERSION`); она же в
-  `<meta name="vertu-build">` и в заголовке `X-Build` каждого ответа;
+  `<meta name="vert-build">` и в заголовке `X-Build` каждого ответа;
 * `commit` / `branch` / `service` — что реально запущено (Render прокидывает
   `RENDER_GIT_COMMIT`, `RENDER_GIT_BRANCH`, `RENDER_SERVICE_NAME`);
 * `wheel.segments` / `wheel.weights` / `wheel.rtp` — конфиг множителей сервера;

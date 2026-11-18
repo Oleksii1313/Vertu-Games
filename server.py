@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertu Games — сервер платформы (Flask + PostgreSQL).
+"""Vert Games — сервер платформы (Flask + PostgreSQL).
 
 Что делает сервер:
 
@@ -537,7 +537,7 @@ def register():
     return response, 201
 
 
-LEGACY_DB = Path(os.environ.get('VERTGAMES_DB', 'data/accounts.sqlite3'))
+LEGACY_DB = Path(os.environ.get('VERT GAMES_DB', 'data/accounts.sqlite3'))
 
 
 def legacy_account(email: str):
@@ -1030,8 +1030,8 @@ def _casino_achievements(user_id: int, result: dict) -> list:
         item = db.unlock_achievement(user_id, 'big_win')
         if item:
             unlocked.append(item)
-    stats = db.casino_stats(user_id)
-    if int(stats.get('bets') or 0) >= 20:
+    # «Мастер колеса» — именно вращения колеса, а не любые ставки: слоты не в счёт.
+    if db.casino_spins(user_id) >= 20:
         item = db.unlock_achievement(user_id, 'wheel_master')
         if item:
             unlocked.append(item)
@@ -1433,7 +1433,7 @@ def admin_games_set():
 def not_found(_):
     if request.path.startswith('/api/'):
         return api_error(404, 'NOT_FOUND', 'Неизвестный запрос')
-    return ('<!doctype html><meta charset="utf-8"><title>404 — Vertu Games</title>'
+    return ('<!doctype html><meta charset="utf-8"><title>404 — Vert Games</title>'
             '<body style="background:#08090d;color:#e9ecf5;font:16px system-ui;display:grid;'
             'place-items:center;height:100vh;margin:0"><div style="text-align:center">'
             '<h1 style="font-size:64px;margin:0">404</h1><p style="color:#9aa3b8">Страница не найдена</p>'
@@ -1453,5 +1453,5 @@ def too_large(_):
 if __name__ == '__main__':
     get_store()
     port = int(os.environ.get('PORT', '8000'))
-    print(f'Vertu Games: http://0.0.0.0:{port}  backend={get_store().backend}', flush=True)
+    print(f'Vert Games: http://0.0.0.0:{port}  backend={get_store().backend}', flush=True)
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)

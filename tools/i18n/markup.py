@@ -90,7 +90,10 @@ class Localizer(HTMLParser):
             self.skip_depth += 1
         if tag == 'html' and self.title_en:
             escaped_title = self.title_en.replace('&', '&amp;').replace('"', '&quot;')
-            new_raw = raw.replace('>', f' data-title-en="{escaped_title}">', 1)
+            # Генератор страниц уже ставит data-title-en — второй такой же
+            # атрибут был бы невалидным HTML (браузер молча взял бы первый).
+            new_raw = re.sub(r'\s*data-title-en="[^"]*"', '', raw)
+            new_raw = new_raw.replace('>', f' data-title-en="{escaped_title}">', 1)
             self.out.append(new_raw)
             return
         if tag in ('meta', 'link'):

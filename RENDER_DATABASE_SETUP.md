@@ -1,4 +1,4 @@
-# PostgreSQL на Render — пошаговая настройка Vertu Games
+# PostgreSQL на Render — пошаговая настройка Vert Games
 
 Инструкция для деплоя платформы на **Render** с базой **PostgreSQL**. Всё, что
 нужно сделать руками, — создать базу, скопировать две строки подключения и
@@ -11,7 +11,7 @@
 | Что | Где взять |
 |---|---|
 | Аккаунт Render | https://dashboard.render.com |
-| Репозиторий `Oleksii1313/Vertu-Games` | GitHub (уже подключён к Render) |
+| Репозиторий `Oleksii1313/Vert-Games` | GitHub (уже подключён к Render) |
 | Ключи Cloudflare Turnstile | https://dash.cloudflare.com → Turnstile |
 
 Локально для миграций нужен Python 3.11+ и пакеты из `requirements.txt`.
@@ -22,9 +22,9 @@
 
 1. Dashboard → **New +** → **Postgres**.
 2. Заполнить:
-   * **Name**: `vertu-games-db`
-   * **Database**: `vertu`
-   * **User**: `vertu`
+   * **Name**: `vert-games-db`
+   * **Database**: `vert`
+   * **User**: `vert`
    * **Region**: тот же, где будет web-сервис (например, Frankfurt)
    * **Plan**: Free
 3. **Create Database** и дождаться статуса *Available* (1–2 минуты).
@@ -35,7 +35,7 @@
 Строка выглядит так:
 
 ```
-postgresql://vertu:пароль@dpg-xxxxxxxx-a.frankfurt-postgres.render.com/vertu
+postgresql://vert:пароль@dpg-xxxxxxxx-a.frankfurt-postgres.render.com/vert
 ```
 
 > Free-план Render удаляет бесплатную базу через 90 дней без активности и не
@@ -50,9 +50,9 @@ postgresql://vertu:пароль@dpg-xxxxxxxx-a.frankfurt-postgres.render.com/ver
 
 1. Dashboard → **New +** → **Blueprint** → выбрать репозиторий.
 2. Render прочитает `render.yaml` и создаст:
-   * web-сервис `vertu-games` (`pip install -r requirements.txt`,
+   * web-сервис `vert-games` (`pip install -r requirements.txt`,
      запуск `gunicorn ... server:app`, healthcheck `/api/health`);
-   * базу `vertu-games-db` и **сам** подставит `DATABASE_URL` из неё.
+   * базу `vert-games-db` и **сам** подставит `DATABASE_URL` из неё.
 3. Либо вручную: **New +** → **Web Service** → Runtime *Python 3*, Build Command
    `pip install -r requirements.txt`, Start Command
    `gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60 server:app`.
@@ -78,7 +78,7 @@ Dashboard → web-сервис → **Environment**:
 | `TURNSTILE_REQUIRED` | да | `1` — без капчи вход/регистрация запрещены |
 | `ADMIN_USERNAME` | да | ник администратора, например `admin` |
 | `ADMIN_PASSWORD` | да | пароль 12+ символов для входа в админку |
-| `PUBLIC_URL` | да | `https://vertu-games.onrender.com` (для Secure-cookie и платёжных return-URL) |
+| `PUBLIC_URL` | да | `https://vert-games.onrender.com` (для Secure-cookie и платёжных return-URL) |
 | `PORT` | авто | Render подставляет сам |
 | `WELCOME_COINS` | нет | приветственный бонус, по умолчанию `100` |
 | `DB_POOL_SIZE` | нет | размер пула соединений, по умолчанию `5` (free-план: не больше 5) |
@@ -100,7 +100,7 @@ Free-план Render держит соединения жёстко: пул ог
 
 ```bash
 # локально, с External Database URL
-export DATABASE_URL='postgresql://vertu:...@dpg-xxxx.frankfurt-postgres.render.com/vertu'
+export DATABASE_URL='postgresql://vert:...@dpg-xxxx.frankfurt-postgres.render.com/vert'
 
 pip install -r requirements.txt
 
@@ -127,7 +127,7 @@ python -c "import db; s=db.get_store(); print(s.backend, s.platform_stats())"
 Полная дымовая проверка живого деплоя (без браузера, только стандартный Python):
 
 ```bash
-python tools/smoke_deploy.py https://vertu-games.onrender.com --admin-password '…'
+python tools/smoke_deploy.py https://vert-games.onrender.com --admin-password '…'
 ```
 
 Скрипт проверяет `/api/health` (`backend=postgresql`), выдачу CSRF-токена,
@@ -209,10 +209,10 @@ DATABASE_URL='postgresql://...' python migrate_sqlite_to_postgres.py \
 
 ```bash
 # дамп базы (External URL) — раз в сутки по cron или вручную
-pg_dump "$DATABASE_URL" --no-owner --format=custom --file=vertu-$(date +%F).dump
+pg_dump "$DATABASE_URL" --no-owner --format=custom --file=vert-$(date +%F).dump
 
 # восстановление
-pg_restore --clean --no-owner --dbname "$DATABASE_URL" vertu-2026-11-11.dump
+pg_restore --clean --no-owner --dbname "$DATABASE_URL" vert-2026-11-11.dump
 ```
 
 Полезные команды:

@@ -227,7 +227,7 @@
       ctx.fillText(text, px, py + fontSize * 0.02);
     }
 
-    /* --- ступица VERTU --- */
+    /* --- ступица VERT --- */
     var hub = radius * 0.235;
     ctx.beginPath();
     ctx.arc(cx, cy, hub + size * 0.012, 0, TWO_PI);
@@ -248,7 +248,7 @@
     ctx.font = '900 ' + Math.max(13, size * 0.045) + 'px Montserrat, Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(opts.center || 'VERTU', cx, cy);
+    ctx.fillText(opts.center || 'VERT', cx, cy);
     ctx.restore();
   }
 

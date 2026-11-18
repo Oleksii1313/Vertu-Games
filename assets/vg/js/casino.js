@@ -175,7 +175,7 @@
     VGWheel.draw(ctx, {
       size: size, rotation: rotation,
       segments: rules.wheel.segments, weights: rules.wheel.weights,
-      colors: segmentColors(), center: 'VERTU'
+      colors: segmentColors(), center: 'VERT'
     });
   }
 

@@ -1,4 +1,4 @@
-# Безопасность Vertu Games: архитектура и внедрение
+# Безопасность Vert Games: архитектура и внедрение
 
 Документ для команды, которая развивает платформу. Он описывает **что уже
 работает в этом репозитории**, чего не хватает до продакшена и в каком порядке
@@ -709,14 +709,14 @@ GAME_SIGNING_KEY=$(openssl rand -base64 48)
 на чужие схемы:
 
 ```sql
-CREATE ROLE vertu_app LOGIN PASSWORD '…';
-GRANT CONNECT ON DATABASE vertu TO vertu_app;
-GRANT USAGE ON SCHEMA public TO vertu_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO vertu_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO vertu_app;
-REVOKE CREATE ON SCHEMA public FROM vertu_app;          -- игры не создают таблиц
+CREATE ROLE vert_app LOGIN PASSWORD '…';
+GRANT CONNECT ON DATABASE vert TO vert_app;
+GRANT USAGE ON SCHEMA public TO vert_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO vert_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO vert_app;
+REVOKE CREATE ON SCHEMA public FROM vert_app;          -- игры не создают таблиц
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
--- миграции — отдельная роль vertu_migrator с DDL, используется только в деплое
+-- миграции — отдельная роль vert_migrator с DDL, используется только в деплое
 ```
 
 ⬜ **Изоляция админки от игрового трафика:**

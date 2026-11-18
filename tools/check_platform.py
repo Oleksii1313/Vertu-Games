@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Сквозные проверки платформы Vertu Games.
+"""Сквозные проверки платформы Vert Games.
 
 Запускает настоящий сервер (Flask) на временном порту с отдельной базой и
 прогоняет сценарии из задания: регистрация, вход/выход, CAPTCHA, уникальность
@@ -130,13 +130,13 @@ def start_server(port, env_extra):
 
 
 def main():
-    tmp = tempfile.mkdtemp(prefix='vertu-check-')
+    tmp = tempfile.mkdtemp(prefix='vert-check-')
     schema = None
     database_url = os.environ.get('DATABASE_URL', '').strip()
     env = {
         'ADMIN_PASSWORD': 'CheckAdmin#2026',
         'WELCOME_COINS': '100',
-        'VERTU_DB': str(Path(tmp) / 'check.sqlite3'),
+        'VERT_DB': str(Path(tmp) / 'check.sqlite3'),
         'PYTHONUNBUFFERED': '1',
     }
     if database_url:
@@ -176,6 +176,88 @@ def main():
                 check(f'{secret} недоступен', False, 'файл отдаётся публично!')
             except urllib.error.HTTPError as exc:
                 check(f'{secret} недоступен (404)', exc.code == 404)
+
+        print('== Каталог, брендинг и мобильная вёрстка (статическая проверка)')
+        top_html = (ROOT / 'top.html').read_text(encoding='utf-8')
+        cards = set(re.findall(r'data-game="([a-z0-9]+)"', top_html))
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from game_catalog import visible_games
+        expected_ids = {game['id'] for game in visible_games()}
+        check('на витрине карточка каждой игры каталога',
+              expected_ids <= cards, str(sorted(expected_ids - cards)))
+        missing_files = [game['file'] for game in visible_games()
+                         if not (ROOT / game['file']).exists()]
+        check('файл каждой игры из каталога существует', not missing_files, str(missing_files))
+        index_html = (ROOT / 'index.html').read_text(encoding='utf-8')
+        check('на главной число игр совпадает с каталогом',
+              f'data-stat="games">{len(expected_ids)}' in index_html,
+              str(len(expected_ids)))
+        check('в каталоге и на главной «11 игр»',
+              '11 игр' in top_html and '11 игр' in index_html)
+        check('в отдаваемом каталоге 11 игр и Redline виден',
+              len(public_games_catalog(base)) == 11, str(len(public_games_catalog(base))))
+
+        # Брендинг: старое имя не должно остаться ни в одной отдаваемой странице.
+        legacy = []
+        for path in list(ROOT.glob('*.html')) + list((ROOT / 'games').glob('*.html')) \
+                + list((ROOT / 'assets').rglob('*.js')) + list((ROOT / 'assets').rglob('*.css')):
+            text = path.read_text(encoding='utf-8', errors='ignore')
+            if re.search(r'vertu', text, re.I):
+                legacy.append(str(path.relative_to(ROOT)))
+        check('нигде нет старого имени «Vertu»', not legacy, str(legacy[:5]))
+        roulette_html = (ROOT / 'roulette.html').read_text(encoding='utf-8')
+        check('рулетка называется «Рулетка Vert»', 'Рулетка Vert' in roulette_html)
+        check('на колесе нарисовано VERT (в графике)',
+              "center: 'VERT'" in (ROOT / 'assets/vg/js/casino.js').read_text(encoding='utf-8')
+              and "opts.center || 'VERT'" in (ROOT / 'assets/vg/js/wheel-math.js').read_text(encoding='utf-8'))
+        check('логотип VERT GAMES на странице рулетки', 'VERT<b>GAMES</b>' in roulette_html)
+
+        # Flappy Bird: портретное поле живёт в движке, а не в CSS-локе.
+        flappy = (ROOT / 'games/flappy.html').read_text(encoding='utf-8')
+        check('Flappy: вертикальная сцена 9:16', 'aspect-ratio:9/16' in flappy and 'class="stage"' in flappy)
+        check('Flappy: логический мир 360×640 и вписывание по min()',
+              'const W=360, H=640' in flappy and 'Math.min(availW/W, availH/H)' in flappy)
+        check('Flappy: реакция на поворот и resize',
+              "addEventListener('orientationchange'" in flappy and "addEventListener('resize',onViewportChange)" in flappy)
+        check('Flappy: фиксированный шаг физики 60 Гц', 'const STEP=1000/60' in flappy)
+        game_kit = (ROOT / 'assets/vg/js/game-kit.js').read_text(encoding='utf-8')
+        check('в игре запрещено выделение текста (кроме полей ввода)',
+              'vg-no-select' in game_kit and '-webkit-user-select:none' in game_kit
+              and 'input,textarea,select,[contenteditable' in game_kit)
+        check('в игре отключено контекстное меню, но не в полях ввода',
+              "'contextmenu'" in game_kit and 'editable(event.target)' in game_kit)
+
+        print('== Игры: файлы, запуск и мобильная рамка')
+        unserved = []
+        for game in visible_games():
+            try:
+                with urllib.request.urlopen(base + '/' + game['file'], timeout=15) as response:
+                    if response.status != 200:
+                        unserved.append(game['id'])
+            except Exception:
+                unserved.append(game['id'])
+        check('все 11 файлов игр отдаются сервером', not unserved, str(unserved))
+        frames = []
+        for game in visible_games():
+            text = (ROOT / game['file']).read_text(encoding='utf-8', errors='ignore')
+            if 'game-kit.js' not in text:
+                frames.append(game['id'])
+        check('в каждой игре подключён game-kit.js', not frames, str(frames))
+        pages_no_viewport = []
+        for page in ('index.html', 'top.html', 'shop.html', 'casino.html', 'roulette.html',
+                     'profile.html', 'login.html', 'about.html', 'support.html', 'api.html',
+                     'privacy.html'):
+            text = (ROOT / page).read_text(encoding='utf-8')
+            if 'name="viewport"' not in text or 'viewport-fit=cover' not in text:
+                pages_no_viewport.append(page)
+        check('все страницы объявляют viewport с viewport-fit=cover',
+              not pages_no_viewport, str(pages_no_viewport))
+        css = (ROOT / 'assets/vg/css/platform.css').read_text(encoding='utf-8')
+        check('в CSS учтены безопасные зоны (safe-area-inset)',
+              'safe-area-inset-bottom' in css and 'safe-area-inset-left' in css)
+        check('нет горизонтального скролла страниц (overflow-x)',
+              'overflow-x' in css or 'overflow:hidden' in css)
 
         print('== Версия сборки и публикация колеса')
         status, version = guest.get('/api/version')
@@ -217,7 +299,7 @@ def main():
         status, _ = guest.get('/roulette.html')
         html_cache = {k.lower(): v for k, v in guest.last_headers.items()}.get('cache-control')
         check('HTML не кешируется (no-cache)', html_cache == 'no-cache', str(html_cache))
-        stamp = re.search(r'<meta name="vertu-build" content="([^"]+)">',
+        stamp = re.search(r'<meta name="vert-build" content="([^"]+)">',
                           (ROOT / 'roulette.html').read_text(encoding='utf-8'))
         check('страница помечена версией сборки в <meta>',
               bool(stamp) and stamp.group(1) == version.get('version'),
@@ -643,9 +725,10 @@ def main():
         check('настройки казино сохраняются', status == 200, str(data))
         status, data = admin.get('/api/admin/games')
         check('список игр в админке', status == 200 and len(data['games']) == 11, str(len(data.get('games', []))))
-        check('Redline скрыт из каталога игр',
-              all(g.get('id') != 'redline' for g in public_games_catalog(base)),
-              str([g.get('id') for g in public_games_catalog(base)]))
+        catalog = public_games_catalog(base)
+        check('каталог отдаёт все 11 игр, включая Redline',
+              len(catalog) == 11 and any(g.get('id') == 'redline' for g in catalog),
+              str([g.get('id') for g in catalog]))
         status, data = admin.get('/api/admin/items')
         check('админ: каталог предметов', status == 200 and len(data.get('items', [])) >= 15,
               str(len(data.get('items', []))))

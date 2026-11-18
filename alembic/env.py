@@ -1,4 +1,4 @@
-"""Alembic environment для Vertu Games.
+"""Alembic environment для Vert Games.
 
 URL берётся из переменной окружения ``DATABASE_URL`` (на Render — Internal
 Database URL). Если переменная не задана, Alembic честно падает с подсказкой,
@@ -33,7 +33,7 @@ def database_url() -> str:
         raise RuntimeError(
             'DATABASE_URL не задан.\n'
             'Задайте строку подключения Render (Internal Database URL), например:\n'
-            '  export DATABASE_URL=postgresql://vertu:secret@dpg-xxxx-a.frankfurt-postgres.render.com/vertu_games\n'
+            '  export DATABASE_URL=postgresql://vert:secret@dpg-xxxx-a.frankfurt-postgres.render.com/vert_games\n'
         )
     # Render иногда отдаёт postgres:// — SQLAlchemy принимает только postgresql://
     if url.startswith('postgres://'):

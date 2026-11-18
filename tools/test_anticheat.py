@@ -29,7 +29,7 @@ def _prepare_database() -> dict:
     """SQLite-файл или отдельная схема PostgreSQL (как в tools/test_economy.py)."""
     url = (os.environ.get('DATABASE_URL') or '').strip()
     if not url:
-        os.environ['VERTU_DB'] = '/tmp/anticheat-test-%d.sqlite3' % os.getpid()
+        os.environ['VERT_DB'] = '/tmp/anticheat-test-%d.sqlite3' % os.getpid()
         return {}
     schema = 'test_anti_' + uuid.uuid4().hex[:10]
     sep = '&' if '?' in url else '?'

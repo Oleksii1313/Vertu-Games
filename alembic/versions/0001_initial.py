@@ -1,4 +1,4 @@
-"""Начальная схема Vertu Games (PostgreSQL).
+"""Начальная схема Vert Games (PostgreSQL).
 
 Revision ID: 0001_initial
 Revises:

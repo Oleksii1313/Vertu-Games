@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="ru" data-title-en="Вход и регистрация — Vertu Games" data-title-en="Sign in and sign up — Vertu Games">
+<html lang="ru" data-title-en="Sign in and sign up — Vert Games">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
 <meta name="description" content="Регистрация по нику и паролю без e-mail, защищённая Cloudflare Turnstile. Сессии на сервере.">
-<meta name="vertu-build" content="2026-11-11-wheel-v3">
-<title>Вход и регистрация — Vertu Games</title>
+<meta name="vert-build" content="2026-11-18-vert-audit-v1">
+<title>Вход и регистрация — Vert Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,11 +22,11 @@
   <section class="auth-art">
     <div class="glow"></div>
     <div style="position:relative;z-index:2;max-width:520px">
-      <span class="eyebrow"><span data-ico="spark"></span> Vertu Games</span>
+      <span class="eyebrow"><span data-ico="spark"></span> Vert Games</span>
       <h2 class="grad" style="margin:14px 0 0"><span data-ru="Один аккаунт — вся платформа" data-en="One account — the whole platform">Один аккаунт — вся платформа</span></h2>
       <ul>
         <li><span data-ico="check"></span><span><span data-ru="Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется." data-en="Sign up with a nickname and a password. No e-mail, no address confirmation.">Регистрация по нику и паролю. E-mail не нужен, подтверждение почты не требуется.</span></span></li>
-        <li><span data-ico="check"></span><span><span data-ru="Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов)." data-en="The password is stored only as a salted PBKDF2 hash (310 000 rounds).">Пароль хранится только как PBKDF2-хеш с солью (310 000 раундов).</span></span></li>
+        <li><span data-ico="check"></span><span><span data-ru="Пароль хранится только как Argon2id-хеш с индивидуальной солью (старые хеши PBKDF2 обновляются при входе)." data-en="The password is stored only as a salted Argon2id hash (older PBKDF2 hashes are upgraded on sign-in).">Пароль хранится только как Argon2id-хеш с индивидуальной солью (старые хеши PBKDF2 обновляются при входе).</span></span></li>
         <li><span data-ico="check"></span><span><span data-ru="Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа." data-en="Cloudflare Turnstile is verified on the server, plus rate limits on sign-in attempts.">Cloudflare Turnstile проверяется на сервере, плюс ограничение попыток входа.</span></span></li>
         <li><span data-ico="check"></span><span><span data-ru="Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве." data-en="Balance, purchases and achievements live in PostgreSQL and are available on any device.">Баланс, покупки и достижения хранятся в PostgreSQL и доступны на любом устройстве.</span></span></li>
       </ul>
@@ -104,7 +104,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <span><span data-ru="© 2026 Vertu Games · Все права защищены" data-en="© 2026 Vertu Games · All rights reserved">© 2026 Vertu Games · Все права защищены</span></span>
+      <span><span data-ru="© 2026 Vert Games · Все права защищены" data-en="© 2026 Vert Games · All rights reserved">© 2026 Vert Games · Все права защищены</span></span>
       <span><span data-ru="V-монеты не имеют денежной стоимости и не подлежат обмену" data-en="V-coins have no monetary value and cannot be exchanged">V-монеты не имеют денежной стоимости и не подлежат обмену</span></span>
     </div>
   </div>

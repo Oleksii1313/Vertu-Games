@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertu Games — та же схема, что в ``schema_sql.py``, но для SQLite.
+"""Vert Games — та же схема, что в ``schema_sql.py``, но для SQLite.
 
 SQLite используется только локально и в тестах (``tools/check_platform.py``,
 ``unittest``), когда ``DATABASE_URL`` не задан. Набор таблиц и колонок совпадает

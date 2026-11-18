@@ -1,4 +1,4 @@
-# База данных Vertu Games (PostgreSQL)
+# База данных Vert Games (PostgreSQL)
 
 Продакшн-база — **PostgreSQL** (Render). SQLite используется только локально и в
 тестах, когда `DATABASE_URL` не задан.
@@ -27,7 +27,7 @@ alembic upgrade head
 python server.py
 
 # вариант 2: SQLite (быстро, без сервера)
-python server.py                           # создаст data/vertu.sqlite3
+python server.py                           # создаст data/vert.sqlite3
 ```
 
 Сервер сам создаёт схему при первом запуске (`CREATE TABLE IF NOT EXISTS`),
@@ -84,7 +84,7 @@ DATABASE_URL=... python tools/check_platform.py          # e2e-проверки
 
 ```bash
 DATABASE_URL=postgresql://user:pass@host:5432/db   # обязательна в продакшене
-VERTU_DB=data/vertu.sqlite3                        # только локально, если DATABASE_URL пуст
+VERT_DB=data/vert.sqlite3                        # только локально, если DATABASE_URL пуст
 DB_POOL_SIZE=5                                     # размер пула psycopg (free-план Render)
 WELCOME_COINS=100                                  # приветственный бонус
 ```

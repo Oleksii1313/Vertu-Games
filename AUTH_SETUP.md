@@ -1,4 +1,4 @@
-# VertGames: вход, регистрация и безопасность
+# Vert Games: вход, регистрация и безопасность
 
 Только **ник + пароль**, без email и без подтверждений. Аккаунты живут на
 сервере (PostgreSQL), баланс и прогресс привязаны к аккаунту, а не к браузеру.
@@ -10,7 +10,7 @@
 | `GAME_SIGNING_KEY` | отдельный HMAC-ключ билетов игровых сессий (не равен `SECRET_KEY`) |
 | `TRUSTED_PROXY` | `1` — доверять `X-Forwarded-For` от Render/Cloudflare |
 | `SECRET_KEY` | обязательна на проде (в `render.yaml` генерируется автоматически); используется как резервный пароль админки, если не задан `ADMIN_PASSWORD` |
-| `DATABASE_URL` | PostgreSQL; локально можно без неё (SQLite `data/vertu.sqlite3`) |
+| `DATABASE_URL` | PostgreSQL; локально можно без неё (SQLite `data/vert.sqlite3`) |
 | `PUBLIC_URL` | точный адрес сайта, включает `Secure`-куки и проверку Origin |
 | `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile для регистрации |
 | `TURNSTILE_REQUIRED` | `1` — капча обязательна (прод), `0` — выключена (локально/тесты) |

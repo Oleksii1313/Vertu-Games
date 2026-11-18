@@ -39,7 +39,7 @@
     VGWheel.draw(ctx, {
       size: size, rotation: current,
       segments: rules.wheel.segments, weights: rules.wheel.weights,
-      center: 'VERTU'
+      center: 'VERT'
     });
   }
 

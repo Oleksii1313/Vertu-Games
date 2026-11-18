@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vertu Games — единый слой данных (PostgreSQL; SQLite только для тестов).
+"""Vert Games — единый слой данных (PostgreSQL; SQLite только для тестов).
 
 Главные правила экономики:
 
@@ -47,7 +47,7 @@ MAX_BALANCE = 100_000_000
 
 USERNAME_RE = re.compile(r'^[A-Za-z0-9](?:[A-Za-z0-9 _.\-]{1,22})[A-Za-z0-9_.]$')
 RESERVED_NAMES = {'admin', 'administrator', 'root', 'moderator', 'support', 'system',
-                  'vertu', 'vertugames', 'null', 'undefined', 'constructor', 'prototype'}
+                  'vert', 'vertgames', 'null', 'undefined', 'constructor', 'prototype'}
 
 # Явный список колонок пользователя (в канонической схеме их больше, чем нужно
 # старым страницам; ``password_hash`` и служебные поля наружу не отдаём).
@@ -378,7 +378,7 @@ class PgDriver:
             max_size=int(os.environ.get('DB_POOL_SIZE', '5') or 5),
             timeout=float(os.environ.get('DB_POOL_TIMEOUT', '15') or 15),
             max_idle=60, max_lifetime=900, open=False,
-            kwargs={'connect_timeout': 10, 'application_name': 'vertu-games'},
+            kwargs={'connect_timeout': 10, 'application_name': 'vert-games'},
         )
         self.pool.open(wait=True, timeout=30)
 
@@ -1244,7 +1244,7 @@ class DataStore:
             rows = c.execute(
                 'SELECT a.id, a.name AS name_ru, a.name_en, a.description AS desc_ru, a.desc_en, '
                 'a.icon, a.reward AS coins, a.item_order AS item_order, '
-                'ua.unlocked_at AS unlocked FROM user_achievements ua '
+                'ua.unlocked_at FROM user_achievements ua '
                 'JOIN achievements a ON a.id=ua.achievement_id WHERE ua.user_id=? '
                 'ORDER BY ua.unlocked_at DESC', (int(user_id),)).fetchall()
         for row in rows:
@@ -1274,7 +1274,7 @@ class DataStore:
         with self.driver.transaction(isolation='read committed') as c:
             rows = c.execute(
                 'SELECT a.name AS name_ru, a.name_en, a.icon, a.reward AS coins, '
-                'ua.unlocked_at AS unlocked, u.username FROM user_achievements ua '
+                'ua.unlocked_at, u.username FROM user_achievements ua '
                 'JOIN achievements a ON a.id=ua.achievement_id '
                 'JOIN users u ON u.id=ua.user_id ORDER BY ua.unlocked_at DESC LIMIT ?',
                 (max(1, min(50, int(limit))),)).fetchall()
@@ -1409,6 +1409,14 @@ class DataStore:
         stats = dict(row or {})
         stats['today_staked'] = int(today_row['s']) if today_row else 0
         return stats
+
+    def casino_spins(self, user_id: int) -> int:
+        """Сколько раз игрок крутил колесо (платно и бесплатно) за всё время."""
+        with self.driver.transaction(isolation='read committed') as c:
+            row = c.execute("SELECT COUNT(*) AS n FROM casino_history "
+                            "WHERE user_id=? AND game_type IN ('wheel','wheel_free')",
+                            (int(user_id),)).fetchone()
+        return int(row['n']) if row else 0
 
     def casino_wheel_limits(self, user_id: int, free_limit: int = 1, paid_limit: int = 5) -> dict:
         """Сколько вращений «Рулетки Vert» осталось сегодня (сброс в 00:00 UTC)."""
@@ -1768,7 +1776,14 @@ def _build_store() -> DataStore:
         return DataStore(PgDriver(url))
     # SQLite — только локально/в тестах: PostgreSQL-схема недоступна, поэтому
     # включается упрощённая схема из schema_sqlite.py.
-    path = os.environ.get('VERTU_DB') or str(Path(__file__).resolve().parent / 'data' / 'vertu.sqlite3')
+    # Старое имя переменной (VERTU_DB) и старое имя файла (data/vertu.sqlite3)
+    # поддерживаются, чтобы обновление платформы не «потеряло» локальную базу.
+    data_dir = Path(__file__).resolve().parent / 'data'
+    path = (os.environ.get('VERT_DB') or os.environ.get('VERTU_DB') or '').strip()
+    if not path:
+        fresh = data_dir / 'vert.sqlite3'
+        legacy = data_dir / 'vertu.sqlite3'
+        path = str(fresh if fresh.exists() or not legacy.exists() else legacy)
     return DataStore(SqliteDriver(path))
 
 
