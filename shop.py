@@ -113,6 +113,30 @@ def buy(user_id: int, item_id: str) -> dict:
     return payload
 
 
+USERNAME_ITEM = 'username_change'
+USERNAME_PRICE = 1000
+
+
+def username_item() -> dict | None:
+    """Предмет-услуга «Смена ника» из каталога (цена берётся оттуда же)."""
+    for item in store.get_store().shop_items():
+        if item['id'] == USERNAME_ITEM:
+            return item
+    return None
+
+
+def rename(user_id: int, new_name: str) -> dict:
+    """Смена ника за V. Цена и валидация — на сервере, списание атомарно."""
+    item = username_item()
+    if not item:
+        raise ShopError(404, 'ITEM', 'Услуга смены ника недоступна')
+    price = int(item['price'] or 0)
+    result = store.get_store().rename_user(user_id, new_name, price, USERNAME_ITEM)
+    return {'ok': True, 'price': price, 'balance': result['balance'],
+            'name': result['name'], 'user': result['user'],
+            'achievements': grant_achievements(user_id)}
+
+
 def equip(user_id: int, item_id: str, kind: str | None = None) -> dict:
     data = store.get_store()
     items = {i['id']: i for i in data.shop_items()}

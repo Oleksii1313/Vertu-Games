@@ -228,6 +228,13 @@ body:not(.playing) #mcx-hud{opacity:0}
    посреди свайпа — именно из-за такого перехвата камера дёргалась, а страница
    уезжала. Соседние свойства убирают подсветку нажатия и меню долгого
    удержания. */
+#viewport{overflow:hidden}
+/* Кнопка полного экрана: только на телефоне и только в игре. */
+#fullscreen{display:none;position:absolute;right:calc(64px + env(safe-area-inset-right,0px));top:calc(60px + env(safe-area-inset-top,0px));z-index:6;width:44px;height:44px;padding:10px}
+#fullscreen svg{width:22px;height:22px}
+.touch.playing #fullscreen{display:grid}
+@media(orientation:landscape) and (max-height:600px){#fullscreen{right:calc(58px + env(safe-area-inset-right,0px));top:calc(52px + env(safe-area-inset-top,0px))}}
+html{overscroll-behavior:none}
 #viewport,#viewport canvas{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 </style><style id="vg-landscape-fullscreen">
 /* ==========================================================================
@@ -284,7 +291,7 @@ body:not(.playing) #mcx-hud{opacity:0}
 </head><body>
 <div id="viewport"></div>
 <header><div class="brand panel"><svg viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10"/></svg><div>MINICRAFT <small>VERT GAMES / 3D</small></div></div><div class="meters"><div class="meter heart panel"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg><div><span id="health">20 / 20</span><div class="bar"><i id="healthbar"></i></div></div></div><div class="meter panel"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="7.5" opacity=".4"/><path d="m8.5 8.5 3.5 7.5 3.5-7.5"/></svg><span id="score">0</span></div><div class="meter panel"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M10 2h4 M12 5V2 M12 9v5l3 2"/></svg><span id="timer">3:00</span></div><button id="pause" class="panel icon-button" title="Пауза" data-title-en="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button></div></header>
-<button id="lockButton" class="panel"><svg viewBox="0 0 24 24"><path d="m5 3 14 9-7 1-3 7Z"/></svg><span><span data-ru="Захват мыши" data-en="Capture mouse">Захват мыши</span></span></button><button id="weatherButton" class="panel" data-weather="clear" aria-label="Погода: ясно"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9 6.3 6.3m11.4 11.4 1.4 1.4M19.1 4.9 17.7 6.3M6.3 17.7 4.9 19.1"/></svg><span><span data-ru="Погода: ясно" data-en="Weather: clear">Погода: ясно</span></span></button><span><span data-ru="Захват мыши" data-en="Capture mouse">Захват мыши</span></span></button>
+<button id="lockButton" class="panel"><svg viewBox="0 0 24 24"><path d="m5 3 14 9-7 1-3 7Z"/></svg><span><span data-ru="Захват мыши" data-en="Capture mouse">Захват мыши</span></span></button><button id="weatherButton" class="panel" data-weather="clear" aria-label="Погода: ясно"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9 6.3 6.3m11.4 11.4 1.4 1.4M19.1 4.9 17.7 6.3M6.3 17.7 4.9 19.1"/></svg><span><span data-ru="Погода: ясно" data-en="Weather: clear">Погода: ясно</span></span></button>
 <div id="lookHint" class="panel" role="status"></div><div id="crosshair"></div><div id="vignette"></div><div id="hotbar" class="panel"></div>
 <div id="touch-controls">
  <button id="joystick" aria-label="Джойстик движения" data-aria-label-en="Movement joystick"><svg class="stick-arrows" viewBox="0 0 100 100" aria-hidden="true"><path d="m44 17 6-6 6 6m-12 66 6 6 6-6M17 44l-6 6 6 6m66-12 6 6-6 6"/></svg><span id="stickKnob"></span></button>
@@ -295,6 +302,7 @@ body:not(.playing) #mcx-hud{opacity:0}
  </div>
 </div>
 <div id="overlay"><section class="dialog"><div class="emblem"><svg viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7Z M3 7l9 5 9-5 M12 12v10"/></svg></div><p class="eyebrow">VERT GAMES · VOXEL WORLD</p><h1 id="title">MiniCraft 3D</h1><p id="subtitle"><span data-ru="Мир 256 × 256. Строй, сражайся и собирай монеты за 3 минуты." data-en="A 256 × 256 world. Build, fight and collect coins in 3 minutes.">Мир 256 × 256. Строй, сражайся и собирай монеты за 3 минуты.</span></p><div id="instructions"></div><button id="start"><span data-ru="Создать мир" data-en="Create world">Создать мир</span></button><noscript><span data-ru="Для игры включите JavaScript." data-en="Please enable JavaScript to play.">Для игры включите JavaScript.</span></noscript></section></div>
+<button id="fullscreen" class="panel icon-button" title="Полный экран" data-title-en="Fullscreen" aria-label="Полный экран" data-aria-label-en="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></svg></button>
 <button id="exit" class="panel icon-button" title="Вернуться в каталог" data-title-en="Back to the catalog"><svg viewBox="0 0 24 24"><path d="m10 5-7 7 7 7 M3 12h17"/></svg></button>
 <!-- Self-contained MiniCraft: Three.js, textures, touch controls and gameplay. -->
 <script id="minicraft-runtime">/*
@@ -5237,10 +5245,144 @@ function Wg(i) {
   mcxLocalCoins = i;
 }
 
+/* ====================== размер игрового поля ======================
+   Раньше поле жило по innerWidth/innerHeight: на телефоне это layout-размер,
+   а игрок видит visual viewport (адресная строка, панели, safe-area). Из-за
+   этого низ мира уезжал под панель браузера, а схлопывание адресной строки во
+   время свайпа давало resize.
+   ================================================================ */
+var mcxStage = { w: innerWidth, h: innerHeight, l: 0, t: 0 },
+  mcxFitTimer = 0,
+  mcxPerf = { acc: 0, n: 0, step: 0, cool: 0 };
+
+function mcxMeasure() {
+  let i = window.visualViewport,
+    e = innerWidth,
+    t = innerHeight,
+    n = 0,
+    s = 0;
+  i && i.width > 0 && i.height > 0 && (e = i.width, t = i.height, n = i.offsetLeft || 0, s = i.offsetTop || 0);
+  return mcxStage.w = Math.max(1, Math.round(e)), mcxStage.h = Math.max(1, Math.round(t)),
+    mcxStage.l = Math.round(n), mcxStage.t = Math.round(s), mcxStage
+}
+
+function mcxFitViewport() {
+  let i = mcxMeasure(),
+    e = $e("viewport");
+  e && (e.style.left = i.l + "px", e.style.top = i.t + "px", e.style.right = "auto", e.style.bottom = "auto",
+    e.style.width = i.w + "px", e.style.height = i.h + "px");
+  if (!Xe || !Wt) return;
+  Wt.aspect = i.w / i.h, Wt.updateProjectionMatrix(),
+    Ei && (Ei.position.x = Math.min(.45, .37 * Wt.aspect)),
+    Xe.setSize(i.w, i.h), lo = !0
+}
+
+/* Пересчёт после resize/orientation/visualViewport — с задержкой, чтобы не
+   дёргать рендерер на каждый пиксель анимации адресной строки. Ввод при этом
+   НЕ сбрасывается: иначе свайп обзора обрывался посреди жеста. */
+function mcxScheduleFit() {
+  mcxFitTimer || (mcxFitTimer = setTimeout(function () {
+    mcxFitTimer = 0, mcxFitViewport()
+  }, 30))
+}
+
+/* Плотность пикселей: на телефоне раньше жёстко ставилась 1 — отсюда «окно
+   стало меньше и мутнее». Начинаем с 1.75 и понижаем шагами, только если
+   кадры реально не успевают. */
+function mcxApplyDpr() {
+  if (!Xe) return;
+  let i = Math.min(devicePixelRatio || 1, fn ? 1.75 : 1.5),
+    e = Math.max(1, i - mcxPerf.step * .25);
+  Xe.setPixelRatio(e), lo = !0
+}
+
+function mcxPerfTick(i) {
+  if (!fn || !Xe || !(i > 0) || i > .25) return;
+  let e = mcxPerf;
+  if (e.acc += i, ++e.n < 90) return;
+  let t = e.acc / e.n;
+  e.acc = 0, e.n = 0, e.cool = Math.max(0, e.cool - 1),
+    e.cool || (t > .026 && e.step < 3 ? (e.step++, e.cool = 2, mcxApplyDpr()) : t < .015 && e.step > 0 && (e.step--, e.cool = 8, mcxApplyDpr()))
+}
+
+/* ====================== полный экран ======================
+   Fullscreen API включает только сам игрок нажатием кнопки. В iframe плеера
+   разрешение уже выдано (allow="fullscreen").
+   ======================================================== */
+function mcxFsElement() {
+  return $e("viewport") || document.documentElement
+}
+
+function mcxFsActive() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement)
+}
+
+function mcxFsSupported() {
+  let i = mcxFsElement();
+  return !!(i && (document.fullscreenEnabled || document.webkitFullscreenEnabled) && (i.requestFullscreen || i.webkitRequestFullscreen))
+}
+
+function mcxFsSync() {
+  let i = $e("fullscreen");
+  if (!i) return;
+  let e = mcxFsActive(),
+    t = e ? tt("\u041E\u0431\u044B\u0447\u043D\u044B\u0439 \u044D\u043A\u0440\u0430\u043D", "Exit fullscreen") : tt("\u041F\u043E\u043B\u043D\u044B\u0439 \u044D\u043A\u0440\u0430\u043D", "Fullscreen");
+  i.setAttribute("aria-pressed", e ? "true" : "false"), i.title = t, i.setAttribute("aria-label", t),
+    fn && mcxFsSupported() ? i.removeAttribute("hidden") : i.setAttribute("hidden", "")
+}
+
+function mcxToggleFullscreen() {
+  let i = mcxFsElement();
+  if (!i) return;
+  if (mcxFsActive()) {
+    let e = document.exitFullscreen || document.webkitExitFullscreen;
+    e && e.call(document);
+    return
+  }
+  let t = i.requestFullscreen || i.webkitRequestFullscreen;
+  if (t) try {
+    let n = t.call(i, { navigationUI: "hide" });
+    n && n.catch && n.catch(function () {})
+  } catch (e) {}
+}
+document.addEventListener("fullscreenchange", function () {
+  mcxFsSync(), mcxScheduleFit(), setTimeout(mcxScheduleFit, 120)
+});
+document.addEventListener("webkitfullscreenchange", function () {
+  mcxFsSync(), mcxScheduleFit()
+});
+(function () {
+  let i = $e("fullscreen");
+  i && (i.onclick = function (e) {
+    e.preventDefault(), e.stopPropagation(), mcxToggleFullscreen()
+  })
+})();
+
+/* ====================== жест «назад» ======================
+   На Android свайп от края экрана — системный «назад». Если игрок ведёт обзор
+   у края, браузер закрывал игру. Пока идёт игра, «назад» ставит паузу: страница
+   остаётся на месте, а выйти можно кнопкой или ещё одним «назад».
+   ========================================================= */
+var mcxHistGuard = 0;
+
+function mcxHistoryGuard() {
+  if (parent !== window || mcxHistGuard || !history.pushState) return;
+  try {
+    history.pushState({ mcxGuard: 1 }, ""), mcxHistGuard = 1
+  } catch (i) {}
+}
+addEventListener("popstate", function () {
+  if (!mcxHistGuard || Mt !== "playing") return;
+  sr();
+  try {
+    history.pushState({ mcxGuard: 1 }, "")
+  } catch (i) {}
+});
+
 function Xg() {
   Xe = new to({
     antialias: !1
-  }), Xe.setPixelRatio(Math.min(devicePixelRatio, fn ? 1 : 1.5)), Xe.setSize(innerWidth, innerHeight), $e("viewport").appendChild(Xe.domElement), Xe.domElement.addEventListener("webglcontextlost", t => {
+  }), $e("viewport").appendChild(Xe.domElement), mcxApplyDpr(), mcxFitViewport(), Xe.domElement.addEventListener("webglcontextlost", t => {
     t.preventDefault(), sr(), $e("subtitle").textContent = tt("\u0413\u0440\u0430\u0444\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043F\u043E\u0442\u0435\u0440\u044F\u043D. \u0417\u0430\u043A\u0440\u043E\u0439\u0442\u0435 \u0438 \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0438\u0433\u0440\u0443 \u0437\u0430\u043D\u043E\u0432\u043E.", "Graphics context lost. Close and reopen the game.")
   }), Ht = new Ts, Ht.background = new Be(8900331), Ht.fog = new Es(8900331, hi * .5, hi), Wt = new Dt(75, innerWidth / innerHeight, .1, hi + 20), Wt.rotation.order = "YXZ";
   /* Свет: тёплое небо + холодная земля (полусферический свет) и «солнце» с
@@ -5340,7 +5482,7 @@ function hs(i, e, t, n) {
 }
 
 function Yg() {
-  $e("overlay").hidden = !0, document.body.classList.add("playing")
+  $e("overlay").hidden = !0, document.body.classList.add("playing"), mcxFsSync(), mcxFitViewport()
 }
 
 function as() {
@@ -5384,7 +5526,7 @@ function Zl(i) {
   });
   /* Автоматический захват мыши больше не включается: по умолчанию обзор —
      зажатая ПКМ, а ЛКМ свободна для игры. Захват остаётся кнопкой справа. */
-  as()
+  as(), mcxHistoryGuard()
 }
 
 function sr() {
@@ -5522,7 +5664,7 @@ function jh(i) {
   ao = requestAnimationFrame(jh);
   let e = Math.max(0, (i - oo) / 1e3),
     t = Math.min(e, .05);
-  oo = i, Mt === "playing" ? ($g(t, e), Xe.render(Ht, Wt)) : lo && (Xe.render(Ht, Wt), lo = !1)
+  oo = i, mcxPerfTick(e), Mt === "playing" ? ($g(t, e), Xe.render(Ht, Wt)) : lo && (Xe.render(Ht, Wt), lo = !1)
 }
 
 /* ============================== мышь и обзор ==============================
@@ -5577,13 +5719,21 @@ function Qh(i, e, t) {
    интерфейса (кнопки, хотбар, панели перехватывают свои касания сами, они выше
    по z-index). Правая часть экрана — основная зона обзора, левый нижний угол
    отдан джойстику движения. */
+function mcxLookSplit() {
+  let i = mcxStage.w * .34,
+    e = $e("joystick");
+  if (e && e.getBoundingClientRect) {
+    let t = e.getBoundingClientRect();
+    t.width > 0 && (i = t.right + MCX_LOOK_PAD)
+  }
+  return i
+}
+
 function mcxInLookZone(i) {
-  let e = $e("joystick");
-  if (!e || !e.getBoundingClientRect) return !0;
-  let t = e.getBoundingClientRect();
-  if (!(t.width > 0) || !(t.height > 0)) return !0;
-  return !(i.clientX >= t.left - MCX_LOOK_PAD && i.clientX <= t.right + MCX_LOOK_PAD &&
-    i.clientY >= t.top - MCX_LOOK_PAD && i.clientY <= t.bottom + MCX_LOOK_PAD)
+  /* Слева — джойстик движения, справа — обзор. Граница идёт по правому краю
+     площадки джойстика, поэтому свайп обзора и ход персонажа никогда не
+     попадают в одно и то же касание. */
+  return i.clientX >= mcxLookSplit()
 }
 
 /* Начало обзора пальцем. Каждое касание живёт по своему pointerId, поэтому
@@ -5765,9 +5915,14 @@ document.addEventListener("visibilitychange", () => {
   document.hidden && sr()
 });
 addEventListener("contextmenu", i => i.preventDefault());
-addEventListener("resize", () => {
-  po(), Xe && (Wt.aspect = innerWidth / innerHeight, Wt.updateProjectionMatrix(), Ei.position.x = Math.min(.45, .37 * Wt.aspect), Xe.setSize(innerWidth, innerHeight), lo = !0)
+/* Размер поля меняется сам по себе (адресная строка, поворот, fullscreen), но
+   ввод при этом не сбрасывается: иначе свайп обзора и джойстик обрывались на
+   середине жеста. */
+addEventListener("resize", mcxScheduleFit);
+addEventListener("orientationchange", function () {
+  mcxScheduleFit(), setTimeout(mcxScheduleFit, 80), setTimeout(mcxScheduleFit, 320)
 });
+window.visualViewport && (visualViewport.addEventListener("resize", mcxScheduleFit), visualViewport.addEventListener("scroll", mcxScheduleFit));
 $e("pause").onclick = sr;
 $e("exit").onclick = () => {
   var pending = !!(F && F.coinsCollected > 0 && MCX_CLAIM.state === "idle");
@@ -5787,7 +5942,7 @@ ss = Dg({
   place: () => nr(!0)
 });
 addEventListener("pointerdown", i => {
-  i.pointerType === "touch" && !fn && (fn = !0, document.body.classList.add("touch"), document.body.classList.remove("drag-look"), clearTimeout(ls), document.pointerLockElement && document.exitPointerLock(), Xe && Xe.setPixelRatio(Math.min(devicePixelRatio, 1)), eu())
+  i.pointerType === "touch" && !fn && (fn = !0, document.body.classList.add("touch"), document.body.classList.remove("drag-look"), clearTimeout(ls), document.pointerLockElement && document.exitPointerLock(), Xe && mcxApplyDpr(), eu())
 }, {
   capture: !0
 });
@@ -5822,6 +5977,7 @@ function eu() {
     "<br><br><b>" + coins + "</b><br>" +
     tt("\u0414\u0435\u0440\u0435\u0432\u043D\u0438 \xB7 \u0436\u0438\u0442\u0435\u043B\u0438 \xB7 \u0441\u0443\u043D\u0434\u0443\u043A\u0438 \xB7 \u0432\u043E\u043B\u043D\u044B \u043C\u043E\u043D\u0441\u0442\u0440\u043E\u0432 \u043A\u0430\u0436\u0434\u0443\u044E \u043C\u0438\u043D\u0443\u0442\u0443",
       "Villages \xB7 villagers \xB7 chests \xB7 new monster waves every minute"),
+    mcxFsSync(),
     $e("joystick").setAttribute("aria-label", tt("\u0414\u0436\u043E\u0439\u0441\u0442\u0438\u043A \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F", "Movement joystick"))
 }
 
@@ -9029,8 +9185,6 @@ three/build/three.module.js:
   else setTimeout(grab, 60);
   addEventListener('load', grab);
 
-/* Начальная погода применяется после объявления всех модулей. */
-mcxSetWeather("clear", !0);
 })();
 </script>
 </body></html>

@@ -866,6 +866,65 @@ def main():
         status, data = relogin.post('/api/auth/login', {'username': 'CheckAlice', 'password': 'AlicePass123'})
         check('аккаунт сохранён в базе', status == 200 and data['user']['coins'] == coins_before, str(data))
 
+        # ------------------------------------------------------------------ #
+        # Магазин: смена ника за 1000 V — полный путь на живом сервере.
+        print('== Магазин: смена ника')
+        base2 = f'http://127.0.0.1:{port2}'
+        admin2 = Client(base2)
+        status, _ = admin2.post('/api/admin/login', {'password': 'CheckAdmin#2026'})
+        check('админ снова вошёл для выдачи V', status == 200, str(status))
+        status, data = relogin.get('/api/shop')
+        services = [i for i in data.get('items', []) if i.get('id') == 'username_change']
+        check('услуга смены ника есть в каталоге', status == 200 and len(services) == 1, str(status))
+        check('услуга стоит 1000 V и не «куплена навсегда»',
+              bool(services) and services[0]['price'] == 1000 and services[0].get('owned') is False
+              and services[0]['kind'] == 'service', str(services[:1]))
+
+        status, data = relogin.post('/api/shop/rename', {'name': 'CheckAlice'})
+        check('смена на текущий ник отклонена без списания',
+              status == 400 and data.get('code') == 'SAME_NAME', str(data))
+        status, data = relogin.post('/api/shop/rename', {'name': 'CheckBob'})
+        check('занятый ник отклонён', status == 409 and data.get('code') == 'NAME_TAKEN', str(data))
+        status, data = relogin.post('/api/shop/rename', {'name': '!!'})
+        check('некорректный ник отклонён', status == 400 and data.get('code') == 'BAD_NAME', str(data))
+
+        admin2.post('/api/admin/balance', {'username': 'CheckAlice', 'set': 500})
+        status, data = relogin.post('/api/shop/rename', {'name': 'CheckAliceNeo'})
+        check('без денег смена отклонена (402 NO_FUNDS)',
+              status == 402 and data.get('code') == 'NO_FUNDS', str(data))
+        check('после отказа баланс не изменился', relogin.get('/api/balance')[1]['coins'] == 500,
+              str(relogin.get('/api/balance')[1]))
+
+        admin2.post('/api/admin/balance', {'username': 'CheckAlice', 'set': 2500})
+        status, data = relogin.post('/api/shop/rename', {'name': 'CheckAliceNeo'})
+        check('смена ника проходит', status == 200 and data.get('ok') is True
+              and data.get('user', {}).get('username') == 'CheckAliceNeo', str(data))
+        check('списано ровно 1000 V', data.get('balance') == 1500, str(data.get('balance')))
+        check('цена в ответе — из каталога', data.get('price') == 1000, str(data.get('price')))
+
+        status, data = relogin.post('/api/shop/rename', {'name': 'CheckAliceNeo'})
+        check('повторный клик не списывает второй раз',
+              status == 400 and data.get('code') == 'SAME_NAME'
+              and relogin.get('/api/balance')[1]['coins'] == 1500, str(data))
+
+        old_login = Client(base2)
+        status, data = old_login.post('/api/auth/login', {'username': 'CheckAlice', 'password': 'AlicePass123'})
+        check('старый ник больше не пускает', status == 401, str(status))
+        neo = Client(base2)
+        status, data = neo.post('/api/auth/login', {'username': 'CheckAliceNeo', 'password': 'AlicePass123'})
+        check('вход под новым ником (ник сохранился)', status == 200
+              and data.get('user', {}).get('username') == 'CheckAliceNeo', str(data))
+        check('баланс переживает переименование и перезаход',
+              neo.get('/api/balance')[1]['coins'] == 1500, str(neo.get('/api/balance')[1]))
+        status, data = neo.get('/api/me')
+        check('профиль показывает новый ник', status == 200
+              and data.get('user', {}).get('username') == 'CheckAliceNeo', str(data.get('user', {}).get('username')))
+
+        status, data = admin2.get('/api/admin/transactions?limit=200&user=CheckAliceNeo')
+        charges = [r for r in data.get('items', []) if r.get('amount') == -1000]
+        check('в журнале ровно одно списание 1000 V за смену ника', len(charges) == 1
+              and charges[0].get('reference_id'), str(len(charges)))
+
         print('\n== Итог')
         print(f'   пройдено: {PASS}, провалено: {FAIL}')
         return 0 if FAIL == 0 else 1

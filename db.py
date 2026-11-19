@@ -67,6 +67,11 @@ class DuplicateUser(StoreError):
     """Ник уже занят."""
 
 
+class SameUsername(StoreError):
+    """Новый ник совпадает с текущим — менять нечего."""
+
+
+
 class InvalidCredentials(StoreError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -1201,6 +1206,37 @@ class DataStore:
                       'quantity=inventory.quantity+1', (int(user_id), item['id'], iso()))
             balance = self._wallet_for_update(c, int(user_id))
         return {'already': False, 'balance': balance, 'item': item}
+
+    def rename_user(self, user_id: int, new_name: str, price: int,
+                    item_id: str = 'username_change') -> dict:
+        """Смена ника за V-монеты: проверка баланса, списание и переименование
+        в одной транзакции.
+
+        Порядок специально такой: сначала переименование (с блокировкой строки
+        пользователя), потом списание. Если монет не хватило, ``_apply_delta``
+        бросает ``InsufficientFunds`` и транзакция откатывается целиком — ни
+        ник, ни баланс не меняются.
+        """
+        name = str(new_name or '').strip()
+        if not valid_username(name):
+            raise StoreError('Некорректный ник')
+        key = name.casefold()
+        with self.driver.transaction() as c:
+            row = c.execute('SELECT id, username, username_key FROM users WHERE id=? FOR UPDATE',
+                            (int(user_id),)).fetchone()
+            if row is None:
+                raise NotFound('Игрок не найден')
+            if row['username_key'] == key:
+                raise SameUsername('Это ваш текущий ник')
+            if c.execute('SELECT 1 FROM users WHERE username_key=?', (key,)).fetchone():
+                raise DuplicateUser('Ник уже занят')
+            self._apply_delta(c, int(user_id), -int(price), 'shop',
+                              f'Смена ника: {name}', f'rename:{int(user_id)}:{key}')
+            c.execute('UPDATE users SET username=?, username_key=? WHERE id=?',
+                      (name, key, int(user_id)))
+            fresh = c.execute(self._SELECT_USER + ' WHERE u.id=?', (int(user_id),)).fetchone()
+            balance = self._wallet_for_update(c, int(user_id))
+        return {'user': _user_row(fresh), 'balance': balance, 'name': name}
 
     def buy_item_free(self, user_id: int, item_id: str) -> dict:
         """Выдать предмет без списания (перенос старых покупок при импорте)."""

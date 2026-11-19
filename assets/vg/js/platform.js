@@ -836,6 +836,18 @@
       return data;
     });
   }
+  /* Смена ника за V: списание и переименование делает сервер одной транзакцией. */
+  function rename(name) {
+    return api('/api/shop/rename', { body: { name: name } }).then(function (data) {
+      if (data.user) setUser(data.user);
+      if (data.balance != null) updateCoins(data.balance);
+      (data.achievements || []).forEach(function (entry) {
+        var ach = entry.achievement || entry;
+        toast(T('Достижение: ' + (ach.name_ru || ach.name_en), 'Achievement: ' + (ach.name_en || ach.name_ru)));
+      });
+      return data;
+    });
+  }
   function equip(itemId) {
     return api('/api/shop/equip', { body: { item: itemId } }).then(function (data) {
       if (data.user) setUser(data.user);
@@ -1580,7 +1592,7 @@
   VG.onSessionChange = onSessionChange; VG.onLangChange = onLangChange;
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;
-  VG.purchase = purchase; VG.equip = equip; VG.openGame = openGame; VG.closeGame = closeGame;
+  VG.purchase = purchase; VG.equip = equip; VG.rename = rename; VG.openGame = openGame; VG.closeGame = closeGame;
   VG.setLang = setLang; VG.lang = currentLang; VG.LANGS = LANGS;
   VG.currentGameReward = currentGameReward;
   /*

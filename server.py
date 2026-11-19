@@ -1103,6 +1103,32 @@ def shop_buy():
     return jsonify(result)
 
 
+@app.post('/api/shop/rename')
+@login_required
+def shop_rename():
+    """Смена ника за V-монеты: одна транзакция, повторные клики не списывают дважды."""
+    data = json_body()
+    user = current_user()
+    if not rate('shop_rename', 10, 600):
+        return api_error(429, 'RATE_LIMIT', 'Слишком много попыток смены ника.')
+    try:
+        result = shop.rename(user['id'], str(data.get('name', '')))
+    except InsufficientFunds:
+        return api_error(402, 'NO_FUNDS', 'Недостаточно V-монет.')
+    except store.SameUsername as exc:
+        return api_error(400, 'SAME_NAME', str(exc))
+    except DuplicateUser as exc:
+        return api_error(409, 'NAME_TAKEN', str(exc))
+    except NotFound as exc:
+        return api_error(404, 'ITEM', str(exc))
+    except StoreError as exc:
+        return api_error(400, 'BAD_NAME', str(exc))
+    except shop.ShopError as exc:
+        return api_error(exc.status, exc.code, exc.message)
+    result['user'] = public_user(get_store().get_user(user['id']))
+    return jsonify(result)
+
+
 @app.post('/api/shop/equip')
 @login_required
 def shop_equip():

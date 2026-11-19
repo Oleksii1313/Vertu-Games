@@ -162,6 +162,13 @@ window.__mcx = () => ({
   F, Wt, startWorld: Kh, playGame: Zl, mc: () => Mt, canvas: Xe && Xe.domElement,
   look: () => (yt ? { id: yt.id, x: yt.x, y: yt.y, touch: yt.touch } : null),
   worldDir: () => ({ x: Gn.x, y: Gn.y, z: Gn.z }),
+  stage: () => ({ w: mcxStage.w, h: mcxStage.h, l: mcxStage.l, t: mcxStage.t }),
+  fit: () => mcxFitViewport(),
+  split: () => mcxLookSplit(),
+  dpr: () => (Xe ? Xe.getPixelRatio() : 0),
+  perf: () => ({ step: mcxPerf.step, n: mcxPerf.n, acc: mcxPerf.acc }),
+  perfTick: (dt) => mcxPerfTick(dt),
+  toggleFs: () => mcxToggleFullscreen(),
   touchMode: () => fn,
   keys: () => Object.keys(Vn).filter((k) => Vn[k]),
   consts: () => ({ SENS: MCX_LOOK_SENS, DRAG: MCX_LOOK_DRAG, TOUCH: MCX_LOOK_TOUCH }),
@@ -265,8 +272,12 @@ function lookDir() {
   const perPx = Math.abs(s120.yaw) / 120;
   check('чувствительность пальца 0.006–0.009 рад/px (≈0.4°/px)',
     perPx >= .006 && perPx <= .009, +perPx.toFixed(5));
-  check('свайп на всю ширину экрана даёт ~160–180°',
-    Math.abs(swipe(0, 400, W, 0).yaw) > 2.4, +(W * perPx).toFixed(3));
+  const splitX = api().split();
+  check('граница «движение / обзор» идёт по правому краю джойстика',
+    splitX > W * .3 && splitX < W * .45, +splitX.toFixed(1));
+  const zoneSwipe = swipe(splitX + 2, 400, W - splitX - 2, 0);
+  check('свайп по всей правой зоне даёт больше 100°',
+    Math.abs(zoneSwipe.yaw) > 1.7, +(Math.abs(zoneSwipe.yaw) * 180 / Math.PI).toFixed(1) + '°');
 
   api().F.yaw = 0; api().F.pitch = -.12; frames(1);
   const slow = swipe(200, 420, 90, -45, 30);
@@ -313,13 +324,13 @@ function lookDir() {
   await wait(40);
   api().F.yaw = 0; frames(1);
   const fid = ++seq;
-  pev('pointerdown', 100, 400, { id: fid });
+  pev('pointerdown', 150, 400, { id: fid });
   await wait(40);
-  pev('pointermove', 400, 400, { id: fid });                    // 300 px, но за 40 мс — это флинт
+  pev('pointermove', 450, 400, { id: fid });                    // 300 px, но за 40 мс — это флинт
   const fling = Math.abs(api().F.yaw) / K.TOUCH;
   check('быстрый реальный флинт не теряется, а ограничивается 240 px',
     fling > 200 && fling <= 240.001, +fling.toFixed(1));
-  pev('pointerup', 400, 400, { id: fid, buttons: 0 });
+  pev('pointerup', 450, 400, { id: fid, buttons: 0 });
 
   /* ------------------- 6. потерянный pointerup и переиспользование pointerId */
   api().F.yaw = 0; frames(1);
@@ -360,9 +371,11 @@ function lookDir() {
     +nearPad.yaw.toFixed(4));
   const rightZone = swipe(300, 300, 80, 0);
   check('правая часть экрана — зона обзора', Math.abs(rightZone.yaw) > .4, +rightZone.yaw.toFixed(3));
-  const topLeft = swipe(40, 200, 80, 0);
-  check('верхняя часть экрана тоже смотрит (палец не у края джойстика)', Math.abs(topLeft.yaw) > .4,
-    +topLeft.yaw.toFixed(3));
+  const leftZone = swipe(20, 260, 80, 0);
+  check('слева от джойстика камера не крутится (там только движение)', Math.abs(leftZone.yaw) < 1e-9,
+    +leftZone.yaw.toFixed(3));
+  const edgeLeft = swipe(splitX - 6, 300, 60, 0);
+  check('и вплотную слева от границы тоже', Math.abs(edgeLeft.yaw) < 1e-9, +edgeLeft.yaw.toFixed(3));
 
   /* -------------------------------------------- 9. несколько касаний сразу */
   api().F.yaw = 0; frames(1);
@@ -478,7 +491,93 @@ function lookDir() {
     Math.abs(api().F.yaw - yClamp + 200 * K.SENS) < 1e-6, +(api().F.yaw - yClamp).toFixed(5));
   Object.defineProperty(w.document, 'pointerLockElement', { value: null, configurable: true });
 
-  /* ------------------------------------- 13. ошибок и лишних событий нет */
+  /* ------------------- 13. поле, поворот экрана и полный экран ------------- */
+  /* Главный баг: свайп на телефоне схлопывает адресную строку → resize →
+     раньше здесь вызывался po() и обзор с джойстиком обрывались на середине. */
+  api().F.yaw = 0; api().F.pitch = -.12; frames(1);
+  const rid = ++seq;
+  pev('pointerdown', 260, 420, { id: rid });
+  pev('pointermove', 270, 420, { id: rid });
+  const midYaw = api().F.yaw;
+  Object.defineProperty(w, 'innerHeight', { value: 780, configurable: true });
+  w.dispatchEvent(new w.Event('resize'));
+  await wait(60);
+  frames(1);
+  check('resize не сбрасывает начатый жест обзора', api().look() !== null, api().look());
+  check('и не дёргает камеру сам по себе', Math.abs(api().F.yaw - midYaw) < 1e-9,
+    +(api().F.yaw - midYaw).toFixed(6));
+  pev('pointermove', 280, 420, { id: rid });
+  check('после resize жест продолжается ровно там, где был',
+    Math.abs(api().F.yaw - midYaw + 10 * K.TOUCH) < 1e-6, +(api().F.yaw - midYaw).toFixed(6));
+  pev('pointerup', 280, 420, { id: rid, buttons: 0 });
+
+  /* Поле подстраивается под видимую часть экрана (visualViewport), а не под
+     layout-размер: иначе низ мира уезжал под панель браузера. */
+  w.visualViewport = {
+    width: 390, height: 700, offsetLeft: 0, offsetTop: 60,
+    addEventListener() {}, removeEventListener() {}
+  };
+  api().fit();
+  const box = api().stage();
+  const vp = $('viewport');
+  check('visualViewport задаёт размер и смещение поля',
+    box.w === 390 && box.h === 700 && box.t === 60 && vp.style.height === '700px' && vp.style.top === '60px',
+    [box, vp.style.width, vp.style.height, vp.style.top]);
+  const cvStyle = api().canvas.style;
+  check('холст занимает ровно эту площадь (без полей и обрезки)',
+    cvStyle.width === '390px' && cvStyle.height === '700px', [cvStyle.width, cvStyle.height]);
+  w.visualViewport = null;
+  Object.defineProperty(w, 'innerHeight', { value: H, configurable: true });
+  api().fit();
+
+  /* Плотность пикселей на телефоне больше не роняется до 1. */
+  check('на телефоне картинка рисуется в повышенной плотности', api().dpr() > 1.2, +api().dpr().toFixed(2));
+  const step0 = api().perf().step;
+  for (let i = 0; i < 4000; i++) api().perfTick(.04);           // стабильно медленные кадры
+  const slowDpr = api().dpr();
+  check('при просадке FPS плотность понижается шагами',
+    api().perf().step > step0 && slowDpr < 1.75 && slowDpr >= 1, [+api().perf().step, +slowDpr.toFixed(2)]);
+  for (let i = 0; i < 40000; i++) api().perfTick(.012);         // кадры снова быстрые
+  check('когда FPS вернулся, плотность возвращается', api().dpr() > slowDpr, +api().dpr().toFixed(2));
+
+  /* Кнопка полного экрана: появляется на телефоне и включает Fullscreen API. */
+  const fsBtn = $('fullscreen');
+  let fsAsked = 0, fsExit = 0, fsOpts = null;
+  Object.defineProperty(w.document, 'fullscreenEnabled', { value: true, configurable: true });
+  vp.requestFullscreen = (opts) => { fsAsked++; fsOpts = opts; return Promise.resolve(); };
+  w.document.exitFullscreen = () => { fsExit++; return Promise.resolve(); };
+  api().playGame();
+  await wait(30);
+  frames(2);
+  check('кнопка полного экрана есть и видна на телефоне', !!fsBtn && !fsBtn.hasAttribute('hidden'),
+    fsBtn && fsBtn.getAttribute('aria-pressed'));
+  fsBtn.onclick({ preventDefault() {}, stopPropagation() {} });
+  check('кнопка вызывает requestFullscreen по жесту игрока',
+    fsAsked === 1 && fsOpts && fsOpts.navigationUI === 'hide', [fsAsked, fsOpts]);
+  Object.defineProperty(w.document, 'fullscreenElement', { value: vp, configurable: true });
+  w.document.dispatchEvent(new w.Event('fullscreenchange'));
+  check('в полном экране кнопка меняет подпись',
+    fsBtn.getAttribute('aria-pressed') === 'true' && api().canvas.style.width === '390px',
+    [fsBtn.title, api().canvas.style.width]);
+  fsBtn.onclick({ preventDefault() {}, stopPropagation() {} });
+  check('повторное нажатие выходит из полного экрана', fsExit === 1, fsExit);
+  Object.defineProperty(w.document, 'fullscreenElement', { value: null, configurable: true });
+  w.document.dispatchEvent(new w.Event('fullscreenchange'));
+
+  /* Жест «назад» у края экрана (Android) не закрывает игру, а ставит паузу. */
+  let pushed = 0;
+  w.parent = w;                                                 // игра открыта отдельно, не в iframe
+  const pushOrig = w.history.pushState;
+  w.history.pushState = function (state) { pushed++; return pushOrig.apply(w.history, arguments); };
+  api().playGame();
+  await wait(30);
+  check('игра ставит защитную запись в историю', pushed === 1, pushed);
+  w.dispatchEvent(new w.Event('popstate'));
+  check('жест «назад» во время игры ставит паузу, а не закрывает игру',
+    api().mc() === 'paused' && pushed === 2, [api().mc(), pushed]);
+  w.history.pushState = pushOrig;
+
+  /* ------------------------------------- 14. ошибок и лишних событий нет */
   check('ошибок в консоли нет', consoleErrors.length === 0, consoleErrors.slice(0, 3));
 
   console.log(results.join('\n'));

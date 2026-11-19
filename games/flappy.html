@@ -359,6 +359,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
 }
 </style>
 <script src="/assets/vg/js/game-kit.js"></script>
+<script src="/assets/vg/js/sfx.js"></script>
 <style id="flappy-immersive">
 /* ==========================================================================
    FLAPPY: поле занимает весь экран телефона.
@@ -395,6 +396,16 @@ body[data-game="flappy"]>.controls #btnJump{width:min(100%,360px);padding:10px 0
   body[data-game="flappy"]>.controls #btnJump{pointer-events:auto;width:min(46%,280px);
     background:rgba(34,58,44,.62);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(6px)}
 }
+/* Кнопка звука: та же «стеклянная» кнопка, что и остальные элементы поля. */
+.sound-btn{pointer-events:auto;display:grid;place-items:center;flex:0 0 auto;width:38px;height:38px;margin-left:6px;
+  border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(12,22,32,.72);color:#cfe9ff;cursor:pointer;
+  padding:0;-webkit-tap-highlight-color:transparent;backdrop-filter:blur(6px)}
+.sound-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sound-btn .ico-off{display:none}
+.sound-btn.muted{color:#8b94ab}
+.sound-btn.muted .ico-on{display:none}
+.sound-btn.muted .ico-off{display:block}
+@media(max-width:520px){.sound-btn{width:34px;height:34px}}
 </style>
 </head>
 <body data-game="flappy">
@@ -402,6 +413,11 @@ body[data-game="flappy"]>.controls #btnJump{width:min(100%,360px);padding:10px 0
   <div class="stat"><span class="l">SCORE</span><span class="v" id="scoreVal">0</span></div>
   <div class="stat"><span class="l">BEST</span><span class="v" id="bestVal">0</span></div>
   <div class="stat"><span class="l">COINS</span><span class="v" id="coinsVal">0 V</span></div>
+  <button type="button" class="sound-btn" id="btnSound" aria-pressed="true"
+          aria-label="Звук" data-aria-label-en="Sound" title="Звук" data-title-en="Sound">
+    <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>
+    <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>
+  </button>
 </div>
 <div class="stage"><canvas id="c" aria-label="Игровое поле Flappy Bird" data-aria-label-en="Flappy Bird playfield"></canvas></div>
 <div class="controls" aria-label="Управление игрой" data-aria-label-en="Game controls"><button type="button" id="btnJump" class="primary-action" aria-label="Взмах" data-aria-label-en="Flap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 14 7-7 7 7M12 7v14"/></svg><span><span data-ru="Взмах" data-en="Flap">Взмах</span></span></button></div>
@@ -516,9 +532,42 @@ function init(){
   document.getElementById('scoreVal').textContent=0;running=true;
   if(!window.VGReward)coinsEl.textContent='0 V';
 }
+/* ---------------------------------------------------------------------------
+   ЗВУК. Эффекты синтезируются в assets/vg/js/sfx.js (Web Audio), файлов нет:
+   взмах, очко за трубу, удар, конец игры и старт новой партии. Громкость
+   выставляет общий модуль, выбор «звук вкл/выкл» хранится в localStorage и
+   переживает перезагрузку. Если модуль не загрузился — игра просто молчит,
+   геймплей от этого не меняется.
+   ------------------------------------------------------------------------- */
+const SFX_ENGINE=(window.VG&&window.VG.sfx)||null;
+const SFX={
+  flap(){if(SFX_ENGINE)SFX_ENGINE.flap()},
+  score(){if(SFX_ENGINE)SFX_ENGINE.score()},
+  hit(){if(SFX_ENGINE)SFX_ENGINE.hit()},
+  over(){if(SFX_ENGINE)SFX_ENGINE.over()},
+  start(){if(SFX_ENGINE)SFX_ENGINE.start()}
+};
+(function bindSoundButton(){
+  const btn=document.getElementById('btnSound');
+  if(!btn)return;
+  const label=(ru,en)=>(window.VGT?VGT(ru,en):ru);
+  function paint(){
+    const on=SFX_ENGINE?SFX_ENGINE.enabled():false;
+    btn.classList.toggle('muted',!on);
+    btn.setAttribute('aria-pressed',on?'true':'false');
+    const title=on?label('Звук: вкл','Sound: on'):label('Звук: выкл','Sound: off');
+    btn.title=title;btn.setAttribute('aria-label',title);
+  }
+  btn.addEventListener('click',function(event){
+    event.preventDefault();event.stopPropagation();
+    if(SFX_ENGINE){SFX_ENGINE.unlock();SFX_ENGINE.toggle();}
+    paint();
+  });
+  paint();
+})();
 const bestEl=document.getElementById('bestVal');bestEl.textContent=best;
 const coinsEl=document.getElementById('coinsVal');
-function jump(){if(running){bird.vy=FLAP;bird.rot=-.45}}
+function jump(){if(running){bird.vy=FLAP;bird.rot=-.45;SFX.flap()}}
 VGInput.tap('btnJump',jump);VGInput.tap(scan,jump);
 /* Тап по свободному полю вокруг вертикальной сцены тоже взмах: на телефоне
    палец часто попадает мимо уменьшенного холста. */
@@ -537,7 +586,7 @@ function update(){
   if(bird.y+bird.r>H-GROUND||bird.y-bird.r<0)return gameOver();
   if(frame%PIPE_EVERY===0)addPipe();
   for(let i=pipes.length-1;i>=0;i--){const p=pipes[i];p.x-=PIPE_SPEED;
-    if(!p.passed&&p.x+p.w<bird.x){p.passed=true;score++;document.getElementById('scoreVal').textContent=score;addCoin(1)}
+    if(!p.passed&&p.x+p.w<bird.x){p.passed=true;score++;document.getElementById('scoreVal').textContent=score;addCoin(1);SFX.score()}
     if(bird.x+bird.r-5>p.x&&bird.x-bird.r+5<p.x+p.w){if(bird.y-bird.r+5<p.topY||bird.y+bird.r-5>p.botY)return gameOver()}
     if(p.x+p.w<-100)pipes.splice(i,1);}
   groundX=(groundX-PIPE_SPEED)%24;frame++;
@@ -564,14 +613,14 @@ function paintReward(state) {
 }
 let overShown = false;
 function addCoin(n){if(window.VGReward)VGReward.add(n);else coins+=n;paintReward();}
-function gameOver(){running=false;saveBest();document.getElementById('fScore').textContent=score;
+function gameOver(){running=false;SFX.hit();setTimeout(function(){SFX.over()},200);saveBest();document.getElementById('fScore').textContent=score;
   document.getElementById('fBest').textContent=best;overShown=true;
   document.getElementById('fEarn').textContent='+'+rewardV()+' V';
   burst(bird.x,bird.y);document.getElementById('overlay').classList.add('show');
   if(window.VGReward)VGReward.finish('crash');else UIover();
 }
 function UIover(){paintReward();}
-function restart(){document.getElementById('overlay').classList.remove('show');overShown=false;
+function restart(){SFX.start();document.getElementById('overlay').classList.remove('show');overShown=false;
   if(window.VGReward)VGReward.reset();document.getElementById('fEarn').textContent='+0 V';init()}
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
 function burst(x,y){for(let i=0;i<26;i++)particles.push({x,y,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,life:1,c:Math.random()>.5?'#2b99a0':'#3730a0'})}

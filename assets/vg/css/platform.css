@@ -703,3 +703,20 @@ body[data-page="roulette"] .rl-table td:last-child,body[data-page="roulette"] .r
 @media (max-width:400px){
   body[data-page="roulette"] .rl-stakes{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* --------------------------------------------------------------------------
+   Окно смены ника (услуга магазина за V). Появляется только по кнопке
+   «Сменить ник» и закрывается крестиком, Esc, «Отменой» или кликом по фону.
+   -------------------------------------------------------------------------- */
+.vg-rename-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;background:#04070bcc;backdrop-filter:blur(6px)}
+.vg-rename-card{width:100%;max-width:430px;padding:24px;border-radius:18px}
+.vg-rename-card h3{margin:0 0 8px;font-size:20px}
+.vg-rename-card p{margin:0 0 10px;font-size:13.5px;line-height:1.55}
+.vg-rename-label{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:6px 0}
+.vg-rename-input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #ffffff2e;background:#0b1017;color:var(--text);font-size:15px;font-family:inherit}
+.vg-rename-input:focus{outline:2px solid var(--lime);outline-offset:1px}
+.vg-rename-hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+.vg-rename-error{min-height:18px;color:#ff8e83;font-size:12.5px;margin:6px 0 0}
+.vg-rename-actions{display:flex;gap:10px;margin-top:14px}
+.vg-rename-actions .btn{flex:1}
+@media(max-width:420px){.vg-rename-card{padding:18px}.vg-rename-actions{flex-direction:column-reverse}}
