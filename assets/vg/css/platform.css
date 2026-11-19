@@ -432,13 +432,19 @@ tbody tr:hover td{background:rgba(255,255,255,.025)}
 /* ---------- game play overlay ---------- */
 .play-overlay{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;background:#05060a;
   width:100vw;height:100vh;height:100dvh;
+  /* Пока игра открыта, страница под ней не «резинит» на iOS и не уезжает от
+     свайпа: жесты остаются внутри игры. */
+  overscroll-behavior:none;overscroll-behavior-y:none;touch-action:manipulation;
   padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+body.vg-playing{overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+body.vg-playing .site-header,body.vg-playing .site-footer{overscroll-behavior:none}
 .play-overlay.open{display:flex}
 .play-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(10,12,18,.96);
   padding-top:calc(10px + env(safe-area-inset-top,0px));flex-shrink:0}
 .play-bar h3{font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Рамка игры — ровно всё оставшееся место: ни чёрных полос, ни пересечения с шапкой. */
 .play-frame-wrap{flex:1 1 auto;position:relative;background:#000;min-height:0;min-width:0;overflow:hidden;
+  overscroll-behavior:contain;touch-action:manipulation;
   display:flex;align-items:stretch;justify-content:stretch}
 .play-frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000}
 body.vg-pseudo-full .site-header,body.vg-pseudo-full .site-footer{display:none!important}

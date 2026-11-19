@@ -2254,6 +2254,29 @@ function bootRedline() {
     } else showCam.viewport = new B.Viewport(0, 0, 1);
   }
   window.addEventListener("resize", resize);
+  /* Та же причина, что и в Sky-Isle: адресная строка меняет видимую высоту без
+     события resize — без пересчёта буфера картинка растягивается. Пересчёт
+     откладываем на кадр, чтобы скролл панели не дёргал рендер. */
+  let fitPending = 0;
+  const fitStage = () => {
+    if (fitPending) return;
+    fitPending = requestAnimationFrame(() => {
+      fitPending = 0;
+      try { resize(); } catch (e) {}
+    });
+  };
+  window.addEventListener("orientationchange", () => {
+    setTimeout(fitStage, 180);
+    setTimeout(fitStage, 420);
+  });
+  window.addEventListener("pageshow", fitStage);
+  if (window.visualViewport) {
+    visualViewport.addEventListener("resize", fitStage);
+    visualViewport.addEventListener("scroll", fitStage);
+  }
+  if (window.ResizeObserver && canvas.parentElement) {
+    new ResizeObserver(fitStage).observe(canvas.parentElement);
+  }
   function updateCityLighting(dt) {
     shadowTime += dt;
     if (shadowTime > 0.7) {

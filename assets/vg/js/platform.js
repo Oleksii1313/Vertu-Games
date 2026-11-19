@@ -1104,6 +1104,7 @@
     var langParam = lang();
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
+    document.body.classList.add('vg-playing');
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
     frame.onload = function () { ensureGameFocus(frame); };
@@ -1574,6 +1575,7 @@
     var frame = overlay.querySelector('.play-frame');
     if (frame) frame.src = 'about:blank';
     document.body.style.overflow = '';
+    document.body.classList.remove('vg-playing');
     VG.activeGame = null;
     VG.activeTicket = null;
     releaseGameFocus();
