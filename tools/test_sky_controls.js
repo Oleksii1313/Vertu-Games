@@ -108,8 +108,17 @@ check('джойстик отпускается на pointerup/cancel/lostpointer
   /for\(const ev of \['pointerup','pointercancel','lostpointercapture'\]\)\$\('stick'\)/.test(source));
 check('кнопки высоты держат палец (held) и снимают его',
   /\$\('up'\),\s*\$\('down'\)/.test(source) && /altOwners\.set\(e\.pointerId,btn\)/.test(source));
-check('обзор работает по pointerdown/move/up на холсте',
-  /canvas\.addEventListener\('pointerdown'/.test(source) && /canvas\.addEventListener\('pointermove'/.test(source));
+/* Обзор слушаем на документе: если поверх сцены окажется панель HUD, жест всё
+   равно доходит до игры (раньше такой жест терялся). */
+check('обзор работает по pointerdown/move/up на всей сцене',
+  /document\.addEventListener\('pointerdown',startLook,\{capture:true\}\)/.test(source) &&
+  /document\.addEventListener\('pointermove',moveLook,\{capture:true\}\)/.test(source) &&
+  /for\(const ev of \['pointerup','pointercancel'\]\)document\.addEventListener\(ev,endLook/.test(source));
+check('захват указателя не сбивает обзор (lostpointercapture при Pointer Lock)',
+  /addEventListener\('lostpointercapture'/.test(source) &&
+  /if\(document\.pointerLockElement===canvas\)return/.test(source));
+check('кнопки и джойстик обзор не перехватывают',
+  /function lookBlocked/.test(source) && /\.stick,\.keys,#map,#lgSheet/.test(source));
 check('ввод сбрасывается при потере фокуса и уходе вкладки',
   /addEventListener\('blur',\(\)=>\{clearInput\(\)/.test(source) && /visibilitychange/.test(source));
 check('поворот экрана пересчитывает сцену',
