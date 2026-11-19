@@ -296,6 +296,39 @@ GAMES = [
                        'the left, jump/mine/attack/action buttons on the right.',
     },
     {
+        'id': 'ocean', 'name': 'Океанские монеты', 'name_en': 'Ocean Coins',
+        'file': 'games/ocean-coins.html', 'icon': 'coin', 'tag': 'NEW',
+        'cat': ['Аркады', 'Приключения'], 'cat_en': ['Arcades', 'Adventure'],
+        'desc': 'Подводная охота за монетами с гарпуном',
+        'desc_en': 'An underwater coin hunt with a harpoon',
+        'reward': 3, 'daily': 300, 'event': 'coin',
+        # Единица награды — десять собранных монет: за забег их набирается
+        # немного, поэтому сервер ограничивает итог сотней единиц.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 100,
+        'session_units_per_sec': 0.06,
+        'how_ru': 'Каждые 10 собранных монет — 3 V, до 300 V в сутки. Сундуки, кристаллы '
+                  'и побеждённые хищники тоже приносят монеты.',
+        'how_en': 'Every 10 coins you collect pays 3 V, up to 300 V per day. Chests, crystals '
+                  'and defeated predators bring coins too.',
+        'long_ru': 'Пять подводных зон: коралловый риф, затонувший корабль, древний город, '
+                   'глубокая пещера и подводный вулкан. Собирайте монеты и кристаллы, '
+                   'открывайте сундуки и следите за кислородом.\n\nВ руках у водолаза — '
+                   'пневматический гарпун: копьё на тросе бьёт акул и хищных рыб. Заработанные '
+                   'монеты тратятся на улучшения и открытие новых зон. Прогресс сохраняется '
+                   'в браузере.',
+        'long_en': 'Five underwater zones: the coral reef, a sunken ship, an ancient city, a '
+                   'deep cave and an underwater volcano. Collect coins and crystals, open '
+                   'chests and watch your air supply.\n\nThe diver carries a pneumatic harpoon: '
+                   'a tethered spear hits sharks and predatory fish. Coins you earn buy '
+                   'upgrades and unlock new zones. Progress is saved in the browser.',
+        'controls_ru': 'WASD — плыть, Пробел — вверх, C — вниз, Shift — ускорение, ЛКМ или F — '
+                       'гарпан, мышь — камера, Esc — пауза. На телефоне: стик слева, гарпун, '
+                       'ускорение и вверх/вниз справа.',
+        'controls_en': 'WASD — swim, Space — rise, C — dive, Shift — boost, LMB or F — harpoon, '
+                       'mouse — camera, Esc — pause. On a phone: the stick on the left, the '
+                       'harpoon, boost and up/down on the right.',
+    },
+    {
         'id': 'omnom', 'name': 'Om Nom Паркур', 'name_en': 'Om Nom Parkour',
         'file': 'games/om-nom-parkour.html', 'icon': 'bolt', 'tag': 'NEW',
         'cat': ['Аркады', 'Экшен'], 'cat_en': ['Arcades', 'Action'],
@@ -500,7 +533,7 @@ ACHIEVEMENTS = [
 # Версия сборки: попадает в <meta name="vert-build">, в заголовок X-Build и в
 # /api/version. По ней видно, какая именно версия страниц реально отдаётся
 # сервером (а не закеширована браузером). Меняется при правках казино/колеса.
-APP_VERSION = '2026-12-03-crystal-hud-v1'
+APP_VERSION = '2026-12-04-ocean-coins-v1'
 
 # Колесо «Рулетки Vert»: 20 одинаковых секторов по 18°, только целые множители.
 #
