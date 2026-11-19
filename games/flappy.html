@@ -508,7 +508,8 @@ function fit(){
   const cssH=Math.max(1, Math.round(H*scale));
   scan.style.width=cssW+'px';
   scan.style.height=cssH+'px';
-  viewDpr=Math.min(2.5, Math.max(1, window.devicePixelRatio||1));
+  /* Плотность: до 2.5× на нормальном железе, 1.5× в лёгком режиме. */
+  viewDpr=Math.min((window.VGGame&&VGGame.maxDpr?VGGame.maxDpr():2.5), Math.max(1, window.devicePixelRatio||1));
   const bw=Math.max(1, Math.round(cssW*viewDpr));
   const bh=Math.max(1, Math.round(cssH*viewDpr));
   if(scan.width!==bw||scan.height!==bh){scan.width=bw;scan.height=bh;}

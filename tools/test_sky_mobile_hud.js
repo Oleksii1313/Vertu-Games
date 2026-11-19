@@ -58,6 +58,10 @@ check('CSS игры: внутри шторки блоки статичные, б
   /#lgSheet \.mission\{position:static/.test(gameCss) &&
   /#lgSheet #lgPanel\{position:static/.test(gameCss) &&
   /#lgSheet \.map-card\{position:static/.test(gameCss), null);
+check('CSS игры: кнопка камеры ушла из-под кнопки «вниз» в правый верх',
+  /body\[data-input=touch\] \.camera-reset\{top:calc\(112px/.test(gameCss) &&
+  /body\[data-input=touch\] \.camera-reset\{[^}]*bottom:auto/.test(gameCss) &&
+  /body\[data-input=touch\] \.camera-reset\{[^}]*right:calc\(12px/.test(gameCss), null);
 check('CSS игры: телеметрия на телефоне уходит под верхнюю строку',
   /body\[data-input=touch\] \.telemetry\{top:calc\(74px/.test(gameCss), null);
 check('CSS игры: режим «без подсказок» прячет панель, карточку, карту и телеметрию',
@@ -90,7 +94,9 @@ check('безопасные зоны есть и в телефоне (max-width:
 check('движок: preserveDrawingBuffer больше не мешает MSAA',
   !/preserveDrawingBuffer:true/.test(source), null);
 check('движок: рендер в физических пикселях экрана',
-  /setHardwareScalingLevel\(1\)/.test(source), null);
+  /setHardwareScalingLevel\(SKY_LOW\?1\.5:1\)/.test(source), null);
+check('движок: ?perf=low из платформы сразу снижает плотность (слабый ПК)',
+  /SKY_LOW=\/\[\?&\]perf=low\//.test(source), null);
 check('движок: адаптивное понижение плотности при просадке кадров',
   /setHardwareScalingLevel\(1\.5\)/.test(source) && /slowStreak>90/.test(source), null);
 
@@ -180,7 +186,7 @@ check('десктоп: подсказки возвращаются', !desk.doc.b
 /* --- сборка совпадает с исходником --- */
 check('сборка games/sky-isle.html содержит те же правки HUD',
   built.includes('#lgSheet{position:fixed') && built.includes("btn.textContent = open ? '×' : '☰';") &&
-  built.includes('engine.setHardwareScalingLevel(1)'), null);
+  built.includes('engine.setHardwareScalingLevel(SKY_LOW?1.5:1)'), null);
 
 const failed = results.filter((r) => r.startsWith('FAIL'));
 console.log(results.join('\n'));

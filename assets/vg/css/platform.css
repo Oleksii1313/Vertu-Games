@@ -429,6 +429,31 @@ tbody tr:hover td{background:rgba(255,255,255,.025)}
 .footer-bottom{border-top:1px solid var(--line);padding:16px 0;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--dim)}
 .age{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:1px solid var(--line-2);font-weight:800;font-size:11px}
 
+/* ---------- лёгкий режим для слабых машин ----------
+   Слабый GPU не тянет «стекло» и тяжёлые тени: включаем атрибут data-lowend
+   (его ставит platform.js по deviceMemory/ядрам/saveData или ?perf=low) и
+   убираем только дорогие эффекты. Цвета, отступы и вся вёрстка остаются. */
+html[data-lowend="1"] .site-header,
+html[data-lowend="1"] .play-bar,
+html[data-lowend="1"] .play-overlay,
+html[data-lowend="1"] .modal-card,
+html[data-lowend="1"] .mobile-nav,
+html[data-lowend="1"] .play-focus-hint,
+html[data-lowend="1"] .vg-rename-overlay,
+html[data-lowend="1"] .vg-report{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html[data-lowend="1"] .game-card,
+html[data-lowend="1"] .feature-card,
+html[data-lowend="1"] .hero-orb,
+html[data-lowend="1"] .auth-art .glow{box-shadow:none!important;filter:none!important}
+/* Анимации «на постоянку» (вращение орбов, пульсации) на слабом железе
+   выключаем — они не несут смысла, но жгут батарею и кадры. */
+html[data-lowend="1"] .hero-orb,
+html[data-lowend="1"] .auth-art .glow,
+html[data-lowend="1"] .spin-slow{animation:none!important}
+/* Тяжёлые участки вне экрана браузер не раскладывает до прокрутки. */
+html[data-lowend="1"] .site-footer,
+html[data-lowend="1"] .game-grid{content-visibility:auto;contain-intrinsic-size:1px 720px}
+
 /* ---------- game play overlay ---------- */
 .play-overlay{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;background:#05060a;
   width:100vw;height:100vh;height:100dvh;
@@ -770,3 +795,10 @@ body[data-page="roulette"] .rl-table td:last-child,body[data-page="roulette"] .r
 .vg-cover-swatch.vg-cover-aurora{background:linear-gradient(135deg,#2ee6c8,#8b5cf6)}
 .vg-cover-swatch.vg-cover-grid{background:linear-gradient(135deg,#0b1218,#c6ff3d33)}
 .vg-cover-swatch.vg-cover-sunset{background:linear-gradient(135deg,#ff2d95,#ff963c)}
+
+/* Уважение к настройке «уменьшить движение»: анимации остаются, но
+   мгновенными — экономит кадры и не мешает тем, кому motion мешает. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;
+    transition-duration:.001ms!important;scroll-behavior:auto!important}
+}

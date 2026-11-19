@@ -21,6 +21,33 @@
     if (html != null) node.innerHTML = html;
     return node;
   }
+  /* ------------------------------------------------------------- low-end ---
+     «Лёгкий режим» для слабых машин: тяжёлые эффекты (backdrop-blur, большие
+     тени, лишние слои композитинга) выключаются атрибутом на <html>, а игры
+     получают ?perf=low и рисуют в меньшей плотности. Ничего не удаляется:
+     на нормальном железе всё работает как раньше. Принудительно —
+     ?perf=low / ?perf=high в адресе страницы.
+     ------------------------------------------------------------------------ */
+  function detectLowEnd() {
+    var forced = '';
+    try { forced = new URLSearchParams(location.search).get('perf') || ''; } catch (e) {}
+    if (forced === 'high') return false;
+    if (forced === 'low') return true;
+    try {
+      var memory = navigator.deviceMemory || 0;      // ГБ, только Chromium
+      var cores = navigator.hardwareConcurrency || 0;
+      var save = !!(navigator.connection && navigator.connection.saveData);
+      return save || (memory > 0 && memory <= 4) || (cores > 0 && cores <= 2);
+    } catch (e) { return false; }
+  }
+  var LOW_END = detectLowEnd();
+  try {
+    var rootEl = document.documentElement;
+    if (LOW_END) rootEl.setAttribute('data-lowend', '1');
+    else rootEl.removeAttribute('data-lowend');
+  } catch (e) {}
+  VG.lowEnd = function () { return LOW_END; };
+
   /* Языки сайта: русский и английский. Значение хранится в атрибуте lang у
      <html>, поэтому его видят и вложенные страницы, и игры в iframe. */
   var LANGS = ['ru', 'en'];
@@ -1107,7 +1134,7 @@
      */
     var frame = overlay.querySelector('.play-frame');
     if (frame && VG.activeGame && VG.activeGame.file) {
-      var wanted = VG.activeGame.file + '?lang=' + next;
+      var wanted = VG.activeGame.file + '?lang=' + next + (LOW_END ? '&perf=low' : '');
       if (frame.getAttribute('src') !== wanted) frame.src = wanted;
     }
     syncFullscreenButton();
@@ -1185,11 +1212,16 @@
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     document.body.classList.add('vg-playing');
+    /* Телефон: сразу просим настоящий полный экран — тогда браузер убирает
+       адресную строку и боковые кнопки, и игра занимает весь экран. Вызов
+       идёт из обработчика клика, поэтому браузер считает его действием
+       пользователя; если нельзя (iOS Safari) — мягко уходим в CSS-режим. */
+    if (coarsePointer()) enterFullscreenOnOpen();
     setupPlayerBar(overlay);
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
     frame.onload = function () { ensureGameFocus(frame); };
-    frame.src = game.file + '?lang=' + langParam;
+    frame.src = game.file + '?lang=' + langParam + (LOW_END ? '&perf=low' : '');
     if (focusTimer) clearTimeout(focusTimer);
     focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
     bindGameKeyBridge();
@@ -1572,6 +1604,35 @@
     return document.fullscreenElement || document.webkitFullscreenElement
       || document.mozFullScreenElement || document.msFullscreenElement || null;
   }
+  /* Просим полный экран у оверлея (или у документа). Если браузер отказал —
+     включаем «псевдополный» режим: игра всё равно займёт 100dvh, а шапка и
+     подвал сайта уже скрыты классом vg-playing. */
+  function enterFullscreenOnOpen() {
+    var overlay = $('#playOverlay');
+    if (!overlay || fullscreenElement()) return;
+    var targets = [overlay, document.documentElement];
+    for (var i = 0; i < targets.length; i++) {
+      var t = targets[i];
+      var fn = t && (t.requestFullscreen || t.webkitRequestFullscreen
+        || t.mozRequestFullScreen || t.msRequestFullscreen);
+      if (!fn) continue;
+      try {
+        var maybe = fn.call(t, { navigationUI: 'hide' });
+        if (maybe && typeof maybe.then === 'function') {
+          maybe.then(function () { syncFullscreenButton(); }, function () {
+            enterPseudoFullscreenClasses(); syncFullscreenButton();
+          });
+        } else {
+          setTimeout(function () {
+            if (!fullscreenElement()) { enterPseudoFullscreenClasses(); syncFullscreenButton(); }
+          }, 320);
+        }
+        return;
+      } catch (e) {}
+    }
+    enterPseudoFullscreenClasses();
+    syncFullscreenButton();
+  }
   function exitFullscreen() {
     var call = document.exitFullscreen || document.webkitExitFullscreen
       || document.mozCancelFullScreen || document.msExitFullscreen;
@@ -1696,8 +1757,9 @@
     var overlay = $('#playOverlay');
     if (!overlay) return;
     overlay.classList.remove('open');
-    overlay.classList.remove('immersive', 'bar-hidden');
+    overlay.classList.remove('immersive', 'bar-hidden', 'pseudo-full');
     if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
+    if (fullscreenElement()) exitFullscreen();
     var frame = overlay.querySelector('.play-frame');
     if (frame) frame.src = 'about:blank';
     document.body.style.overflow = '';
