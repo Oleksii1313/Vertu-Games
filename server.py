@@ -47,7 +47,7 @@ ADMIN_COOKIE = 'vg_admin'
 STATIC_WHITELIST = {
     'index.html', 'top.html', 'roulette.html', 'casino.html', 'admin.html', 'shop.html',
     'profile.html', 'login.html', 'about.html', 'support.html', 'api.html', 'privacy.html',
-    'coin.svg', 'robots.txt', 'manifest.webmanifest', 'sw.js',
+    'coin.svg', 'robots.txt', 'manifest.webmanifest',
 }
 STATIC_PREFIXES = ('assets/', 'games/', 'docs/')
 STATIC_SUFFIXES = {'.html', '.js', '.css', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.json',
@@ -289,18 +289,6 @@ def serve_file(rel: str):
     response = make_response(send_from_directory(ROOT, rel))
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['Referrer-Policy'] = 'same-origin'
-    # Манифест и service worker — часть «устанавливаемого приложения»: без
-    # правильного MIME-типа браузер не считает платформу PWA, а без
-    # Service-Worker-Allowed воркер не может управлять всем сайтом.
-    if rel.endswith('.webmanifest'):
-        response.headers['Content-Type'] = 'application/manifest+json'
-        response.headers['Cache-Control'] = 'no-cache'
-        return response
-    if rel == 'sw.js':
-        response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
-        response.headers['Service-Worker-Allowed'] = '/'
-        response.headers['Cache-Control'] = 'no-cache'
-        return response
     if rel.endswith('.html'):
         response.headers['Cache-Control'] = 'no-cache'
     elif rel.startswith('assets/vg/') and Path(rel).suffix.lower() in ('.js', '.css'):

@@ -456,66 +456,14 @@ html[data-lowend="1"] .game-grid{content-visibility:auto;contain-intrinsic-size:
 
 /* ---------- game play overlay ---------- */
 .play-overlay{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;background:#05060a;
-  /* 100% растягивает оверлей по экрану даже там, где 100dvh не поддержан
-     (старые WebView): игра не должна сжиматься в прямоугольник по центру. */
-  width:100%;height:100vh;height:100dvh;min-height:100%;
+  width:100vw;height:100vh;height:100dvh;
   /* Пока игра открыта, страница под ней не «резинит» на iOS и не уезжает от
      свайпа: жесты остаются внутри игры. */
   overscroll-behavior:none;overscroll-behavior-y:none;touch-action:manipulation;
-  /* Никаких отступов у самого кадра. Раньше здесь стояли safe-area-inset-*,
-     и в ландшафте iPhone «челка» вырезала из игры по 44 px слева и справа —
-     это и были чёрные полосы по бокам на скриншотах. Игра теперь идёт от
-     края до края, а безопасные зоны соблюдают только органы управления
-     плеера (кнопка «Выйти» и панель) — они ниже это и делают. */
-  padding:0}
+  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
 body.vg-playing{overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
 body.vg-playing .site-header,body.vg-playing .site-footer{overscroll-behavior:none}
 .play-overlay.open{display:flex}
-/* ------------------------------------------------------------------ загрузка
-   Пока кадр игры не загрузился, вместо чёрного прямоугольника — спокойный
-   индикатор с названием игры. Он же страхует от «вечной» загрузки: через
-   9 секунд появляется кнопка «Обновить». */
-.play-loader{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;
-  background:radial-gradient(circle at 50% 42%,#141b27,#05060a 72%);color:#eaf1f6;
-  transition:opacity .25s ease}
-.play-loader[hidden]{display:none}
-.play-loader-done{opacity:0;pointer-events:none}
-.play-loader b{font:700 15px/1.25 inherit;letter-spacing:.01em;max-width:min(80%,420px)}
-.play-loader-hint{font-size:12px;color:#9fb0bf;max-width:min(80%,420px)}
-.play-loader-ring{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.13);
-  border-top-color:#c6ff3d;border-right-color:#2ee6c8;animation:play-spin .85s linear infinite}
-@keyframes play-spin{to{transform:rotate(360deg)}}
-.play-loader-retry{margin-top:4px;min-height:34px}
-.play-loader-slow .play-loader-ring{animation-duration:1.9s;border-top-color:#ff2d95}
-@media (prefers-reduced-motion:reduce){.play-loader-ring{animation-duration:2.6s}}
-html[data-lowend="1"] .play-loader{background:#05060a}
-
-/* Кнопка «Выйти» поверх игры. Панель плеера уезжает через 3 секунды, и без
-   этой кнопки выйти можно было только «угадав» язычок сверху. Кнопка живёт в
-   том же углу, где была кнопка панели, и появляется только когда панели нет —
-   две кнопки выхода одновременно не показываются никогда. */
-.play-exit-chip{display:none;position:absolute;z-index:9;
-  top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);
-  align-items:center;gap:4px;height:32px;padding:0 12px 0 7px;border-radius:999px;min-height:0;min-width:0;
-  border:1px solid rgba(255,255,255,.2);background:rgba(8,12,18,.66);
-  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
-  color:#eef4f8;font:700 12px/1 var(--font-body,'Lato',system-ui,sans-serif);letter-spacing:.04em;
-  cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:.9;
-  transition:opacity .18s ease,background .18s ease,border-color .18s ease}
-.play-exit-chip svg{width:14px;height:14px;flex:0 0 auto}
-.play-exit-chip:hover,.play-exit-chip:focus-visible{opacity:1;border-color:rgba(255,45,149,.6);background:rgba(255,45,149,.24)}
-.play-overlay.bar-hidden .play-exit-chip{display:inline-flex}
-.play-overlay.open:not(.immersive) .play-exit-chip{display:none}
-@media (max-width:400px){.play-exit-chip{height:30px;padding:0 10px 0 6px;font-size:11px}}
-
-/* Кнопка выхода. Выход из игры — главное действие панели, поэтому она
-   отличается от служебных кнопок: рамка и лёгкая подсветка при наведении. */
-.play-bar .play-exit{order:-1;flex:0 0 auto;border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.05);color:#f3f7fb;gap:4px;min-height:34px}
-.play-bar .play-exit:hover,.play-bar .play-exit:focus-visible{background:rgba(255,45,149,.16);
-  border-color:rgba(255,45,149,.5);color:#fff}
-.play-bar .play-exit svg{width:14px;height:14px;flex:0 0 auto}
 .play-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(10,12,18,.96);
   padding-top:calc(10px + env(safe-area-inset-top,0px));flex-shrink:0}
 .play-bar h3{font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -569,6 +517,33 @@ body.vg-playing .mobile-nav{display:none!important}
 .play-fs-float svg{width:16px;height:16px}
 html[data-lowend="1"] .play-fs-float{box-shadow:none}
 
+/* Кнопка выхода всегда под рукой. Когда панель уезжает (телефон, полный
+   экран), кнопка «Выйти» исчезает вместе с ней, и выйти можно было только
+   «угадав» язычок сверху. Этот компактный чип живёт в левом верхнем углу и
+   появляется ровно тогда, когда панели нет — две кнопки выхода одновременно
+   не показываются никогда. */
+.play-exit-chip{display:none;position:absolute;z-index:9;
+  top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);
+  align-items:center;gap:4px;height:32px;padding:0 12px 0 7px;border-radius:999px;min-height:0;min-width:0;
+  border:1px solid rgba(255,255,255,.2);background:rgba(8,12,18,.66);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  color:#eef4f8;font:700 12px/1 var(--font-body,'Lato',system-ui,sans-serif);letter-spacing:.04em;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:.9;
+  transition:opacity .18s ease,background .18s ease,border-color .18s ease}
+.play-exit-chip svg{width:14px;height:14px;flex:0 0 auto}
+.play-exit-chip:hover,.play-exit-chip:focus-visible{opacity:1;border-color:rgba(255,45,149,.6);background:rgba(255,45,149,.24)}
+.play-overlay.bar-hidden .play-exit-chip{display:inline-flex}
+.play-overlay.open:not(.immersive) .play-exit-chip{display:none}
+@media (max-width:400px){.play-exit-chip{height:30px;padding:0 10px 0 6px;font-size:11px}}
+
+/* Кнопка выхода в самой панели — главное действие, поэтому она отличается от
+   служебных кнопок рамкой и подсветкой при наведении. */
+.play-bar .play-exit{order:-1;flex:0 0 auto;border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.05);color:#f3f7fb;gap:4px;min-height:34px}
+.play-bar .play-exit:hover,.play-bar .play-exit:focus-visible{background:rgba(255,45,149,.16);
+  border-color:rgba(255,45,149,.5);color:#fff}
+.play-bar .play-exit svg{width:14px;height:14px;flex:0 0 auto}
+
 /* Телефон в ландшафте: игра на весь экран, панель плеера — тонкая полоса сверху,
    кнопки «Назад/Экран» остаются под большим пальцем. */
 @media (orientation:landscape) and (max-height:560px){
@@ -594,7 +569,7 @@ html[data-lowend="1"] .play-fs-float{box-shadow:none}
 .play-overlay:fullscreen .play-bar,.play-overlay:-webkit-full-screen .play-bar,
 .play-overlay.pseudo-full .play-bar{position:absolute;top:0;left:0;right:0;z-index:6;
   border:0;background:linear-gradient(180deg,rgba(5,6,10,.9),rgba(5,6,10,0));
-  opacity:.55;transition:opacity .18s ease}
+  opacity:.35;transition:opacity .18s ease}
 .play-overlay:fullscreen .play-bar:hover,.play-overlay:fullscreen .play-bar:focus-within,
 .play-overlay.pseudo-full .play-bar:hover,.play-overlay.pseudo-full .play-bar:focus-within{opacity:1}
 /* Телефон: панель плеера компактная, чтобы у игры оставалась высота экрана. */

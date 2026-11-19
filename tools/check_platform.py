@@ -342,14 +342,8 @@ def main():
         check('все страницы объявляют viewport с viewport-fit=cover',
               not pages_no_viewport, str(pages_no_viewport))
         css = (ROOT / 'assets/vg/css/platform.css').read_text(encoding='utf-8')
-        # Кадр игры отдаётся целиком (без отступов), а безопасные зоны
-        # соблюдают панель, кнопка «Выйти» и кнопки самой игры: платформа
-        # измеряет вырез и отправляет его в кадр сообщением vg:safe.
-        check('органы управления плеера учитывают безопасные зоны (safe-area-inset)',
-              'safe-area-inset-top' in css and 'safe-area-inset-left' in css)
-        check('кадр игры отдаётся целиком, без боковых отступов',
-              not any('safe-area-inset-left' in m.group(0) and '.play-overlay' in m.group(0)
-                      for m in __import__('re').finditer(r'\.play-overlay\{[^}]*\}', css)))
+        check('в CSS учтены безопасные зоны (safe-area-inset)',
+              'safe-area-inset-bottom' in css and 'safe-area-inset-left' in css)
         check('нет горизонтального скролла страниц (overflow-x)',
               'overflow-x' in css or 'overflow:hidden' in css)
 

@@ -1115,8 +1115,11 @@
     overlay.querySelectorAll('.play-lang [data-lang]').forEach(function (button) {
       button.setAttribute('aria-pressed', String(button.getAttribute('data-lang') === next));
     });
-    var close = overlay.querySelector('[data-close]');
-    if (close) close.innerHTML = icon('chev', 15) + '<span>' + T('Назад', 'Back') + '</span>';
+    var close = overlay.querySelectorAll('[data-close]');
+    close.forEach(function (button) {
+      button.innerHTML = icon('chev', 15) + '<span>' + T('Выйти', 'Exit') + '</span>';
+      button.setAttribute('aria-label', T('Выйти из игры', 'Exit game'));
+    });
     var coins = overlay.querySelector('[data-action="play-coins"]');
     if (coins) coins.setAttribute('title', T('Баланс V-монет · нажмите, чтобы обновить', 'V-coin balance · tap to refresh'));
     var account = overlay.querySelector('[data-action="play-account"]');
@@ -1162,12 +1165,12 @@
       overlay.innerHTML =
         '<button type="button" class="play-grip" data-grip aria-label="' +
         T('Панель игрока', 'Player panel') + '"></button>' +
-        '<button type="button" class="play-exit-chip" data-close aria-label="' +
-        T('Выйти из игры', 'Exit game') + '">' + icon('chev', 14) +
-        '<span>' + T('Выйти', 'Exit') + '</span></button>' +
         '<button type="button" class="play-fs-float" data-fs-float hidden aria-label="' +
         T('Игра на весь экран', 'Play fullscreen') + '" title="' +
         T('Игра на весь экран', 'Play fullscreen') + '">' + icon('expand', 16) + '</button>' +
+        '<button type="button" class="play-exit-chip" data-close aria-label="' +
+        T('Выйти из игры', 'Exit game') + '">' + icon('chev', 14) +
+        '<span>' + T('Выйти', 'Exit') + '</span></button>' +
         '<div class="play-bar"><button type="button" class="btn btn-ghost btn-sm play-exit" data-close aria-label="' +
         T('Выйти из игры', 'Exit game') + '">' +
         icon('chev', 15) + '<span>' + T('Выйти', 'Exit') + '</span></button><h3></h3>' +
@@ -1183,25 +1186,9 @@
         '</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-pressed="false" title="' + T('На весь экран', 'Fullscreen') + '">' +
         icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
-        '<div class="play-frame-wrap">' +
-        /* Пока игра грузится, вместо чёрного прямоугольника — аккуратный
-           индикатор: игрок видит, что платформа работает, а не зависла. */
-        '<div class="play-loader" data-loader>' +
-        '<span class="play-loader-ring" aria-hidden="true"></span>' +
-        '<b data-loader-title>' + T('Загрузка игры', 'Loading game') + '</b>' +
-        '<span class="play-loader-hint" data-loader-hint>' + T('Секунду…', 'One moment…') + '</span>' +
-        '<button type="button" class="btn btn-ghost btn-sm play-loader-retry" data-loader-retry hidden>' +
-        T('Обновить', 'Reload') + '</button></div>' +
-        '<iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
+        '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelectorAll('[data-close]').forEach(function (button) {
         button.addEventListener('click', closeGame);
-      });
-      var loaderRetry = overlay.querySelector('[data-loader-retry]');
-      if (loaderRetry) loaderRetry.addEventListener('click', function () {
-        var f = overlay.querySelector('.play-frame');
-        if (!f) return;
-        showPlayLoader();
-        try { f.contentWindow.location.reload(); } catch (e) { f.src = f.src; }
       });
       overlay.querySelector('[data-grip]').addEventListener('click', togglePlayerBar);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
@@ -1234,51 +1221,26 @@
     rewardChip.textContent = '+' + (game.reward || 0) + ' V ' + T('за событие', 'per event');
     /* Литовское название есть не у всех игр — тогда показываем английское. */
     overlay.querySelector('h3').textContent = lang() === 'en' ? (game.name_en || game.name) : game.name;
-    var exitButton = overlay.querySelector('[data-close]');
-    exitButton.innerHTML = icon('chev', 15) + '<span>' + T('Выйти', 'Exit') + '</span>';
-    exitButton.setAttribute('aria-label', T('Выйти из игры', 'Exit game'));
+    overlay.querySelectorAll('[data-close]').forEach(function (button) {
+      button.innerHTML = icon('chev', 15) + '<span>' + T('Выйти', 'Exit') + '</span>';
+      button.setAttribute('aria-label', T('Выйти из игры', 'Exit game'));
+    });
     var frame = overlay.querySelector('.play-frame');
     var langParam = lang();
     overlay.classList.add('open');
-    /* Режим приложения: страница «замирает», оверлей прибит к экрану.
-       Геометрию дублируем инлайном — если у любого предка появится
-       transform/filter/contain, position:fixed перестал бы растягиваться на
-       весь экран, и вокруг игры осталась бы полоса сайта. */
-    overlay.style.position = 'fixed';
-    overlay.style.inset = '0';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.zIndex = '2147483000';
-    collapseBrowserChrome();
-    syncPlayerSize();
-    lockPageForPlay();
-    pushPlayHistory();
-    /* Полный экран просим на всех устройствах, не только на телефоне:
-       клик по игре — это действие пользователя, поэтому браузер вправе
-       развернуть окно. На компьютере это убирает адресную строку и вкладки,
-       на телефоне — панель браузера. Если браузер откажет (iOS Safari умеет
-       fullscreen только для видео, встроенные браузеры тоже) — остаёмся в
-       CSS-режиме: игра всё равно занимает 100dvh, а сайт вокруг скрыт. */
+    document.body.style.overflow = 'hidden';
+    document.body.classList.add('vg-playing');
+    /* Телефон: сразу просим настоящий полный экран — тогда браузер убирает
+       адресную строку и боковые кнопки, и игра занимает весь экран. Вызов
+       идёт из обработчика клика, поэтому браузер считает его действием
+       пользователя; если нельзя (iOS Safari) — мягко уходим в CSS-режим. */
     overlay.removeAttribute('data-fs-retry');
-    enterFullscreenOnOpen();
+    if (touchLike()) enterFullscreenOnOpen();
     setupPlayerBar(overlay);
     updateFsFloat();
-    /* Первый кадр может ещё не иметь размеров — проверяем дважды. */
-    setTimeout(ensureFrameFills, 120);
-    setTimeout(ensureFrameFills, 480);
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
-    frame.onload = function () {
-      hidePlayLoader();
-      ensureGameFocus(frame);
-      ensureFrameFills();
-      /* Безопасные зоны (вырез, «домашняя» полоса) сообщаем игре числами:
-         внутри iframe env() всегда нули, а кнопки не должны уезжать под них. */
-      setTimeout(postSafeInsets, 60);
-    };
-    showPlayLoader();
+    frame.onload = function () { ensureGameFocus(frame); };
     frame.src = game.file + '?lang=' + langParam + (LOW_END ? '&perf=low' : '');
     if (focusTimer) clearTimeout(focusTimer);
     focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
@@ -1649,12 +1611,8 @@
     var touch = touchLike();
     if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
     overlay.classList.remove('bar-hidden');
-    /* Панель уезжает сама не только на телефоне: в полном экране на
-       компьютере игра тоже должна занимать весь кадр, а не узкую полосу под
-       шапкой плеера. Мышь у верхнего края возвращает панель. */
-    var app = touch || !!fullscreenElement() || overlay.classList.contains('pseudo-full');
-    overlay.classList.toggle('immersive', app);
-    if (app) playerBarTimer = setTimeout(hidePlayerBar, 3000);
+    overlay.classList.toggle('immersive', touch);
+    if (touch) playerBarTimer = setTimeout(hidePlayerBar, 3000);
   }
 
   /* Псевдополноэкранный режим: overlay уже position:fixed/inset:0, добавляем
@@ -1861,7 +1819,7 @@
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
     updateFsFloat();
     var label = button.querySelector('span');
-    if (label) label.textContent = active ? T('В окно', 'Windowed') : T('Экран', 'Screen');
+    if (label) label.textContent = active ? T('Выйти', 'Exit') : T('Экран', 'Screen');
     // Иконка меняется между «развернуть» и «свернуть» вместе с состоянием.
     var glyph = button.querySelector('svg') && button.querySelector('svg').parentNode;
     if (glyph && glyph !== button) glyph.innerHTML = icon(active ? 'compress' : 'expand', 15);
@@ -1873,336 +1831,7 @@
   if (!syncFullscreenButton.bound) {
     syncFullscreenButton.bound = true;
     ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (name) {
-      document.addEventListener(name, onFullscreenChange);
-    });
-  }
-
-  /* ---------------------------------------------------- режим приложения */
-  /*
-   * Пока игра открыта, страница под ней не должна ни прокручиваться, ни
-   * «подпрыгивать» при появлении адресной строки во встроенных браузерах.
-   * body фиксируется на месте (с запоминанием позиции — иначе после выхода
-   * сайт вернулся бы к началу), а оверлей получает собственные 100%/100%.
-   */
-  var playScrollY = 0;
-  var playBodyLocked = false;
-  function lockPageForPlay() {
-    if (playBodyLocked) return;
-    playBodyLocked = true;
-    playScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-    var body = document.body;
-    body.classList.add('vg-playing');
-    body.style.overflow = 'hidden';
-    body.style.position = 'fixed';
-    body.style.top = (-playScrollY) + 'px';
-    body.style.left = '0';
-    body.style.right = '0';
-    body.style.width = '100%';
-    body.style.overscrollBehavior = 'none';
-    document.documentElement.style.overscrollBehavior = 'none';
-  }
-  function unlockPageForPlay() {
-    var body = document.body;
-    body.classList.remove('vg-playing');
-    body.style.overflow = '';
-    body.style.position = '';
-    body.style.top = '';
-    body.style.left = '';
-    body.style.right = '';
-    body.style.width = '';
-    body.style.overscrollBehavior = '';
-    document.documentElement.style.overscrollBehavior = '';
-    if (playBodyLocked) {
-      playBodyLocked = false;
-      /* Возврат к тому месту каталога, откуда игрок ушёл в игру. */
-      try { window.scrollTo(0, playScrollY); } catch (e) {}
-      playScrollY = 0;
-    }
-  }
-  /* Кнопка «Назад» телефона/браузера должна выводить из игры на платформу,
-     а не уводить со страницы. Один pushState на игру, один back при выходе —
-     история остаётся ровной при любом количестве открытий. */
-  var playHistoryPushed = false;
-  function pushPlayHistory() {
-    if (playHistoryPushed) return;
-    try {
-      history.pushState({ vgPlay: 1 }, '');
-      playHistoryPushed = true;
-    } catch (e) { playHistoryPushed = false; }
-  }
-  function popPlayHistory() {
-    if (!playHistoryPushed) return;
-    playHistoryPushed = false;
-    try { history.back(); } catch (e) {}
-  }
-  if (!openGame.historyBound) {
-    openGame.historyBound = true;
-    window.addEventListener('popstate', function () {
-      if (VG.activeGame) { playHistoryPushed = false; closeGame(); }
-    });
-  }
-
-  /* Кадр игры должен узнать о новом размере: после перехода в полный экран
-     (и обратно) window.resize внутри iframe приходит не всегда. */
-  function nudgeFrameResize() {
-    var overlay = $('#playOverlay');
-    if (!overlay) return;
-    var frame = overlay.querySelector('.play-frame');
-    if (!frame || !frame.contentWindow) return;
-    try { frame.contentWindow.postMessage({ type: 'vg:resize' }, location.origin); } catch (e) {}
-    frameFocusSoon();
-  }
-
-  /*
-   * Переход в полный экран и обратно меняет размер кадра — играм нужно об
-   * этом сказать, а панель плеера должна вести себя как в приложении:
-   * в полном экране она уезжает, вне его — остаётся на месте.
-   */
-  function onFullscreenChange() {
-    syncFullscreenButton();
-    var overlay = $('#playOverlay');
-    if (overlay && overlay.classList.contains('open')) {
-      var app = touchLike() || !!fullscreenElement() || overlay.classList.contains('pseudo-full');
-      overlay.classList.toggle('immersive', app);
-      if (app && !overlay.classList.contains('bar-hidden')) {
-        if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
-        playerBarTimer = setTimeout(hidePlayerBar, 3000);
-      }
-      if (!app) showPlayerBar();
-    }
-    nudgeFrameResize();
-    setTimeout(nudgeFrameResize, 220);
-  }
-
-  /* Компьютер: панель спрятана, но стоит подвести мышь к верхнему краю —
-     она возвращается, вместе с ней и кнопка «Выйти». */
-  var edgeRevealBound = false;
-  function bindEdgeReveal() {
-    if (edgeRevealBound) return;
-    edgeRevealBound = true;
-    document.addEventListener('mousemove', function (event) {
-      var overlay = $('#playOverlay');
-      if (!overlay || !overlay.classList.contains('open')) return;
-      if (!overlay.classList.contains('immersive')) return;
-      if (event.clientY > 64) return;
-      if (!overlay.classList.contains('bar-hidden')) return;
-      showPlayerBar();
-      if (playerBarTimer) clearTimeout(playerBarTimer);
-      playerBarTimer = setTimeout(hidePlayerBar, 3000);
-    }, { passive: true });
-  }
-  bindEdgeReveal();
-
-  /*
-   * Самопроверка «игра занимает весь кадр». Любая внешняя причина — transform у
-   * предка, старый WebView без dvh, сторонний скрипт со своими стилями — снова
-   * делает из игры прямоугольник по центру. Вместо того чтобы гадать, меряем
-   * рамку и кадр и при расхождении повторно растягиваем их инлайном.
-   */
-  /* --------------------------------------------------- безопасные зоны */
-  /*
-   * Игра теперь занимает экран от края до края, поэтому env(safe-area-inset-*)
-   * из платформы в кадр не попадают: у iframe свой viewport, и внутри него все
-   * env() равны нулю. Измеряем вырезы здесь и отправляем игре числа — она
-   * поднимает свои кнопки над «домашней» полосой iPhone и уводит их из-под
-   * «челки» (без единой чёрной полосы: фон остаётся игровым).
-   */
-  var safeProbe = null;
-  function safeInsets() {
-    var out = { top: 0, right: 0, bottom: 0, left: 0 };
-    try {
-      if (!safeProbe) {
-        safeProbe = document.createElement('div');
-        safeProbe.setAttribute('aria-hidden', 'true');
-        safeProbe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;' +
-          'pointer-events:none;padding-top:env(safe-area-inset-top,0px);' +
-          'padding-right:env(safe-area-inset-right,0px);' +
-          'padding-bottom:env(safe-area-inset-bottom,0px);' +
-          'padding-left:env(safe-area-inset-left,0px)';
-        document.body.appendChild(safeProbe);
-      }
-      var cs = getComputedStyle(safeProbe);
-      out.top = parseFloat(cs.paddingTop) || 0;
-      out.right = parseFloat(cs.paddingRight) || 0;
-      out.bottom = parseFloat(cs.paddingBottom) || 0;
-      out.left = parseFloat(cs.paddingLeft) || 0;
-    } catch (e) {}
-    return out;
-  }
-  function postSafeInsets() {
-    var overlay = $('#playOverlay');
-    if (!overlay || !overlay.classList.contains('open')) return;
-    var frame = overlay.querySelector('.play-frame');
-    if (!frame || !frame.contentWindow) return;
-    var insets = safeInsets();
-    insets.type = 'vg:safe';
-    try { frame.contentWindow.postMessage(insets, location.origin); } catch (e) {}
-  }
-  if (!postSafeInsets.bound) {
-    postSafeInsets.bound = true;
-    window.addEventListener('resize', function () { setTimeout(postSafeInsets, 120); }, { passive: true });
-    window.addEventListener('orientationchange', function () { setTimeout(postSafeInsets, 320); }, { passive: true });
-  }
-
-  /* --------------------------------------------------- высота кадра плеера */
-  /*
-   * Адресная строка и панели мобильного браузера уменьшают видимую область.
-   * 100vh при этом больше экрана (низ игры уезжает под панель браузера), а
-   * 100dvh поддерживают не все встроенные браузеры (Telegram, старые WebView).
-   * Поэтому высоту оверлея считаем по visualViewport — это ровно то, что видно
-   * на телефоне сейчас. Игра занимает всю видимую область, ничего не обрезано
-   * и не «начинается ниже».
-   */
-  function syncPlayerSize() {
-    var overlay = $('#playOverlay');
-    if (!overlay || !overlay.classList.contains('open')) return;
-    var vv = window.visualViewport;
-    var h = Math.round((vv && vv.height) || window.innerHeight || 0);
-    if (h <= 0) return;
-    var top = Math.round((vv && vv.offsetTop) || 0);
-    if (overlay.style.height !== h + 'px') overlay.style.height = h + 'px';
-    overlay.style.top = top + 'px';
-    overlay.style.bottom = 'auto';
-  }
-
-  /* Свернуть адресную строку там, где браузер это разрешает: короткий
-     «прокрут» вниз-вверх убирает панель Chrome на Android и даёт игре больше
-     места. На iOS Safari это не сработает — там остаётся visualViewport. */
-  function collapseBrowserChrome() {
-    try {
-      if ((window.scrollY || 0) <= 1) window.scrollTo(0, 1);
-    } catch (e) {}
-    setTimeout(function () {
-      try { window.scrollTo(0, 0); } catch (e) {}
-      syncPlayerSize();
-    }, 140);
-  }
-
-  if (!syncPlayerSize.bound) {
-    syncPlayerSize.bound = true;
-    window.addEventListener('resize', function () { setTimeout(syncPlayerSize, 60); }, { passive: true });
-    window.addEventListener('orientationchange', function () { setTimeout(syncPlayerSize, 260); }, { passive: true });
-    /* Выезд/уход панели браузера не всегда присылает resize окна, зато всегда
-       меняет visualViewport. */
-    if (window.visualViewport) {
-      try {
-        window.visualViewport.addEventListener('resize', function () { setTimeout(syncPlayerSize, 60); }, { passive: true });
-        window.visualViewport.addEventListener('scroll', function () { syncPlayerSize(); }, { passive: true });
-      } catch (e) {}
-    }
-  }
-
-  function ensureFrameFills() {
-    var overlay = $('#playOverlay');
-    if (!overlay || !overlay.classList.contains('open')) return;
-    syncPlayerSize();
-    var viewW = window.innerWidth || 0;
-    var viewH = window.innerHeight || 0;
-    var box = overlay.getBoundingClientRect ? overlay.getBoundingClientRect() : null;
-    if (box && viewW && viewH && (box.width < viewW - 1 || box.height < viewH - 1)) {
-      overlay.style.position = 'fixed';
-      overlay.style.inset = '0';
-      overlay.style.width = '100%';
-      /* Высоту не навязываем: её точнее всех знает visualViewport — им и
-         занимается syncPlayerSize() ниже (вызов в начале функции). */
-      syncPlayerSize();
-    }
-    var wrap = overlay.querySelector('.play-frame-wrap');
-    var frame = overlay.querySelector('.play-frame');
-    if (!wrap || !frame || !wrap.getBoundingClientRect || !frame.getBoundingClientRect) return;
-    var wr = wrap.getBoundingClientRect();
-    var fr = frame.getBoundingClientRect();
-    if (!wr.width || !wr.height) return;
-    if (Math.abs(fr.width - wr.width) > 2 || Math.abs(fr.height - wr.height) > 2) {
-      frame.style.position = 'absolute';
-      frame.style.inset = '0';
-      frame.style.width = '100%';
-      frame.style.height = '100%';
-      frame.style.border = '0';
-      nudgeFrameResize();
-    }
-  }
-  if (!openGame.frameFillBound) {
-    openGame.frameFillBound = true;
-    window.addEventListener('resize', function () { setTimeout(ensureFrameFills, 60); }, { passive: true });
-    window.addEventListener('orientationchange', function () { setTimeout(ensureFrameFills, 260); }, { passive: true });
-  }
-
-  /* --------------------------------------------------- индикатор загрузки */
-  /*
-   * Пока кадр игры не загрузился, поверх него виден индикатор с названием
-   * игры. Это не «украшение»: без него медленный ответ сервера выглядел как
-   * зависшая платформа — чёрный прямоугольник без единого признака жизни.
-   * Через 9 секунд индикатор сам предлагает кнопку «Обновить», поэтому
-   * бесконечной загрузки без выхода не бывает.
-   */
-  var loaderTimer = 0;
-  function showPlayLoader() {
-    var overlay = $('#playOverlay');
-    if (!overlay) return;
-    var box = overlay.querySelector('[data-loader]');
-    if (!box) return;
-    box.removeAttribute('hidden');
-    box.classList.remove('play-loader-done', 'play-loader-slow');
-    var retry = box.querySelector('[data-loader-retry]');
-    if (retry) retry.hidden = true;
-    var title = box.querySelector('[data-loader-title]');
-    if (title) {
-      var name = VG.activeGame ? (lang() === 'en' ? (VG.activeGame.name_en || VG.activeGame.name) : VG.activeGame.name) : '';
-      title.textContent = name ? name : T('Загрузка игры', 'Loading game');
-    }
-    var hint = box.querySelector('[data-loader-hint]');
-    if (hint) hint.textContent = T('Секунду…', 'One moment…');
-    if (loaderTimer) clearTimeout(loaderTimer);
-    loaderTimer = setTimeout(function () {
-      loaderTimer = 0;
-      var current = overlay.querySelector('[data-loader]');
-      if (!current || current.hasAttribute('hidden')) return;
-      current.classList.add('play-loader-slow');
-      var slow = current.querySelector('[data-loader-hint]');
-      if (slow) slow.textContent = T('Игра грузится дольше обычного…', 'The game is taking longer than usual…');
-      var again = current.querySelector('[data-loader-retry]');
-      if (again) again.hidden = false;
-    }, 9000);
-  }
-  function hidePlayLoader() {
-    if (loaderTimer) { clearTimeout(loaderTimer); loaderTimer = 0; }
-    var overlay = $('#playOverlay');
-    if (!overlay) return;
-    var box = overlay.querySelector('[data-loader]');
-    if (!box) return;
-    box.classList.add('play-loader-done');
-    box.setAttribute('hidden', '');
-  }
-
-  /* ------------------------------------------------------- прогрев игры */
-  /*
-   * Игра открывается мгновенно, если её HTML уже в кеше браузера. Прогреваем
-   * файл в тот момент, когда игрок только собирается играть (наведение,
-   * тап по карточке, открытие описания) — к нажатию «Играть» ответ уже
-   * получен и в iframe остаётся только отрисовать кадр.
-   */
-  var warm = {};
-  function prefetchGame(file) {
-    if (!file || warm[file]) return;
-    warm[file] = 1;
-    try {
-      var link = document.createElement('link');
-      link.rel = 'prefetch';
-      link.as = 'document';
-      link.href = file;
-      document.head.appendChild(link);
-    } catch (e) {}
-    try {
-      /* fetch даёт настоящий прогрев соединения и HTTP-кеша даже там, где
-         rel=prefetch игнорируется (Safari, встроенные браузеры). */
-      if (window.fetch) fetch(file, { credentials: 'same-origin', cache: 'no-cache' }).catch(function () {});
-    } catch (e) {}
-    /* Общие скрипты есть у каждой игры — их тоже греем. */
-    ['assets/vg/js/game-kit.js', 'assets/vg/js/sfx.js'].forEach(function (src) {
-      if (warm[src]) return;
-      warm[src] = 1;
-      try { fetch(src, { credentials: 'same-origin', cache: 'no-cache' }).catch(function () {}); } catch (e) {}
+      document.addEventListener(name, syncFullscreenButton);
     });
   }
 
@@ -2217,7 +1846,8 @@
      * короткий миг на отправку результата. Остальные игры закрываются как
      * прежде, без задержки.
      */
-    if (frame && VG.activeGame && VG.activeGame.id === 'minicraft' && !VG._closingFlush) {
+    var flushNeeded = VG.activeGame && (VG.activeGame.id === 'minicraft' || VG.activeGame.id === 'omnom');
+    if (frame && flushNeeded && !VG._closingFlush) {
       VG._closingFlush = true;
       try { frame.contentWindow.postMessage({ type: 'vg:flush' }, location.origin); } catch (e) {}
       setTimeout(function () {
@@ -2233,27 +1863,15 @@
     if (!overlay) return;
     overlay.classList.remove('open');
     overlay.classList.remove('immersive', 'bar-hidden', 'pseudo-full');
-    overlay.style.height = '';
-    overlay.style.top = '';
     overlay.removeAttribute('data-fs-retry');
     updateFsFloat();
     if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
     if (fullscreenElement()) exitFullscreen();
     var frame = overlay.querySelector('.play-frame');
     if (frame) frame.src = 'about:blank';
-    hidePlayLoader();
-    overlay.style.position = '';
-    overlay.style.inset = '';
-    overlay.style.top = '';
-    overlay.style.left = '';
-    overlay.style.width = '';
-    overlay.style.height = '';
-    overlay.style.zIndex = '';
-    unlockPageForPlay();
-    /* activeGame снимаем до history.back(): обработчик popstate не должен
-       принять собственный шаг назад за «игрок нажал Назад». */
+    document.body.style.overflow = '';
+    document.body.classList.remove('vg-playing');
     VG.activeGame = null;
-    popPlayHistory();
     VG.activeTicket = null;
     releaseGameFocus();
   }
@@ -2272,19 +1890,6 @@
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;
   VG.purchase = purchase; VG.equip = equip; VG.rename = rename; VG.openGame = openGame; VG.closeGame = closeGame;
-  VG.prefetchGame = prefetchGame;
-
-  /*
-   * PWA: установленное приложение открывается без адресной строки и вкладок
-   * браузера — это и есть «как настоящее приложение». Манифест объявлен в
-   * каждой странице, здесь только регистрируем сквозной service worker
-   * (он ничего не кеширует, чтобы деплой не приносил устаревший код).
-   */
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    window.addEventListener('load', function () {
-      try { navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {}); } catch (e) {}
-    });
-  }
   VG.setLang = setLang; VG.lang = currentLang; VG.LANGS = LANGS;
   VG.currentGameReward = currentGameReward;
   /*
