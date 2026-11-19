@@ -62,8 +62,21 @@ function makeEnv(session, opts) {
     },
   });
   const w = dom.window;
+  /* Заглушка Fullscreen API: запоминаем, просил ли плеер настоящий полный экран. */
+  const fsCalls = [];
+  w.Element.prototype.requestFullscreen = function () {
+    fsCalls.push(this.className || this.tagName);
+    /* Как настоящий браузер: заявляем документу текущий fullscreen-элемент. */
+    Object.defineProperty(w.document, 'fullscreenElement', { value: this, configurable: true });
+    return Promise.resolve();
+  };
+  w.document.exitFullscreen = function () {
+    fsCalls.push('exit');
+    Object.defineProperty(w.document, 'fullscreenElement', { value: null, configurable: true });
+    return Promise.resolve();
+  };
   w.eval(PLATFORM);
-  return { w, doc: w.document, errors };
+  return { w, doc: w.document, errors, fsCalls };
 }
 
 (async () => {
@@ -104,6 +117,8 @@ function makeEnv(session, opts) {
   w.VG.openGame(game);
   await wait(80);
   const overlay = doc.getElementById('playOverlay');
+  check('десктоп: полный экран сам не включается (только по кнопке)',
+    signed.fsCalls.length === 0, signed.fsCalls);
   check('плеер открылся', !!overlay && overlay.classList.contains('open'), !!overlay);
   check('страница помечена как «идёт игра»', doc.body.classList.contains('vg-playing'), doc.body.className);
   check('прокрутка страницы выключена', doc.body.style.overflow === 'hidden', doc.body.style.overflow);
@@ -146,6 +161,9 @@ function makeEnv(session, opts) {
   check('телефон: панель сначала видна', !phoneOverlay.classList.contains('bar-hidden'), null);
   const grip = phoneOverlay.querySelector('[data-grip]');
   check('телефон: «язычок» панели есть в разметке', !!grip, null);
+  /* Полный экран: браузер убирает адресную строку и боковые кнопки. */
+  check('телефон: при открытии игры плеер просит настоящий полный экран',
+    phone.fsCalls.some((c) => /play-overlay/.test(c)), phone.fsCalls);
   /* Панель уходит сама через 3 секунды — ждём реального таймера. */
   await wait(3400);
   check('телефон: панель сама уходит с экрана, чтобы не закрывать HUD игры',
@@ -158,6 +176,8 @@ function makeEnv(session, opts) {
     phoneOverlay.classList.contains('bar-hidden'), null);
   phone.w.VG.closeGame();
   await wait(80);
+  check('телефон: при выходе из игры полный экран снимается',
+    phone.fsCalls.includes('exit'), phone.fsCalls);
   check('телефон: после выхода режим и таймер убраны',
     !phoneOverlay.classList.contains('immersive') && !phoneOverlay.classList.contains('bar-hidden'),
     phoneOverlay.className);

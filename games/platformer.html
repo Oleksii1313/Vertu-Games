@@ -428,7 +428,7 @@ function fitBuffer(){
   const rect=c.getBoundingClientRect();
   VW=Math.max(320,Math.round(rect.width||c.clientWidth||window.innerWidth||360));
   VH=Math.max(320,Math.round(rect.height||c.clientHeight||((window.innerHeight||640)-140)));
-  const dpr=Math.min(2.5,Math.max(1,window.devicePixelRatio||1));
+  const dpr=Math.min((window.VGGame&&VGGame.maxDpr?VGGame.maxDpr():2.5),Math.max(1,window.devicePixelRatio||1));
   const bw=Math.round(VW*dpr),bh=Math.round(VH*dpr);
   if(c.width!==bw||c.height!==bh){c.width=bw;c.height=bh}
   if(ctx)ctx.setTransform(dpr,0,0,dpr,0,0);

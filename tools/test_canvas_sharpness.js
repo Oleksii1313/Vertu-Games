@@ -115,11 +115,11 @@ function read(rel) { return fs.readFileSync(path.join(root, rel), 'utf8'); }
 const sky = read('games/sky-isle.js');
 check('sky-isle: движок создаётся с adaptToDeviceRatio', /new B\.Engine\(canvas,true,\{[^}]*\},true\)/.test(sky));
 check('sky-isle: рендер в физических пикселях (1:1)',
-  sky.includes('engine.setHardwareScalingLevel(1)'));
+  sky.includes('engine.setHardwareScalingLevel(SKY_LOW?1.5:1)'));
 check('sky-isle: есть адаптивное понижение до 2× CSS', sky.includes('setHardwareScalingLevel(1.5)'));
 check('sky-isle: preserveDrawingBuffer не мешает MSAA', !sky.includes('preserveDrawingBuffer:true'));
 check('sky-isle: сборка совпадает с исходником',
-  read('games/sky-isle.html').includes('engine.setHardwareScalingLevel(1)'));
+  read('games/sky-isle.html').includes('engine.setHardwareScalingLevel(SKY_LOW?1.5:1)'));
 
 const red = read('games/redline.js');
 check('redline: adaptToDeviceRatio включён', red.includes('adaptToDeviceRatio: true'));
@@ -127,8 +127,10 @@ check('redline: плотность рендера не ниже 2× CSS (был�
 check('redline: сборка совпадает с исходником', read('games/redline.html').includes('adaptToDeviceRatio: true'));
 
 const rover = read('games/chefs-rover.js');
-check('chefs-rover: pixelRatio не ниже 2 (было 1.65)', rover.includes('setPixelRatio(Math.min(devicePixelRatio||1,2))'));
-check('chefs-rover: сборка совпадает с исходником', read('games/chefs-rover.html').includes('setPixelRatio(Math.min(devicePixelRatio||1,2))'));
+check('chefs-rover: pixelRatio не ниже 2 (было 1.65)',
+  rover.includes('setPixelRatio(Math.min(devicePixelRatio||1,/[?&]perf=low/.test(location.search)?1.25:2))'));
+check('chefs-rover: сборка совпадает с исходником',
+  read('games/chefs-rover.html').includes('?1.25:2))'));
 
 const mc = read('games/minicraft.html');
 check('minicraft: pixelRatio не ниже 2 (было 1.75)', mc.includes('fn ? 2 : 1.75'));

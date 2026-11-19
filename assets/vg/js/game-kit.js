@@ -21,6 +21,21 @@
      масштабируется до физического размера экрана без потери чёткости у мелких
      элементов интерфейса игры. */
 
+  /* Слабая машина: ?perf=low из платформы, Save-Data или мало памяти.
+     Тогда игры рисуют в 1.5× вместо 2.5× — резкость сохраняется, а кадров
+     вдвое больше. Ничего не отключается, только плотность. */
+  function lowEnd() {
+    try {
+      if (window.VG && typeof window.VG.lowEnd === 'function') return !!window.VG.lowEnd();
+      var forced = new URLSearchParams(location.search).get('perf');
+      if (forced === 'low') return true;
+      if (forced === 'high') return false;
+      var memory = navigator.deviceMemory || 0;
+      return memory > 0 && memory <= 4;
+    } catch (e) { return false; }
+  }
+  function maxDpr() { return lowEnd() ? 1.5 : 2.5; }
+
   function dpr() {
     return Math.min(MAX_DPR, Math.max(1, window.devicePixelRatio || 1));
   }
@@ -477,6 +492,8 @@
 
   window.VGGame = window.VGGame || {};
   window.VGGame.sharpCanvas = sharpCanvas;
+  window.VGGame.lowEnd = lowEnd;
+  window.VGGame.maxDpr = maxDpr;
   window.VGGame.sharpenEngine = sharpenEngine;
   window.VGGame.focus = focusGame;
   window.VGGame.dpr = dpr;

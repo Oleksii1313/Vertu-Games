@@ -636,7 +636,8 @@ function resize() {
   const side = VGInput.fitSquare(c) || S;      // поле — квадрат по меньшей стороне
   /* Буфер повторяет физическую плотность экрана: на большом поле или retina
      сетка и змейка остаются чёткими, а не растянутыми из 400 px. */
-  const dpr = window.devicePixelRatio || 1;
+  /* Полная плотность экрана, но на слабом устройстве ?perf=low режет до 1.5×. */
+  const dpr = Math.min(window.devicePixelRatio || 1, (window.VGGame&&VGGame.lowEnd&&VGGame.lowEnd()) ? 1.5 : 3);
   const scale = clamp((side / S) * dpr, 1, 3);
   const buffer = Math.round(S * scale);
   if (c.width !== buffer || c.height !== buffer) {

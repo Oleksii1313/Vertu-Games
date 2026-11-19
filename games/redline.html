@@ -851,7 +851,12 @@ function bootRedline() {
       adaptToDeviceRatio: true,
     });
   engine.setHardwareScalingLevel(
-    touch ? Math.max(1, (devicePixelRatio || 1) / 2) : 1,
+    // ?perf=low из платформы: на слабом ПК не гонимся за плотностью.
+    /[?&]perf=low/.test(location.search)
+      ? 1.5
+      : touch
+        ? Math.max(1, (devicePixelRatio || 1) / 2)
+        : 1,
   );
   const scene = new B.Scene(engine);
   scene.clearColor = new B.Color4(0.7, 0.7, 0.62, 1);

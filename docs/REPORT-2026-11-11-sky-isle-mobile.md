@@ -176,3 +176,70 @@ GET https://vert-games.onrender.com/api/session
 | `tools/test_captcha.py` | OK (17 проверок) |
 | остальные 30 наборов JS | без провалов |
 | `tools/check_platform.py` | 261/261 |
+
+---
+
+# Итерация 3 (скриншот с телефона): кнопка камеры, полный экран, резкость, слабые ПК
+
+Жалобы: «стрелка возврата камеры налезает на нижнюю стрелку», «уберите адресную
+строку и кнопки браузера», «сделайте хорошее разрешение для всех игр»,
+«оптимизируйте сайт для слабых ПК, но ничего не удаляйте».
+
+## 1. Кнопка «вернуть камеру»
+
+Была справа снизу, ровно под кнопкой «вниз» (`bottom:196px` на тач-экране) —
+палец попадал не туда. Теперь на тач-устройстве она в правом верхнем углу:
+
+```css
+body[data-input=touch] .camera-reset{
+  top:calc(112px + env(safe-area-inset-top,0px));
+  right:calc(12px + env(safe-area-inset-right,0px));
+  bottom:auto; left:auto; width:40px; height:40px;
+}
+@media (max-height:520px){ body[data-input=touch] .camera-reset{ top:calc(104px + ...) } }
+```
+
+На десктопе всё по-прежнему (кнопка висит справа снизу рядом с подсказками).
+Правка продублирована в `games/sky-isle.js` и `games/sky-isle.html` (сборка = исходник,
+проверяется `tools/test_sky_mobile_hud.js`).
+
+## 2. Настоящий полный экран при открытии игры
+
+`assets/vg/js/platform.js`: `openGame()` на устройстве с тач-экраном вызывает
+`requestFullscreen({navigationUI:'hide'})` на оверлее игры — адресная строка с
+названием сайта и боковые кнопки браузера уходят. Если браузер отказал —
+пробуем `documentElement`, затем запасной «псевдополный» режим (класс
+`pseudo-full`: оверлей на весь `100dvh` с учётом safe-area). `closeGame()`
+снимает и настоящий fullscreen, и псевдорежим. Десктоп не тронут: там полный
+экран включается кнопкой, как раньше.
+
+## 3. Резкость для всех игр
+
+Раньше часть игр рисовала в CSS-пикселях (мыло на телефоне с dpr≈3). Теперь
+общий знаменатель в `assets/vg/js/game-kit.js` (`maxDpr()` — 2.5×): его
+используют pong, platformer, shooter, 2048, flappy; snake и doodle берут полную
+плотность экрана; 3D-игры (sky-isle, redline, chefs-rover, minicraft) рисуют в
+физических пикселях. Подробности и таблица — `docs/PERFORMANCE.md`.
+
+## 4. Слабые ПК: лёгкий режим вместо удаления функций
+
+Ничего не удалено. Добавлено условие: `?perf=low|high` в адресе, а также
+автоопределение (`saveData`, `deviceMemory<=4`, `hardwareConcurrency<=2`).
+В лёгком режиме:
+
+* CSS отключает `backdrop-filter`, глубокие тени и постоянные анимации
+  (`html[data-lowend="1"]` в `platform.css`), блоки вне экрана получают
+  `content-visibility:auto`;
+* игры получают `&perf=low` и рисуют в 1.5× вместо 2.5× (3D — 1.25–1.5×);
+* добавлен `@media (prefers-reduced-motion: reduce)`.
+
+## 5. Тесты итерации
+
+| Набор | Результат |
+|---|---|
+| `tools/test_perf_lowend.js` (новый) | 22/22 |
+| `tools/test_play_overlay.js` | 35/35 (+3: авто-fullscreen, снятие при выходе, десктоп не трогаем) |
+| `tools/test_sky_mobile_hud.js` | 32/32 (+2: позиция кнопки камеры, `perf=low` в движке) |
+| `tools/test_canvas_sharpness.js` | 38/38 |
+| остальные наборы JS (31 файл) | без провалов (`test_snake` изредка 66/67 — флейк таймера, 12 повторных прогонов зелёные) |
+| `tools/check_platform.py` | 261/261 |

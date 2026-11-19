@@ -349,7 +349,9 @@ try{
    Плотность рендера = физические пиксели экрана (1:1), это максимум резкости.
    Если телефон не тянет, цикл кадров ниже один раз снижает плотность до 1.5. */
  const engine=new B.Engine(canvas,true,{stencil:true,antialias:true,powerPreference:'high-performance'},true);
- engine.setHardwareScalingLevel(1);
+ /* ?perf=low из платформы (слабый ПК/телефон): сразу 1.5, без ожидания просадки. */
+ const SKY_LOW=/[?&]perf=low/.test(location.search);
+ engine.setHardwareScalingLevel(SKY_LOW?1.5:1);
  const scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#b5d9e5ff');scene.fogMode=B.Scene.FOGMODE_LINEAR;scene.fogStart=450;scene.fogEnd=1900;scene.fogColor=B.Color3.FromHexString('#c7e2e9');scene.ambientColor=B.Color3.Black();
  const camera=new B.FreeCamera('Following camera',new B.Vector3(100,85,100),scene);camera.minZ=.12;camera.maxZ=3400;camera.fov=.82;camera.inputs.clear();scene.activeCamera=camera;
  const hemi=new B.HemisphericLight('Open sky',new B.Vector3(0,1,0),scene);hemi.intensity=.65;hemi.groundColor=B.Color3.FromHexString('#75896d');
@@ -893,6 +895,14 @@ function skyLogistics(ctx) {
   #lgSheet .map-card{position:static;right:auto;top:auto;width:auto;border-radius:12px;box-shadow:none;
     display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff9}
   #lgSheet .map-card canvas{width:152px;height:152px}
+  /* Кнопка возврата камеры уходит в правый верхний угол: раньше она стояла
+     под кнопкой «вниз» и наезжала на неё. Низ экрана — только управление. */
+  body[data-input=touch] .camera-reset{top:calc(112px + env(safe-area-inset-top,0px));
+    right:calc(12px + env(safe-area-inset-right,0px));bottom:auto;left:auto;
+    width:40px;height:40px;min-width:0;min-height:0;opacity:.94}
+  @media (max-height:520px){
+    body[data-input=touch] .camera-reset{top:calc(104px + env(safe-area-inset-top,0px))}
+  }
   /* Телеметрия уходит под верхнюю строку: низ экрана целиком отдан
      управлению (джойстик слева, высота справа), ничего не перекрывается. */
   body[data-input=touch] .telemetry{top:calc(74px + env(safe-area-inset-top,0px));bottom:auto;
