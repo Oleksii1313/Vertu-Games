@@ -138,11 +138,23 @@ function makeEnv(session, opts) {
   w.VG.openGame(game);
   await wait(80);
   const overlay = doc.getElementById('playOverlay');
-  check('десктоп: полный экран сам не включается (только по кнопке)',
-    signed.fsCalls.length === 0, signed.fsCalls);
+  /* Компьютер: игра тоже открывается как приложение — клик по карточке уже
+     является действием пользователя, поэтому полный экран просим сразу, а не
+     только по кнопке «Экран». */
+  check('десктоп: игра открывается сразу в полный экран',
+    signed.fsCalls.some((c) => /play-overlay/.test(c)), signed.fsCalls);
   check('плеер открылся', !!overlay && overlay.classList.contains('open'), !!overlay);
   check('страница помечена как «идёт игра»', doc.body.classList.contains('vg-playing'), doc.body.className);
   check('прокрутка страницы выключена', doc.body.style.overflow === 'hidden', doc.body.style.overflow);
+  /* position:fixed на body и инлайн-геометрия оверлея: вокруг игры не должно
+     оставаться ни шапки сайта, ни адресной строки в кадре. */
+  check('страница зафиксирована под игрой (не уезжает и не прокручивается)',
+    doc.body.style.position === 'fixed', doc.body.style.position);
+  check('оверлей прибит к экрану инлайном, а не только классом',
+    overlay.style.position === 'fixed' && overlay.style.width === '100%' && overlay.style.height === '100%',
+    overlay.getAttribute('style'));
+  check('в истории появилась запись игры (кнопка «Назад» вернёт на платформу)',
+    typeof signed.w.history.length === 'number' && signed.w.history.length >= 2, signed.w.history.length);
   const frame = overlay.querySelector('.play-frame');
   check('кадр получил игру с языком', /games\/flappy\.html\?lang=(ru|en)/.test(frame.getAttribute('src') || ''),
     frame.getAttribute('src'));
@@ -151,7 +163,14 @@ function makeEnv(session, opts) {
   const bar = overlay.querySelector('.play-bar');
   check('панель плеера на месте и не перекрывает игру',
     !!bar && !/position:absolute/.test(bar.getAttribute('style') || ''), null);
-  check('кнопка выхода из игры доступна', !!overlay.querySelector('[data-close]'), null);
+  const exitBtn = overlay.querySelector('[data-close]');
+  check('кнопка выхода из игры доступна', !!exitBtn, null);
+  check('кнопка выхода подписана «Выйти» и лежит в панели плеера',
+    !!exitBtn && exitBtn.closest('.play-bar') === bar &&
+    /Выйти|Exit/.test(exitBtn.textContent || ''), exitBtn && exitBtn.textContent);
+  check('у кнопки выхода есть подпись для скринридера',
+    !!exitBtn && /Выйти|Exit/.test(exitBtn.getAttribute('aria-label') || ''),
+    exitBtn && exitBtn.getAttribute('aria-label'));
   check('кнопка полного экрана доступна', !!overlay.querySelector('[data-fullscreen]'), null);
 
   /* --------------------------------------------------------- закрытие */
@@ -160,6 +179,8 @@ function makeEnv(session, opts) {
   check('плеер закрылся', !overlay.classList.contains('open'), null);
   check('страница снова прокручивается', !doc.body.classList.contains('vg-playing') && doc.body.style.overflow === '',
     [doc.body.className, doc.body.style.overflow]);
+  check('после выхода страница расфиксирована', doc.body.style.position === '', doc.body.style.position);
+  check('после выхода инлайн-геометрия оверлея снята', overlay.style.position === '', overlay.getAttribute('style'));
   check('кадр очищен', (frame.getAttribute('src') || '') === 'about:blank', frame.getAttribute('src'));
 
   /* -------------------------------------------------- повторное открытие */
