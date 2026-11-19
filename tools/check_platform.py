@@ -193,11 +193,12 @@ def main():
         check('на главной число игр совпадает с каталогом',
               f'data-stat="games">{len(expected_ids)}' in index_html,
               str(len(expected_ids)))
-        check('в каталоге и на главной «10 игр» (Redline снят с витрины)',
-              '10 игр' in top_html and '10 игр' in index_html)
+        shown = f'{len(expected_ids)} игр'
+        check(f'в каталоге и на главной «{shown}» (Redline снят с витрины)',
+              shown in top_html and shown in index_html)
         catalog_public = public_games_catalog(base)
-        check('в отдаваемом каталоге 10 игр и Redline скрыт',
-              len(catalog_public) == 10
+        check(f'в отдаваемом каталоге {len(expected_ids)} игр и Redline скрыт',
+              len(catalog_public) == len(expected_ids)
               and not any(g.get('id') == 'redline' for g in catalog_public),
               str([g.get('id') for g in catalog_public]))
         check('Redline не попал ни в одну отдаваемую страницу',
@@ -811,11 +812,14 @@ def main():
         status, data = admin.post('/api/admin/settings', {'settings': {'min_stake': 5, 'max_stake': 100}})
         check('настройки казино сохраняются', status == 200, str(data))
         status, data = admin.get('/api/admin/games')
-        check('список игр в админке', status == 200 and len(data['games']) == 11, str(len(data.get('games', []))))
-        from game_catalog import GAMES
+        from game_catalog import GAMES, visible_games
+        check('список игр в админке', status == 200 and len(data['games']) == len(GAMES),
+              str(len(data.get('games', []))))
         catalog = public_games_catalog(base)
-        check('каталог отдаёт 10 игр, Redline скрыт, история сохранена',
-              len(catalog) == 10 and not any(g.get('id') == 'redline' for g in catalog)
+        visible = {g['id'] for g in visible_games()}
+        check(f'каталог отдаёт {len(visible)} игр, Redline скрыт, история сохранена',
+              len(catalog) == len(visible) and set(g['id'] for g in catalog) == visible
+              and not any(g.get('id') == 'redline' for g in catalog)
               and 'redline' in [g['id'] for g in GAMES],
               str([g.get('id') for g in catalog]))
         status, data = admin.get('/api/admin/items')
