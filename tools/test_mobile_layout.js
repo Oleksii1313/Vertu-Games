@@ -208,6 +208,67 @@ check('doodle не получает правил классической рас
 check('doodle при этом тоже не растягивается и не прокручивается',
   !!ddoc.getElementById('vg-base-fit'));
 
+/* ------------------------------- 7. игра занимает весь кадр (любой браузер) */
+/* Ссылку на игру открывают из Telegram, ВКонтакте и других приложений со своим
+   встроенным браузером — там адресная строка и «шторки» меняют размер окна.
+   Поэтому страница фиксируется по видимой области, а холст получает явную
+   рамку: иначе браузер подгоняет ширину холста под соотношение его буфера, и
+   синее поле платформера висит прямоугольником по центру экрана. */
+const FILL = CLASSIC.concat(['snake']);
+check('у всех классических игр есть блок «весь кадр» (vg-fill-frame)',
+  FILL.every((n) => /<style id="vg-fill-frame">/.test(html[n])),
+  FILL.filter((n) => !/<style id="vg-fill-frame">/.test(html[n])));
+check('страница фиксируется по видимой области (html/body без прокрутки)',
+  FILL.every((n) => {
+    const block = html[n].slice(html[n].indexOf('<style id="vg-fill-frame">'));
+    return /html\{[^}]*height:100%/.test(block) && /html\{[^}]*overflow:hidden/.test(block)
+      && /body\{position:fixed;inset:0/.test(block) && /body\{[^}]*overflow:hidden/.test(block);
+  }),
+  FILL.filter((n) => {
+    const block = html[n].slice(html[n].indexOf('<style id="vg-fill-frame">'));
+    return !(/html\{[^}]*height:100%/.test(block) && /body\{position:fixed;inset:0/.test(block));
+  }));
+const fillBlocks = {};
+FILL.forEach((n) => {
+  const i = html[n].indexOf('<style id="vg-fill-frame">');
+  fillBlocks[n] = html[n].slice(i, html[n].indexOf('</style>', i));
+});
+const declaresCanvasWidth = (block) => {
+  const m = block.match(/body>canvas\{([^}]*)\}/);
+  if (!m) return false;
+  /* Только само свойство width — min-width/max-width не в счёт. */
+  return /(^|;)\s*width\s*:/.test(';' + m[1].replace(/\s+/g, ' '));
+};
+check('CSS не навязывает холсту ширину (иначе поле выдавит колонку кнопок)',
+  ['pong', 'shooter', 'platformer'].every((n) => !declaresCanvasWidth(fillBlocks[n])),
+  ['pong', 'shooter', 'platformer'].filter((n) => declaresCanvasWidth(fillBlocks[n])));
+check('в строчной раскладке (ландшафт телефона) игра отдаёт размер поля flex',
+  ['pong', 'shooter', 'platformer'].every((n) => /frame\.row|row\)/.test(html[n]) && /c\.style\.width=''/.test(html[n])),
+  ['pong', 'shooter', 'platformer'].filter((n) => !(/frame\.row|row\)/.test(html[n]) && /c\.style\.width=''/.test(html[n]))));
+check('игры с холстом на весь кадр считают рамку от окна минус панели (VGGame.frameSize)',
+  ['pong', 'shooter', 'platformer'].every((n) => /VGGame\.frameSize/.test(html[n])),
+  ['pong', 'shooter', 'platformer'].filter((n) => !/VGGame\.frameSize/.test(html[n])));
+check('рамка холста задаётся явно в пикселях, а не берётся у самого холста',
+  ['pong', 'shooter'].every((n) => /c\.style\.width\s*=\s*VW\s*\+\s*'px'/.test(html[n]))
+    && /c\.style\.width\s*=\s*cssW\s*\+\s*'px'/.test(html.platformer),
+  ['pong', 'shooter'].filter((n) => !/c\.style\.width\s*=\s*VW\s*\+\s*'px'/.test(html[n]))
+    .concat(/c\.style\.width\s*=\s*cssW\s*\+\s*'px'/.test(html.platformer) ? [] : ['platformer']));
+check('game-kit отдаёт расчёт кадра (VGGame.frameSize)', typeof w.VGGame.frameSize === 'function');
+
+/* Масштаб платформера: мир крупнее кадра, чтобы персонаж и предметы были
+   заметнее. Физика и уровни не меняются — VW/VH по-прежнему логическая сетка. */
+const pf = html.platformer;
+const viewScale = Number((pf.match(/const VIEW_SCALE\s*=\s*([\d.]+)/) || [])[1]);
+check('платформер рисует мир крупнее (VIEW_SCALE > 1)', viewScale > 1 && viewScale <= 1.5, viewScale);
+check('логическая ширина мира считается от кадра с масштабом',
+  /const scale\s*=\s*Math\.min\(VIEW_SCALE,\s*cssW\s*\/\s*320,\s*cssH\s*\/\s*240\)/.test(pf)
+  && /VW\s*=\s*Math\.ceil\(cssW\s*\/\s*scale\)/.test(pf)
+  && /VH\s*=\s*Math\.ceil\(cssH\s*\/\s*scale\)/.test(pf));
+check('мир не становится мельче античитовых 320×240 (правый край не уезжает)',
+  /cssW\s*\/\s*320/.test(pf) && /cssH\s*\/\s*240/.test(pf));
+check('контекст холста масштабируется на dpr × масштаб мира',
+  /setTransform\(dpr\s*\*\s*scale/.test(pf));
+
 /* ------------------------------------------------------------- итог */
 results.forEach((line) => console.log(line));
 const failed = results.filter((line) => line.startsWith('FAIL')).length;

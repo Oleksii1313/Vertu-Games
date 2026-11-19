@@ -430,9 +430,25 @@ let keys={left:false,right:false,firing:false},fireCd=0,power=null;
 /* Буфер canvas = CSS-размер × devicePixelRatio — резкая картинка на retina.
    Ширина берётся у поля, а не у окна: в плеере вокруг canvas есть панели. */
 function fitBuffer(){
-  const rect=c.getBoundingClientRect();
-  VW=Math.max(320,Math.round(rect.width||c.clientWidth||window.innerWidth||360));
-  VH=Math.max(320,Math.round(rect.height||c.clientHeight||((window.innerHeight||640)-140)));
+  /* Рамку холста считаем от окна минус панели игры (VGGame.frameSize) и задаём
+     её явно: иначе браузер подгоняет ширину холста под соотношение буфера и
+     поле сжимается прямоугольником по центру. */
+  const frame=(window.VGGame&&VGGame.frameSize)?VGGame.frameSize():null;
+  /* В строчной раскладке (телефон в ландшафте) размер поля задаёт flex —
+     пиксели не навязываем, иначе поле выдавит колонку кнопок. */
+  if(frame&&frame.row){
+    /* Телефон в ландшафте: размер поля задаёт flex — берём фактическую рамку. */
+    if(c.style.width)c.style.width='';
+    if(c.style.height)c.style.height='';
+    const rect=c.getBoundingClientRect();
+    VW=Math.max(240,Math.round(rect.width||c.clientWidth||window.innerWidth||360));
+    VH=Math.max(200,Math.round(rect.height||c.clientHeight||((window.innerHeight||640)-140)));
+  }else{
+    VW=Math.max(240,Math.round((frame&&frame.width)||window.innerWidth||360));
+    VH=Math.max(200,Math.round((frame&&frame.height)||((window.innerHeight||640)-140)));
+    if(c.style.width!==VW+'px')c.style.width=VW+'px';
+    if(c.style.height!==VH+'px')c.style.height=VH+'px';
+  }
   const dpr=Math.min((window.VGGame&&VGGame.maxDpr?VGGame.maxDpr():2.5),Math.max(1,window.devicePixelRatio||1));
   const bw=Math.round(VW*dpr),bh=Math.round(VH*dpr);
   if(c.width!==bw||c.height!==bh){c.width=bw;c.height=bh}
@@ -769,5 +785,21 @@ readyState();loop();
   addEventListener('load', grab);
 })();
 </script>
+<style id="vg-fill-frame">
+/* -------------------------------------------------------------------------
+   Игра занимает весь кадр в любом браузере — в том числе когда ссылку открыли
+   из Telegram, ВКонтакте или другого приложения со своим встроенным браузером.
+   Размеры страницы фиксируем по видимой области: адресная строка и «шторки»
+   больше не растягивают страницу и не сдвигают поле. Ничего не удаляем:
+   меняются только size-правила.
+   ------------------------------------------------------------------------- */
+html{width:100%;height:100%;max-width:none;margin:0;overflow:hidden;overscroll-behavior:none}
+body{position:fixed;inset:0;width:auto;height:var(--vg-vh,auto);max-width:none;max-height:none;
+  margin:0;overflow:hidden;overscroll-behavior:none}
+/* Размер холста задаёт игра (VGGame.frameSize → пиксели), а в строчной
+   раскладке телефона — flex. CSS ширину не навязывает: иначе поле выдавит
+   колонку кнопок. */
+body>canvas{display:block}
+</style>
 </body>
 </html>

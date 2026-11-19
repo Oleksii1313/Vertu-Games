@@ -64,9 +64,12 @@ function boot(file) {
 }
 
 const GAMES = [
-  { file: 'pong.html', canvas: 'c', exact: true },
-  { file: 'platformer.html', canvas: 'c', exact: true },
-  { file: 'shooter.html', canvas: 'c', exact: true },
+  /* pong и shooter тоже задают рамку холста сами (см. VGGame.frameSize). */
+  { file: 'pong.html', canvas: 'c', exact: false, custom: true, viewScale: 1 },
+  /* Platformer сам задаёт рамку холста (иначе браузер подгоняет ширину под
+     соотношение буфера и поле сжимается в столбик) и рисует мир крупнее. */
+  { file: 'platformer.html', canvas: 'c', exact: false, custom: true, viewScale: 1.28 },
+  { file: 'shooter.html', canvas: 'c', exact: false, custom: true, viewScale: 1 },
   { file: 'game2048.html', canvas: 'c', exact: false, board: 560 },
   { file: 'doodle.html', canvas: null, exact: true },
   { file: 'snake.html', canvas: 'c', exact: false, board: 400, square: true }
@@ -84,7 +87,22 @@ GAMES.forEach((game) => {
   const scale = calls.length ? calls[calls.length - 1][0] : 0;
   const bw = canvas.width, bh = canvas.height;
 
-  if (game.exact) {
+  if (game.custom) {
+    const styleW = parseFloat(canvas.style.width) || 0;
+    const styleH = parseFloat(canvas.style.height) || 0;
+    const ratio = styleW ? bw / styleW : 0;
+    check(game.file + ': холст получает явный размер в пикселях', styleW > 0 && styleH > 0,
+      { styleW, styleH });
+    check(game.file + ': буфер в физических пикселях', ratio >= 1.99 && ratio <= 3.05,
+      { buffer: [bw, bh], css: [styleW, styleH], ratio: +ratio.toFixed(2) });
+    /* Масштаб мира не больше VIEW_SCALE и не мельче античитовых 320×240. */
+    const worldScale = Math.min(game.viewScale, styleW / 320, styleH / 240);
+    check(game.file + ': картинка крупнее кадра (VIEW_SCALE)',
+      Math.abs(scale - ratio * worldScale) < 0.06,
+      { scale, expected: +(ratio * worldScale).toFixed(2), worldScale: +worldScale.toFixed(3) });
+    check(game.file + ': пропорции поля не искажены',
+      Math.abs((bw / bh) - (styleW / styleH)) < 0.03, { buffer: [bw, bh], css: [styleW, styleH] });
+  } else if (game.exact) {
     /* Плотность буфера: не меньше 2 физических пикселей на CSS-пиксель (это
        retina-уровень) и не больше 3 — выше смысла нет, только нагрузка. */
     const ratio = bw / CSS_W;

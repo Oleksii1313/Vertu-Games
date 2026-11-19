@@ -175,6 +175,7 @@
   .cheat-box p{color:var(--muted);font-size:14px;margin:0 0 6px;font-family:var(--body)}
 
 </style>
+
 <style id="game-controls-style">
 /* Responsive play area and reachable controls; no control is hidden on mobile. */
 html{height:100%;overflow:hidden;overscroll-behavior:none}
@@ -421,17 +422,57 @@ window.VGReward&&VGReward.on&&VGReward.on(function(st){
 
 const player={x:60,y:100,w:30,h:34,vx:0,vy:0,speed:5.6,jumpForce:11.8,grounded:false,doubleJump:false,facing:1};
 let platforms=[],gameCoins=[],hazards=[],stars=[],clouds=[],mountains=[],keys={},particles=[],floaters=[];
-/* Буфер canvas = CSS-размер × devicePixelRatio: на телефоне с 3x экраном
-   картинка рисуется в физических пикселях, а не растягивается из 1x.
-   Ширину берём у самого поля, а не у окна (в плеере по бокам есть панели). */
+/* Масштаб картинки: мир рисуется в логических пикселях, которых на экране
+   меньше, чем физических. 1.28 — персонаж и предметы заметно крупнее (играть
+   удобнее), при этом обзор и физика остаются прежними: все игровые величины
+   по-прежнему считаются от VW/VH. */
+const VIEW_SCALE=1.28;
+/* Свободная площадь кадра: всё окно минус верхняя строка и нижний док кнопок.
+   Раньше размер брался у самого холста, а браузер подгоняет ширину холста под
+   соотношение его буфера — поле «залипало» прямоугольником по центру, и
+   никакие правки CSS его не растягивали. */
+function frameSize(){
+  const shared=(window.VGGame&&VGGame.frameSize)?VGGame.frameSize():null;
+  if(shared)return {availW:shared.width,availH:shared.height,row:!!shared.row};
+  const vv=window.visualViewport;
+  return {
+    availW:Math.max(320,Math.round((vv&&vv.width)||window.innerWidth||360)),
+    availH:Math.max(240,Math.round(((vv&&vv.height)||window.innerHeight||640)*0.85)),
+    row:false
+  };
+}
+/* Рамку холста задаём сами в пикселях: иначе браузер берёт «внутренний» размер
+   буфера как собственный размер элемента, и поле сжимается в столбик. */
 function fitBuffer(){
-  const rect=c.getBoundingClientRect();
-  VW=Math.max(320,Math.round(rect.width||c.clientWidth||window.innerWidth||360));
-  VH=Math.max(320,Math.round(rect.height||c.clientHeight||((window.innerHeight||640)-140)));
+  const {availW,availH,row}=frameSize();
+  let cssW, cssH;
+  if(row){
+    /* Телефон в ландшафте: поле и колонку кнопок раскладывает flex — берём
+       фактическую рамку, свои пиксели не навязываем. */
+    if(c.style.width)c.style.width='';
+    if(c.style.height)c.style.height='';
+    const rect=c.getBoundingClientRect();
+    cssW=Math.max(200,Math.round(rect.width||c.clientWidth||availW));
+    cssH=Math.max(160,Math.round(rect.height||c.clientHeight||availH));
+  }else{
+    /* Нижняя граница — только защита от нулей: минимальный мир 320×240
+       обеспечивает сам масштаб (scale ≤ cssW/320, cssH/240). */
+    cssW=Math.max(200,Math.round(availW));
+    cssH=Math.max(160,Math.round(availH));
+    if(c.style.width!==cssW+'px')c.style.width=cssW+'px';
+    if(c.style.height!==cssH+'px')c.style.height=cssH+'px';
+  }
+  /* Масштаб может оказаться меньше VIEW_SCALE на узком экране: мир не должен
+     становиться уже 320 логических пикселей (античит MIN_W), иначе правый край
+     поля уходил бы за кадр. ceil — чтобы по краям не оставалось непрокрашенной
+     полоски в 1–2 пикселя. */
+  const scale=Math.min(VIEW_SCALE,cssW/320,cssH/240);
+  VW=Math.ceil(cssW/scale);
+  VH=Math.ceil(cssH/scale);
   const dpr=Math.min((window.VGGame&&VGGame.maxDpr?VGGame.maxDpr():2.5),Math.max(1,window.devicePixelRatio||1));
-  const bw=Math.round(VW*dpr),bh=Math.round(VH*dpr);
+  const bw=Math.round(cssW*dpr),bh=Math.round(cssH*dpr);
   if(c.width!==bw||c.height!==bh){c.width=bw;c.height=bh}
-  if(ctx)ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(ctx)ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
 }
 function resize(){const oldHeight=VH;fitBuffer();const dy=VH-oldHeight;
   if(platforms.length&&dy){for(const list of [platforms,gameCoins,hazards,particles,floaters])for(const item of list)item.y+=dy;player.y+=dy;lastSafe.y+=dy}
@@ -582,5 +623,24 @@ start();gameLoop();
   addEventListener('load', grab);
 })();
 </script>
+<style id="vg-fill-frame">
+/* -------------------------------------------------------------------------
+   Игра занимает весь кадр — в любом браузере, включая встроенные браузеры
+   Telegram/ВКонтакте и «шторки» iOS.
+   Ничего не удаляем: только фиксируем размеры страницы по видимой области и
+   запрещаем холсту подстраивать ширину под соотношение своего буфера.
+   ------------------------------------------------------------------------- */
+html{width:100%;height:100%;max-width:none;margin:0;overflow:hidden;overscroll-behavior:none}
+/* Кадр платформера — всегда колонка «статистика → поле → кнопки»: строковая
+   раскладка с колонкой кнопок отнимала у поля треть ширины. */
+body{position:fixed;inset:0;width:auto;height:var(--vg-vh,auto);max-width:none;max-height:none;margin:0;
+  overflow:hidden;overscroll-behavior:none;display:flex!important;flex-direction:column!important}
+body>.info,body>.controls,body>.help{flex:0 0 auto}
+/* Размер холста задаёт игра (VGGame.frameSize → пиксели в style). object-fit:fill
+   и aspect-ratio:auto снимают «подгонку» картинки под соотношение буфера —
+   именно она оставляла поле прямоугольником по центру. */
+body>canvas{display:block;object-fit:fill!important;aspect-ratio:auto!important;
+  flex:1 1 auto!important;min-width:0;min-height:0;max-width:none;max-height:none}
+</style>
 </body>
 </html>
