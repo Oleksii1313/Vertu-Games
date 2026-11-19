@@ -462,7 +462,12 @@ html[data-lowend="1"] .game-grid{content-visibility:auto;contain-intrinsic-size:
   /* Пока игра открыта, страница под ней не «резинит» на iOS и не уезжает от
      свайпа: жесты остаются внутри игры. */
   overscroll-behavior:none;overscroll-behavior-y:none;touch-action:manipulation;
-  padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0)}
+  /* Никаких отступов у самого кадра. Раньше здесь стояли safe-area-inset-*,
+     и в ландшафте iPhone «челка» вырезала из игры по 44 px слева и справа —
+     это и были чёрные полосы по бокам на скриншотах. Игра теперь идёт от
+     края до края, а безопасные зоны соблюдают только органы управления
+     плеера (кнопка «Выйти» и панель) — они ниже это и делают. */
+  padding:0}
 body.vg-playing{overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
 body.vg-playing .site-header,body.vg-playing .site-footer{overscroll-behavior:none}
 .play-overlay.open{display:flex}

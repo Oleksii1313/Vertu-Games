@@ -1272,6 +1272,9 @@
       hidePlayLoader();
       ensureGameFocus(frame);
       ensureFrameFills();
+      /* Безопасные зоны (вырез, «домашняя» полоса) сообщаем игре числами:
+         внутри iframe env() всегда нули, а кнопки не должны уезжать под них. */
+      setTimeout(postSafeInsets, 60);
     };
     showPlayLoader();
     frame.src = game.file + '?lang=' + langParam + (LOW_END ? '&perf=low' : '');
@@ -1994,6 +1997,51 @@
    * делает из игры прямоугольник по центру. Вместо того чтобы гадать, меряем
    * рамку и кадр и при расхождении повторно растягиваем их инлайном.
    */
+  /* --------------------------------------------------- безопасные зоны */
+  /*
+   * Игра теперь занимает экран от края до края, поэтому env(safe-area-inset-*)
+   * из платформы в кадр не попадают: у iframe свой viewport, и внутри него все
+   * env() равны нулю. Измеряем вырезы здесь и отправляем игре числа — она
+   * поднимает свои кнопки над «домашней» полосой iPhone и уводит их из-под
+   * «челки» (без единой чёрной полосы: фон остаётся игровым).
+   */
+  var safeProbe = null;
+  function safeInsets() {
+    var out = { top: 0, right: 0, bottom: 0, left: 0 };
+    try {
+      if (!safeProbe) {
+        safeProbe = document.createElement('div');
+        safeProbe.setAttribute('aria-hidden', 'true');
+        safeProbe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;' +
+          'pointer-events:none;padding-top:env(safe-area-inset-top,0px);' +
+          'padding-right:env(safe-area-inset-right,0px);' +
+          'padding-bottom:env(safe-area-inset-bottom,0px);' +
+          'padding-left:env(safe-area-inset-left,0px)';
+        document.body.appendChild(safeProbe);
+      }
+      var cs = getComputedStyle(safeProbe);
+      out.top = parseFloat(cs.paddingTop) || 0;
+      out.right = parseFloat(cs.paddingRight) || 0;
+      out.bottom = parseFloat(cs.paddingBottom) || 0;
+      out.left = parseFloat(cs.paddingLeft) || 0;
+    } catch (e) {}
+    return out;
+  }
+  function postSafeInsets() {
+    var overlay = $('#playOverlay');
+    if (!overlay || !overlay.classList.contains('open')) return;
+    var frame = overlay.querySelector('.play-frame');
+    if (!frame || !frame.contentWindow) return;
+    var insets = safeInsets();
+    insets.type = 'vg:safe';
+    try { frame.contentWindow.postMessage(insets, location.origin); } catch (e) {}
+  }
+  if (!postSafeInsets.bound) {
+    postSafeInsets.bound = true;
+    window.addEventListener('resize', function () { setTimeout(postSafeInsets, 120); }, { passive: true });
+    window.addEventListener('orientationchange', function () { setTimeout(postSafeInsets, 320); }, { passive: true });
+  }
+
   function ensureFrameFills() {
     var overlay = $('#playOverlay');
     if (!overlay || !overlay.classList.contains('open')) return;

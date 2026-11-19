@@ -275,13 +275,19 @@ async function boot2d(base, id, keep) {
     const field = info.field || { width: 412, height: 819 };
     check('flappy: поле занимает всю ширину экрана', cw >= field.width * 0.98, { cssW: cw, field: field.width });
     check('flappy: поле занимает всю высоту экрана', ch >= field.height * 0.98, { cssH: ch, field: field.height });
-    check('flappy: мир остаётся вертикальным', ch > cw, [cw, ch]);
+    /* Мир подстраивается под экран: в портрете он вертикальный, и полос по
+       бокам быть не должно — холст занимает ширину целиком. */
+    check('flappy: мир в портрете вертикальный', ch > cw, [cw, ch]);
     const lcss = (info.landscape && info.landscape.css) || '';
     const lw = /width:\s*([\d.]+)px/.exec(lcss);
     const lh = /height:\s*([\d.]+)px/.exec(lcss);
     const lcw = lw ? Number(lw[1]) : 0;
     const lch = lh ? Number(lh[1]) : 0;
-    check('flappy: после поворота сцена вертикальная (портрет сохранён)', lch > lcw, [lcw, lch]);
+    /* После поворота в ландшафт поле расширяется вместе с кадром (а не встаёт
+       вертикальной полоской с чёрными полосами по бокам): ширина холста равна
+       ширине кадра 915 px, высота — всей оставшейся площади под панелями. */
+    check('flappy: после поворота сцена заполняет кадр',
+      Math.abs(lcw - 915) <= 2 && lch >= 300, [lcw, lch]);
   }
 
   server.close();

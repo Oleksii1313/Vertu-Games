@@ -236,7 +236,9 @@ body[data-game="pong"] .controls{justify-content:space-between}
 <script>
 'use strict';
 // All artwork is original procedural canvas art, cached as local textures/sprites.
-const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d'),W=420;
+const $=id=>document.getElementById(id),canvas=$('game'),ctx=canvas.getContext('2d');
+/* Ширина мира: в ландшафте расширяется под экран (см. resize), поэтому let. */
+let W=420; const BASE_W=420;
 const en=new URLSearchParams(location.search).get('lang')==='en',tr=(ru,eng)=>en?eng:ru;
 document.documentElement.lang=en?'en':'ru';
 let H=700,scale=1,ox=0,oy=0,dpr=1,mode='intro',last=0,accumulator=0,time=0,player,platforms=[],enemies=[],shots=[],particles=[],camera=0,topY=0,chainX=170,sequence=0,startY=0,minY=0,height=0,earned=0,rewardTier=0,shotCooldown=0,shake=0,bounceFlash=0,soundOn=false,audio=null;
@@ -346,7 +348,7 @@ function resize(){
   var vw=box.width||Math.max(240,(window.innerWidth||360));
   var vh=box.height||Math.max(320,(window.innerHeight||640)-150);
   var r={width:vw,height:vh};
-  const oldH=H;H=Math.max(430,Math.min(820,r.height/Math.min(r.width,680)*W));dpr=Math.min(devicePixelRatio||1,(window.VGGame&&VGGame.lowEnd&&VGGame.lowEnd())?1.5:2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);scale=Math.min(r.width/W,r.height/H);ox=(r.width-W*scale)/2;oy=(r.height-H*scale)/2;if(player&&mode!=='intro'){const relative=(player.y-camera)/oldH;camera=player.y-relative*H;generate()}else if(player)reset();clearInput();draw()}
+  const oldH=H;/* Мир подстраивается под экран по обеим осям: высота — как раньше (по ней считаются платформы), а ширина берётся из соотношения сторон кадра. Иначе на широком экране вертикальное поле вставало прямоугольником по центру с чёрными полосами по бокам. */const aspect=r.width/r.height;H=Math.max(430,Math.min(1100,r.height/Math.min(r.width,680)*BASE_W));W=Math.max(BASE_W,Math.round(H*aspect));dpr=Math.min(devicePixelRatio||1,(window.VGGame&&VGGame.lowEnd&&VGGame.lowEnd())?1.5:2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);scale=Math.min(r.width/W,r.height/H);ox=(r.width-W*scale)/2;oy=(r.height-H*scale)/2;if(player&&mode!=='intro'){const relative=(player.y-camera)/oldH;camera=player.y-relative*H;generate()}else if(player)reset();clearInput();draw()}
 function frame(now){const elapsed=Math.min(.08,Math.max(0,(now-last)/1000));last=now;if(mode==='playing'){accumulator+=elapsed;while(accumulator>=1/120){update(1/120);accumulator-=1/120;if(mode!=='playing'){accumulator=0;break}}}draw();requestAnimationFrame(frame)}
 function bind(id,key){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();if(mode!=='playing'||owners.has(id)||e.button!==0)return;owners.set(id,e.pointerId);touchInput[key]=true;b.classList.add('pressed');b.setPointerCapture(e.pointerId);if(key==='shoot')shoot()});for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,e=>{if(owners.get(id)!==e.pointerId)return;owners.delete(id);touchInput[key]=false;b.classList.remove('pressed')})}
 bind('left','left');bind('right','right');bind('shoot','shoot');

@@ -141,7 +141,7 @@
   .stat .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
   .stat .v{font-size:20px;font-weight:800;color:var(--teal)}
   .board-wrap{flex:1;display:grid;place-items:center;padding:12px;min-height:0}
-  canvas{width:100%;max-width:560px;max-height:100%;display:block;touch-action:none}
+  canvas{width:100%;max-width:none;max-height:100%;display:block;touch-action:none}
   .controls{display:flex;justify-content:center;padding:14px;border-top:1px solid var(--line);gap:10px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;font:inherit;font-weight:700;border-radius:10px;padding:12px 20px;font-size:14px;color:#fff;background:var(--grad);transition:.15s}
   .btn:active{transform:translateY(2px)}
@@ -296,7 +296,7 @@ body[data-game="pong"] .controls{justify-content:space-between}
   releases.add(()=>point=null);
  }
  function reset(){for(const release of releases)release()}
- function fitSquare(c){const wrap=c.parentElement,style=getComputedStyle(wrap);const w=wrap.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),h=wrap.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);const size=Math.max(1,Math.floor(Math.min(w,h,560)));c.style.width=c.style.height=size+'px'}
+ function fitSquare(c){const wrap=c.parentElement,style=getComputedStyle(wrap);const w=wrap.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),h=wrap.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);/* Доска 4×4 обязана остаться квадратной (иначе плитки растянутся), но потолок в 560 px больше не нужен: на телефоне и планшете поле занимает всю короткую сторону кадра. */const size=Math.max(1,Math.floor(Math.min(w,h)));c.style.width=c.style.height=size+'px'}
  window.VGInput={hold,tap,swipe,reset,fitSquare};
  addEventListener('blur',reset);addEventListener('resize',reset);document.addEventListener('visibilitychange',reset);
  document.addEventListener('DOMContentLoaded',()=>{
