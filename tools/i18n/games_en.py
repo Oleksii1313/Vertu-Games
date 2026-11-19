@@ -805,3 +805,23 @@ GAMES_EN.update({
     'Сложено припасов: ': 'Stored supplies: ',
     'Ты восстановил Сердце, успев за ': 'You restored the Heart with ',
 })
+
+# Crystal Frontier: строки итогового экрана и кнопок выхода.
+GAMES_EN.update({
+    'ИТОГ ЗАБЕГА': 'RUN SUMMARY',
+    'Сердце восстановлено': 'Heart restored',
+    'Время вышло': 'Time is up',
+    'Ты восстановил Сердце, успев за ': 'You restored the Heart with ',
+    'Время вышло раньше, чем Сердце было восстановлено.':
+        'Time ran out before the Heartstone was restored.',
+    'Монеты': 'Coins',
+    'Осколки': 'Fragments',
+    'Побеждено врагов': 'Monsters defeated',
+    'Время в игре': 'Time used',
+    'Играть снова': 'Play again',
+    'Выйти в каталог': 'Exit to catalog',
+    'Низкое — для телефонов': 'Low — for phones',
+    'Низкое (телефоны)': 'Low (phones)',
+    'Среднее': 'Medium',
+    'Высокое': 'High',
+})

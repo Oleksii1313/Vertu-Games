@@ -142,6 +142,171 @@ check('ландшафтный компактный режим есть',
   /orientation:landscape\) and \(max-height:520px\)/.test(html));
 check('нет горизонтальной прокрутки', !/(^|;)\s*width:\s*100vw/.test(html) || /overflow-x:hidden/.test(html));
 
+// --- 7. Стартовый экран: объяснение, графика, выход --------------------------
+check('на старте есть кнопка выхода в каталог',
+  /id="exitStart"[^>]*>[\s\S]{0,120}?Выйти в каталог/.test(html));
+check('в паузе есть кнопка выхода', /id="exitPause"/.test(html));
+check('выход говорит родителю закрыть плеер', /function goHome\(\)\{[\s\S]{0,200}postMessage\(\{type:'home'\}/.test(html));
+check('без iframe выход ведёт на главную платформы', /location\.href='\.\.\/index\.html'/.test(html));
+check('кнопки выхода подключены', /\$\('exitStart'\)\.onclick=goHome/.test(html) &&
+  /\$\('exitPause'\)\.onclick=/.test(html));
+check('выход есть и на экране итогов', /id="exitOver"[\s\S]{0,80}?Выйти в каталог/.test(html) &&
+  /\$\('exitOver'\)\.onclick=goHome/.test(html));
+
+const goal = html.slice(html.indexOf('class="goal"'), html.indexOf('class="gfx"'));
+const steps = (goal.match(/<li>/g) || []).length;
+check('на старте объяснено, что делать (≥ 4 шага)', steps >= 4, steps);
+check('в инструкции есть осколки и алтарь', /алтарь/i.test(goal) && /осколк/i.test(goal));
+check('в инструкции есть управление и жители',
+  /клавишей E/.test(goal) && /жителями/.test(goal));
+
+check('качество графики выбирается на старте', /id="sQualStart"/.test(html));
+check('выбор графики один на старт и паузу',
+  /function setQuality\(k\)\{[\s\S]{0,200}syncQuality\(\)/.test(html) &&
+  /\$\('sQualStart'\)\.onchange=e=>setQuality/.test(html) &&
+  /\$\('sQual'\)\.onchange=e=>setQuality/.test(html));
+check('варианты качества подписаны на обоих языках',
+  (html.match(/<option value="low" data-ru=/g) || []).length === 2);
+
+// --- 8. Раскладка тач-кнопок: без наложений на любом экране -----------------
+/* Позиции кнопок живут только в CSS, поэтому тест сам разрешает каскад для
+   тач-устройства (safe-area = 0) и считает прямоугольники. */
+function cssBlocks(text) {
+  const out = [];
+  let i = 0;
+  while (i < text.length) {
+    const open = text.indexOf('{', i);
+    if (open < 0) break;
+    const head = text.slice(i, open).replace(/\/\*[\s\S]*?\*\//g, '').trim();
+    let depth = 1;
+    let j = open + 1;
+    while (j < text.length && depth) { if (text[j] === '{') depth++; else if (text[j] === '}') depth--; j++; }
+    out.push({ head, body: text.slice(open + 1, j - 1) });
+    i = j;
+  }
+  return out;
+}
+function cssDecls(body) {
+  const map = {};
+  body.split(';').forEach((pair) => {
+    const k = pair.indexOf(':');
+    if (k < 0) return;
+    const prop = pair.slice(0, k).trim().toLowerCase();
+    const value = pair.slice(k + 1).trim();
+    if (prop) map[prop] = value;
+  });
+  return map;
+}
+function mediaMatches(head, w, h) {
+  if (!head.startsWith('@media')) return false;
+  const q = head.slice(6).trim();
+  let ok = true;
+  if (/max-width:(\d+)px/.test(q)) ok = ok && w <= Number(RegExp.$1);
+  if (/max-height:(\d+)px/.test(q)) ok = ok && h <= Number(RegExp.$1);
+  if (/orientation:landscape/.test(q)) ok = ok && w > h;
+  if (/orientation:portrait/.test(q)) ok = ok && h >= w;
+  return ok;
+}
+function cssLength(expr) {
+  const str = expr.replace(/env\([^)]*\)/g, '0px');
+  let i = 0;
+  const ws = () => { while (i < str.length && /\s/.test(str[i])) i++; };
+  function value() {
+    ws();
+    if (str.startsWith('max(', i)) {
+      i += 4; const a = sum(); ws(); if (str[i] === ',') i++; const b = sum();
+      ws(); if (str[i] === ')') i++;
+      return Math.max(a, b);
+    }
+    if (str.startsWith('calc(', i)) {
+      i += 5; const v = sum(); ws(); if (str[i] === ')') i++; return v;
+    }
+    const px = /^[\d.]+px/.exec(str.slice(i));
+    if (px) { i += px[0].length; return parseFloat(px[0]); }
+    throw new Error('не разобрал длину: ' + str.slice(i, i + 16));
+  }
+  function sum() {
+    let v = value();
+    for (;;) {
+      ws();
+      const c = str[i];
+      if (c === '+') { i++; v += value(); }
+      else if (c === '-') { i++; v -= value(); }
+      else return v;
+    }
+  }
+  const out = sum();
+  ws();
+  if (i !== str.length) throw new Error('лишний хвост в длине: ' + str.slice(i));
+  return out;
+}
+const cssText = html.slice(html.lastIndexOf('<style>') + 7);
+const cssSource = cssText.slice(0, cssText.indexOf('</style>'));
+const WATCH = ['#bAtk', '#bJump', '#bMine', '#bUse', '#bSpr', '#bInv', '#bPause', '#joy', '#mm', '#vbal'];
+function cssLayout(w, h) {
+  const style = {};
+  const apply = (head, body) => head.split(',').map((s) => s.trim()).forEach((sel) => {
+    style[sel] = Object.assign(style[sel] || {}, cssDecls(body));
+  });
+  for (const block of cssBlocks(cssSource)) {
+    if (block.head.startsWith('@media')) {
+      if (mediaMatches(block.head, w, h)) cssBlocks(block.body).forEach((inner) => apply(inner.head, inner.body));
+    } else apply(block.head, block.body);
+  }
+  const rects = {};
+  for (const sel of WATCH) {
+    const own = style[sel] || {};
+    const base = sel.startsWith('#b') ? (style['.mb'] || {}) : {};
+    const width = cssLength(own.width || base.width || '0px');
+    const height = cssLength(own.height || base.height || '0px');
+    if (!width) continue;
+    const auto = (v) => v && v.trim() !== 'auto';
+    let left = null;
+    let top = null;
+    if (auto(own.left)) left = cssLength(own.left);
+    if (auto(own.right)) left = w - cssLength(own.right) - width;
+    if (auto(own.top)) top = cssLength(own.top);
+    if (auto(own.bottom)) top = h - cssLength(own.bottom) - height;
+    if (left === null || top === null) continue;
+    rects[sel] = { left, top, right: left + width, bottom: top + height };
+  }
+  return rects;
+}
+const viewports = [[320, 568], [360, 640], [390, 844], [414, 896], [360, 780],
+  [640, 360], [740, 400], [844, 390]];
+const clash = [];
+const offscreen = [];
+for (const [w, h] of viewports) {
+  const rects = cssLayout(w, h);
+  const names = Object.keys(rects);
+  for (const name of names) {
+    const r = rects[name];
+    if (r.left < -1 || r.top < -1 || r.right > w + 1 || r.bottom > h + 1) {
+      offscreen.push(w + 'x' + h + ' ' + name);
+    }
+  }
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      const a = rects[names[i]];
+      const b = rects[names[j]];
+      if (a.left < b.right + 4 && b.left < a.right + 4 && a.top < b.bottom + 4 && b.top < a.bottom + 4) {
+        clash.push(w + 'x' + h + ' ' + names[i] + '/' + names[j]);
+      }
+    }
+  }
+}
+check('тач-кнопки не наезжают друг на друга и на HUD', clash.length === 0, clash.slice(0, 6));
+check('все тач-кнопки внутри экрана на 8 разрешениях', offscreen.length === 0, offscreen.slice(0, 6));
+check('позиции кнопок заданы в CSS, а не в разметке',
+  !/<div class="mb" id="b[A-Za-z]+" style=/.test(html));
+check('мини-карта уходит влево в ландшафте',
+  /orientation:landscape\) and \(max-height:520px\)\{[\s\S]{0,400}#mm\{[^}]*left:/.test(html));
+
+// --- 9. Звук при появлении в деревне ---------------------------------------
+check('фон плавно входит, а не включается сразу',
+  /ambT\+=dt;const fade=Math\.min\(1,ambT\/4\)/.test(html) && /ambT=0;/.test(html));
+check('птицы молчат, пока фон не вошёл', /soft>=1&&surf&&dayF>\.4/.test(html));
+
 // --- Итог -----------------------------------------------------------------
 console.log(results.join('\n'));
 const failed = results.filter((line) => line.startsWith('FAIL'));
