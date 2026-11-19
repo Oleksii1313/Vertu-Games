@@ -555,7 +555,7 @@ const SFX={
     const on=SFX_ENGINE?SFX_ENGINE.enabled():false;
     btn.classList.toggle('muted',!on);
     btn.setAttribute('aria-pressed',on?'true':'false');
-    const title=on?label('Звук: вкл','Sound: on'):label('Звук: выкл','Sound: off');
+    const title=on?label('Звук: вкл','Sound: on'):label(((window.VGT&&window.VGT('Звук: выкл','Sound: off'))||'Звук: выкл'),'Sound: off');
     btn.title=title;btn.setAttribute('aria-label',title);
   }
   btn.addEventListener('click',function(event){

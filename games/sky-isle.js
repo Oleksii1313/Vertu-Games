@@ -719,7 +719,17 @@ function skyLogistics(ctx) {
 canvas.addEventListener('wheel',e=>{if(mode!=='playing')return;e.preventDefault();cam.distance=Math.max(9,Math.min(24,cam.distance*Math.exp(e.deltaY*.001)))},{passive:false});
  function moveStick(e){if(e.pointerId!==stick.id)return;const r=$('stick').getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,d=Math.hypot(x,y),limit=34,k=d>limit?limit/d:1;stick.x=d>5?x*k/limit:0;stick.y=d>5?y*k/limit:0;$('nub').style.transform='translate('+x*k+'px,'+y*k+'px)'}$('stick').addEventListener('pointerdown',e=>{if(mode!=='playing'||stick.id!==null)return;e.preventDefault();stick.id=e.pointerId;$('stick').setPointerCapture(e.pointerId);moveStick(e)});$('stick').addEventListener('pointermove',moveStick);for(const ev of ['pointerup','pointercancel','lostpointercapture'])$('stick').addEventListener(ev,e=>{if(stick.id!==e.pointerId)return;stick.id=null;stick.x=stick.y=0;$('nub').style.transform='translate(0,0)'});
  for(const btn of [$('up'),$('down')]){btn.addEventListener('pointerdown',e=>{if(mode!=='playing')return;e.preventDefault();altOwners.set(e.pointerId,btn);btn.classList.add('held');btn.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{if(altOwners.get(e.pointerId)!==btn)return;altOwners.delete(e.pointerId);if(![...altOwners.values()].includes(btn))btn.classList.remove('held')})}
- window.addEventListener('blur',()=>{clearInput();if(mode==='playing')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause()});window.addEventListener('resize',()=>{engine.resize();clearInput()});window.addEventListener('pagehide',save);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();message(tr('Восстанавливаем графику…','Restoring graphics…'))});
+ window.addEventListener('blur',()=>{clearInput();if(mode==='playing')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause()});window.addEventListener('resize',()=>{engine.resize();clearInput()});
+/* Панель браузера (и адресная строка iOS в частности) меняет высоту без события
+   resize: тогда canvas остаётся старым по буферу и кадр растягивается. Держим
+   буфер в размере видимой области, но НЕ сбрасываем ввод — иначе жест обзора
+   обрывается посреди движения. */
+let fitPending=0;
+const fitStage=()=>{if(fitPending)return;fitPending=requestAnimationFrame(()=>{fitPending=0;try{engine.resize()}catch(e){}})};
+window.addEventListener('orientationchange',()=>{setTimeout(fitStage,180);setTimeout(fitStage,420)});
+window.addEventListener('pageshow',fitStage);
+if(window.visualViewport){visualViewport.addEventListener('resize',fitStage);visualViewport.addEventListener('scroll',fitStage)}
+if(window.ResizeObserver&&canvas.parentElement)new ResizeObserver(fitStage).observe(canvas.parentElement);window.addEventListener('pagehide',save);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();message(tr('Восстанавливаем графику…','Restoring graphics…'))});
  refreshTarget();updateUI();$('start').disabled=false;$('loading').textContent=storageOK?tr('Дрон готов. Посылки никуда не спешат.','Drone ready. The parcels are in no hurry.'):tr('Хранилище недоступно: прогресс до закрытия вкладки.','Storage unavailable: progress lasts until this tab closes.');
  engine.runRenderLoop(()=>{if(!runLoop)return;update(engine.getDeltaTime()/1000);scene.render()});
 

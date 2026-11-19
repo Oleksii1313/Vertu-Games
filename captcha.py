@@ -16,7 +16,6 @@ import json
 import os
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
-from urllib.error import URLError
 
 import db as store
 
@@ -74,7 +73,10 @@ def verify(token: str, ip: str = '') -> tuple[bool, str]:
     try:
         with urlopen(request, timeout=8) as response:
             payload = json.loads(response.read().decode() or '{}')
-    except (URLError, TimeoutError, ValueError):
+    # Сеть отказывает по-разному: URLError, таймаут, сброс соединения
+    # (ConnectionResetError), битый JSON. Любой из этих случаев — «сервис
+    # недоступен», а не 500 для игрока.
+    except (OSError, ValueError, TimeoutError):
         store.get_store().rate_forget('captcha_used:' + fingerprint)
         return False, 'CAPTCHA_UNAVAILABLE'
     if payload.get('success') is not True:
