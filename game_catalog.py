@@ -301,26 +301,28 @@ GAMES = [
         'cat': ['Аркады', 'Экшен'], 'cat_en': ['Arcades', 'Action'],
         'desc': '50 уровней паркура с конфетами и ловушками',
         'desc_en': '50 parkour stages with candy and traps',
-        'reward': 5, 'daily': 300, 'event': 'minutes',
-        # Единица награды — минута игры: единицы присылает мост самой игры,
-        # сервер сам сверяет их со временем забега и режет суточным лимитом.
-        'session_claim': True, 'session_award': 'units', 'session_max_units': 20,
-        'session_units_per_sec': 0.017,
-        'how_ru': 'Проходи уровни и собирай конфеты. Каждая минута забега — 5 V '
-                  '(до 100 V за забег и 300 V в сутки).',
-        'how_en': 'Clear stages and collect candy. Every minute of a run pays 5 V '
-                  '(up to 100 V per run and 300 V a day).',
+        'reward': 3, 'daily': 300, 'event': 'coins',
+        # Единица награды — одна зелёная монета V, собранная в забеге: 3 V за
+        # монету. Клиент присылает только число монет, сумму V, суточный лимит и
+        # правдоподобность по времени забега проверяет сервер.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 60,
+        'session_units_per_sec': 0.12,
+        'how_ru': 'Собирай зелёные монеты V — на каждом уровне их 3–5. '
+                  'Одна монета = 3 V (до 100 V за забег и 300 V в сутки).',
+        'how_en': 'Collect the green V coins — each stage hides 3–5 of them. '
+                  'One coin pays 3 V (up to 100 V per run and 300 V a day).',
         'long_ru': 'Трёхмерный паркур с зелёным сладкоежкой: 50 уровней в десяти '
                    'ступенях сложности, свои декорации и цвета у каждой ступени. '
                    'Прыгай по платформам, уворачивайся от вращающихся неоновых балок, '
-                   'прессов, пил и лазеров, собирай конфеты и звёзды.\n\nКаждые десять '
+                   'прессов, вращающихся пил и лазеров, собирай конфеты, звёзды и '
+                   'зелёные монеты V.\n\nКаждые десять '
                    'уровней — событие: конфетный дождь, поднимающаяся лава, ускорение, '
                    'хаос гравитации и финальная трасса-босс. Прогресс, звёзды и рекорды '
                    'сохраняются в браузере.',
         'long_en': 'A three-dimensional parkour game starring a green sweet-tooth: 50 '
                    'stages across ten difficulty tiers, each with its own scenery and '
                    'palette. Jump across platforms, dodge spinning neon bars, crushers, '
-                   'saws and lasers, and grab candy and stars.\n\nEvery ten stages brings '
+                   'saws and lasers, and grab candy, stars and green V coins.\n\nEvery ten stages brings '
                    'an event: candy rain, rising lava, a speed boost, gravity chaos and a '
                    'final boss course. Progress, stars and best times are saved in the browser.',
         'controls_ru': 'WASD / стрелки — бег, пробел — прыжок (держи дольше — выше), '
@@ -498,7 +500,7 @@ ACHIEVEMENTS = [
 # Версия сборки: попадает в <meta name="vert-build">, в заголовок X-Build и в
 # /api/version. По ней видно, какая именно версия страниц реально отдаётся
 # сервером (а не закеширована браузером). Меняется при правках казино/колеса.
-APP_VERSION = '2026-11-30-omnom-parkour-v1'
+APP_VERSION = '2026-12-01-omnom-vcoins-v1'
 
 # Колесо «Рулетки Vert»: 20 одинаковых секторов по 18°, только целые множители.
 #

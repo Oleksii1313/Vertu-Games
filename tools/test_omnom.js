@@ -51,8 +51,8 @@ check('game-kit без defer', !/game-kit\.js" defer/.test(html));
 
 /* --------------------------------------------------------- 3. мост награды */
 const bridge = html.slice(html.lastIndexOf('<script>'));
-check('мост инициализирует VGReward с id игры', /VGReward/.test(bridge) && /R\.init\('omnom', 5\)/.test(bridge), null);
-check('единица награды — минута забега', /Math\.floor\(\(Date\.now\(\) - start\) \/ 60000\)/.test(bridge));
+check('мост инициализирует VGReward с id игры', /VGReward/.test(bridge) && /R\.init\('omnom', 3\)/.test(bridge), null);
+check('единица награды — одна зелёная монета V (3 V)', /coins \+= Math\.max\(1, n \|\| 1\)/.test(bridge) && /R\.set\(coins\)/.test(bridge));
 check('итог отправляется по vg:flush и pagehide',
   /data\.type === 'vg:flush'/.test(bridge) && /'pagehide'/.test(bridge) && /R\.finish\(/.test(bridge));
 check('вне плеера награда не начисляется', /window\.parent === window\) return/.test(bridge));
@@ -77,7 +77,7 @@ check('игра описана в каталоге (game_catalog.py)', !!game.id
 check('id игры — omnom', game.id === 'omnom', game.id);
 check('файл в каталоге совпадает с games/om-nom-parkour.html',
   game.file === 'games/om-nom-parkour.html', game.file);
-check('награда и суточный лимит заданы', game.reward === 5 && game.daily === 300, [game.reward, game.daily]);
+check('награда и суточный лимит заданы', game.reward === 3 && game.daily === 300, [game.reward, game.daily]);
 check('награда считается по единицам сессии (units), а не суммой V',
   game.session_claim === true && game.session_award === 'units', [game.session_claim, game.session_award]);
 check('сервер ограничивает итог по времени забега',
@@ -97,7 +97,7 @@ check('карточка в каталоге ссылается на обложк
   INDEX.includes('src="assets/vg/img/games/omnom.jpg"'), null);
 check('карточка игры есть на главной', /data-game="omnom"/.test(INDEX));
 check('на карточке видна награда и суточный лимит',
-  /data-game="omnom"[\s\S]{0,900}?\+5 V/.test(INDEX) && /data-game="omnom"[\s\S]{0,900}?до 300 V\/сутки/.test(INDEX));
+  /data-game="omnom"[\s\S]{0,900}?\+3 V/.test(INDEX) && /data-game="omnom"[\s\S]{0,900}?до 300 V\/сутки/.test(INDEX));
 check('игра попала в каталог каталог-данных (cards берут id оттуда)',
   /"id":"omnom"/.test(DATA) && /"file":"games\/om-nom-parkour.html"/.test(DATA));
 
