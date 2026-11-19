@@ -140,12 +140,98 @@ check('тач не запрашивает Pointer Lock', canvas.lockRequests ===
 up(160, 100, 9, 'touch');
 check('после тач-свайпа обзор закрыт', api.look === null);
 
+/* --------------------------------- реальный порядок событий в браузере --- */
+/* Жалоба с живого сайта: «камера не поворачивается ни правой кнопкой мыши,
+   ни пальцем на телефоне, а движение работает». Причина — Pointer Lock:
+   по стандарту (Pointer Events §9.5) при включении захвата браузер САМ снимает
+   pointer capture и присылает lostpointercapture. Старый обработчик считал это
+   отпусканием кнопки, гасил обзор и тут же выходил из только что полученного
+   захвата — камера замирала после первого пикселя. Ниже — точная
+   последовательность Chrome, чтобы такое не вернулось. */
+pointerLockElement = null;
+api.look = null;
+canvas.lockRequests = 0;
+down(0, 300, 300);
+let yawBefore = cam.yaw;
+move(320, 300);
+check('до захвата обзор идёт', cam.yaw !== yawBefore, tidy(cam.yaw - yawBefore));
+check('захват запрошен', canvas.lockRequests === 1, canvas.lockRequests);
+for (let i = 0; i < 6; i++) move(340 + i * 10, 300);
+check('пока захват не включился, запрос не дублируется', canvas.lockRequests === 1, canvas.lockRequests);
+
+pointerLockElement = canvas;                                 /* захват включился */
+w.document.dispatchEvent(new w.Event('pointerlockchange'));
+canvas.dispatchEvent(ev('lostpointercapture', { pointerId: 1, pointerType: 'mouse' }));
+check('снятие capture при захвате НЕ обрывает обзор', api.look !== null, api.look);
+yawStart = cam.yaw;
+w.document.dispatchEvent(ev('mousemove', { movementX: 120, movementY: 0 }));
+check('после захвата камера продолжает вращаться', along(cam.yaw, yawStart) > 0,
+  tidy(along(cam.yaw, yawStart)));
+up(400, 300);
+check('отпускание кнопки под захватом завершает обзор и снимает захват',
+  api.look === null && pointerLockElement === null, [api.look, pointerLockElement]);
+
+/* Отказ браузера (например, политика iframe) не должен ломать обзор. */
+canvas.lockRequests = 0;
+yawStart = cam.yaw;
+down(2, 100, 100);
+move(160, 100);
+check('отказ не мешает: камера поворачивается правой кнопкой', along(cam.yaw, yawStart) > 0,
+  tidy(along(cam.yaw, yawStart)));
+w.document.dispatchEvent(new w.Event('pointerlockerror'));
+yawStart = cam.yaw;
+move(260, 100);
+check('после отказа браузера обзор продолжается', along(cam.yaw, yawStart) > 0,
+  tidy(along(cam.yaw, yawStart)));
+check('после отказа запросы не спамятся', canvas.lockRequests === 1, canvas.lockRequests);
+up(260, 100);
+check('после отказа отпускание закрывает обзор', api.look === null);
+
+/* Жест по панели HUD (она может оказаться над сценой) тоже вращает камеру. */
+const panel = w.document.createElement('div');
+w.document.body.appendChild(panel);
+panel.dispatchEvent(ev('pointerdown', { button: 0, clientX: 10, clientY: 10, pointerId: 7, pointerType: 'mouse' }));
+check('жест по панели над сценой вращает камеру', api.look !== null && api.look.id === 7, api.look);
+yawStart = cam.yaw;
+w.document.dispatchEvent(ev('pointermove', { clientX: 90, clientY: 10, pointerId: 7, pointerType: 'mouse' }));
+check('движение по документу продолжает обзор', along(cam.yaw, yawStart) > 0, tidy(along(cam.yaw, yawStart)));
+w.document.dispatchEvent(ev('pointerup', { clientX: 90, clientY: 10, pointerId: 7, pointerType: 'mouse' }));
+check('отпускание по документу закрывает обзор', api.look === null);
+
+/* А вот кнопки и джойстик обзор не перехватывают. */
+const hudBtn = w.document.createElement('button');
+w.document.body.appendChild(hudBtn);
+const stickBox = w.document.createElement('div');
+stickBox.className = 'stick';
+w.document.body.appendChild(stickBox);
+hudBtn.dispatchEvent(ev('pointerdown', { button: 0, clientX: 5, clientY: 5, pointerId: 11, pointerType: 'mouse' }));
+check('кнопка HUD обзор не начинает', api.look === null);
+stickBox.dispatchEvent(ev('pointerdown', { button: 0, clientX: 5, clientY: 5, pointerId: 12, pointerType: 'touch' }));
+check('джойстик обзор не начинает', api.look === null);
+
+/* На тач-экране Pointer Lock не запрашивается вообще. */
+canvas.lockRequests = 0;
+down(0, 100, 100, 21, 'touch');
+move(200, 100, 21, 'touch');
+up(200, 100, 21, 'touch');
+check('тач не просит Pointer Lock и после правок', canvas.lockRequests === 0, canvas.lockRequests);
+
 /* ------------------------------------------------------------------- пауза */
 const api2 = run('paused', { yaw: 1, pitch: 0.3, distance: 16 }, canvas, element, { id: null, x: 0, y: 0 }, new Map(), w.document);
 down(2, 10, 10, 3);
 check('в паузе обзор не начинается', api2.look === null);
 down(0, 10, 10, 4, 'touch');
 check('в паузе тач не начинает обзор', api2.look === null);
+
+/* ------------------------------------------ сборка и защита от «прокрутки» */
+const source = fs.readFileSync(path.join(__dirname, '..', 'games', 'sky-isle.js'), 'utf8');
+check('во время полёта протягивание не превращается в прокрутку/жест браузера',
+  /body\[data-mode=playing\]\{touch-action:none;overscroll-behavior:none\}/.test(html), null);
+check('в сборке есть защита обзора от lostpointercapture при Pointer Lock',
+  html.includes("lostpointercapture") && /if\(document\.pointerLockElement===canvas\)return/.test(html), null);
+check('исходник и сборка совпадают по обработчикам обзора',
+  source.includes("document.addEventListener('lostpointercapture'") ===
+  html.includes("document.addEventListener('lostpointercapture'"), null);
 
 /* --------------------------------------------------- движение не сломано */
 check('движение дрона по-прежнему считается от cam.cyaw',

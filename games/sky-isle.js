@@ -543,6 +543,10 @@ function skyLogistics(ctx) {
   #hudToggle.off{opacity:.55}
   /* Одно меню на телефоне: карточка доставки, панель полёта и карта живут
      внутри шторки, а не висят поверх игры и не наезжают на джойстик. */
+  /* Пока идёт полёт, любое протягивание по экрану — это обзор, а не прокрутка
+     или жест браузера: иначе Chrome отменяет жест (pointercancel) и камера
+     «залипает» на телефоне. */
+  body[data-mode=playing]{touch-action:none;overscroll-behavior:none}
   #lgSheet{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));
     top:calc(64px + env(safe-area-inset-top,0px));z-index:30;width:min(300px,76vw);
     max-height:calc(100dvh - 170px);display:none;flex-direction:column;background:#fbf8edf7;
@@ -879,14 +883,55 @@ document.addEventListener('keydown',e=>{const t=e.target;if(t&&t.matches&&t.matc
     После нескольких пикселей указатель захватывается (Pointer Lock), чтобы обзор
     не обрывался на краю канваса. Движение дрона считается от cam.cyaw и не меняется. */
  const LOOK_SPEED=.005,TILT_SPEED=.004,LOCK_AFTER=6;
+let lockPending=false,lockDenied=false;
  function lookBy(dx,dy){cam.yaw+=dx*LOOK_SPEED;cam.pitch=Math.max(.08,Math.min(1.25,cam.pitch+dy*TILT_SPEED))}
  function dropLookLock(){if(typeof document.exitPointerLock==='function'&&document.pointerLockElement===canvas){try{document.exitPointerLock()}catch(e){}}}
- canvas.addEventListener('contextmenu',e=>e.preventDefault());
- canvas.addEventListener('pointerdown',e=>{if(mode!=='playing'||lookPointer)return;if(e.pointerType!=='touch'&&e.button!==0&&e.button!==2)return;e.preventDefault();lookPointer={id:e.pointerId,x:e.clientX,y:e.clientY,moved:0,type:e.pointerType};canvas.setPointerCapture(e.pointerId)});
- canvas.addEventListener('pointermove',e=>{if(!lookPointer||lookPointer.id!==e.pointerId||mode!=='playing')return;if(document.pointerLockElement===canvas)return;const dx=e.clientX-lookPointer.x,dy=e.clientY-lookPointer.y;lookBy(dx,dy);lookPointer.x=e.clientX;lookPointer.y=e.clientY;lookPointer.moved+=Math.hypot(dx,dy);if(lookPointer.type==='mouse'&&lookPointer.moved>LOCK_AFTER&&typeof canvas.requestPointerLock==='function'){try{const pending=canvas.requestPointerLock();if(pending&&typeof pending.catch==='function')pending.catch(()=>{})}catch(err){}}});
- document.addEventListener('mousemove',e=>{if(!lookPointer||mode!=='playing'||document.pointerLockElement!==canvas)return;lookBy(e.movementX||0,e.movementY||0)});
- document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement!==canvas&&lookPointer)lookPointer=null});
- for(const ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,e=>{if(lookPointer?.id!==e.pointerId)return;lookPointer=null;dropLookLock()});
+ /* Захват указателя просим ровно один раз за нажатие: повторные запросы Chrome
+    отклоняет, и обзор от этого дёргается. Любой отказ браузера — не беда:
+    обзор работает и без захвата, просто «кончается» на краю экрана. */
+ function requestLock(){
+   if(lockPending||lockDenied||document.pointerLockElement===canvas||typeof canvas.requestPointerLock!=='function')return;
+   lockPending=true;
+   try{const pending=canvas.requestPointerLock();if(pending&&typeof pending.catch==='function')pending.catch(()=>{lockPending=false;lockDenied=true})}catch(e){lockPending=false;lockDenied=true}
+ }
+ /* Кнопки, джойстик, шторка и мини-карта обзор не перехватывают: у них своя логика. */
+ function lookBlocked(t){
+   if(!t||t===canvas||typeof t.closest!=='function')return false;
+   return !!t.closest('button,input,textarea,select,a,label,.stick,.keys,#map,#lgSheet,#lgStation,#lgPanel,.modal,.toast,[data-look-block]')||!!t.closest('canvas');
+ }
+ /* Слушаем документ, а не только канвас: если поверх сцены окажется панель HUD,
+    жест обзора всё равно доходит до игры и не «теряется». */
+ function startLook(e){
+   if(mode!=='playing'||lookPointer)return;
+   if(e.pointerType!=='touch'&&e.button!==0&&e.button!==2)return;
+   if(lookBlocked(e.target))return;
+   e.preventDefault();lockPending=false;lockDenied=false;
+   lookPointer={id:e.pointerId,x:e.clientX,y:e.clientY,moved:0,type:e.pointerType};
+   try{canvas.setPointerCapture(e.pointerId)}catch(err){}
+ }
+ function moveLook(e){
+   if(!lookPointer||lookPointer.id!==e.pointerId||mode!=='playing')return;
+   if(document.pointerLockElement===canvas)return; /* при захвате считаем по mousemove */
+   const dx=e.clientX-lookPointer.x,dy=e.clientY-lookPointer.y;
+   lookBy(dx,dy);lookPointer.x=e.clientX;lookPointer.y=e.clientY;lookPointer.moved+=Math.hypot(dx,dy);
+   if(lookPointer.type==='mouse'&&lookPointer.moved>LOCK_AFTER)requestLock();
+ }
+ function endLook(e){if(!lookPointer||lookPointer.id!==e.pointerId)return;lookPointer=null;lockPending=false;dropLookLock()}
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('contextmenu',e=>{if(lookPointer)e.preventDefault()});
+document.addEventListener('pointerdown',startLook,{capture:true});
+document.addEventListener('pointermove',moveLook,{capture:true});
+document.addEventListener('mousemove',e=>{if(!lookPointer||mode!=='playing'||document.pointerLockElement!==canvas)return;lookBy(e.movementX||0,e.movementY||0)});
+document.addEventListener('pointerlockchange',()=>{lockPending=false;if(document.pointerLockElement!==canvas)lookPointer=null});
+document.addEventListener('pointerlockerror',()=>{lockPending=false;lockDenied=true});
+for(const ev of ['pointerup','pointercancel'])document.addEventListener(ev,endLook,{capture:true});
+ /* Pointer Lock по стандарту САМ снимает pointer capture (lostpointercapture).
+    Это не отпускание кнопки: раньше обзор гасился на первом же пикселе, а
+    вместе с ним и только что полученный захват — камера «не поворачивалась». */
+document.addEventListener('lostpointercapture',e=>{
+  if(document.pointerLockElement===canvas)return;
+  if(lookPointer&&lookPointer.id===e.pointerId)lookPointer=null;
+});
 canvas.addEventListener('wheel',e=>{if(mode!=='playing')return;e.preventDefault();cam.distance=Math.max(9,Math.min(24,cam.distance*Math.exp(e.deltaY*.001)))},{passive:false});
  function moveStick(e){if(e.pointerId!==stick.id)return;const r=$('stick').getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,d=Math.hypot(x,y),limit=34,k=d>limit?limit/d:1;stick.x=d>5?x*k/limit:0;stick.y=d>5?y*k/limit:0;$('nub').style.transform='translate('+x*k+'px,'+y*k+'px)'}$('stick').addEventListener('pointerdown',e=>{if(mode!=='playing'||stick.id!==null)return;e.preventDefault();stick.id=e.pointerId;$('stick').setPointerCapture(e.pointerId);moveStick(e)});$('stick').addEventListener('pointermove',moveStick);for(const ev of ['pointerup','pointercancel','lostpointercapture'])$('stick').addEventListener(ev,e=>{if(stick.id!==e.pointerId)return;stick.id=null;stick.x=stick.y=0;$('nub').style.transform='translate(0,0)'});
  for(const btn of [$('up'),$('down')]){btn.addEventListener('pointerdown',e=>{if(mode!=='playing')return;e.preventDefault();altOwners.set(e.pointerId,btn);btn.classList.add('held');btn.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{if(altOwners.get(e.pointerId)!==btn)return;altOwners.delete(e.pointerId);if(![...altOwners.values()].includes(btn))btn.classList.remove('held')})}
