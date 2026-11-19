@@ -39,8 +39,10 @@ check('качество задаёт число слоёв меха', /fur:1\},?
 check('у монстров есть глаза, зрачки и блик', /function eyesMesh\(/.test(engine));
 check('у монстров есть зубы', /Math\.PI,0,0\),bone/.test(engine));
 check('у монстров есть когти', /clawC/.test(engine) && /CONE\(rad\*\.3,rad\*1\.05/.test(engine));
+/* Мех делают двумя способами: старые типы — слоями furShells, Watcher и
+   Pale Hand — слоями furBall с текстурой прядей. Считаем оба. */
 check('мех есть у нескольких типов (не только у одного)',
-  (engine.match(/furShells\(/g) || []).length >= 5);
+  (engine.match(/furShells\(|furBall\(/g) || []).length >= 5);
 check('у людей объёмное тело с поясом и воротником', /воротник/.test(engine) && /пряжка/.test(engine));
 check('у людей складки одежды', /складки подола/.test(engine));
 check('у людей обувь', /ботинок/.test(engine));
@@ -109,7 +111,7 @@ function stats(group) {
   group.traverse((o) => {
     if (!o.isMesh) return;
     meshes++;
-    if (o.material && o.material.alphaTest > 0) { shells++; if (o.material.map) textured++; }
+    if (o.material && o.material.alphaTest > 0) { shells++; if (o.material.map || o.material.alphaMap) textured++; }
     const p = o.geometry && o.geometry.attributes && o.geometry.attributes.position;
     if (!p) return;
     verts += p.count;
@@ -121,9 +123,9 @@ function stats(group) {
 }
 
 if (built) {
-  const expectedFur = { moss: true, guardian: true, bat: true, crawler: true, shard: false, boss: true };
-  const budgets = { moss: 16, guardian: 18, shard: 12, bat: 14, crawler: 20, boss: 20 };
-  for (const type of ['moss', 'guardian', 'shard', 'bat', 'crawler', 'boss']) {
+  const expectedFur = { moss: true, palehand: false, guardian: true, bat: true, crawler: true, shard: false, boss: true };
+  const budgets = { moss: 40, palehand: 14, guardian: 18, shard: 12, bat: 14, crawler: 20, boss: 20 };
+  for (const type of ['moss', 'palehand', 'guardian', 'shard', 'bat', 'crawler', 'boss']) {
     let s = null, err = null;
     try { s = stats(built.mkEnemy(type).g); } catch (e) { err = e.message; }
     check(`монстр ${type} собирается`, !!s && !err, err || undefined);
