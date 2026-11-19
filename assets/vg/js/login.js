@@ -32,9 +32,11 @@
   function mountCaptcha() {
     var cfg = VG.session ? VG.session.captcha : null;
     if (!cfg || !cfg.enabled) {
+      /* Ключей Turnstile на сервере нет — виджет отрисовать нечем. Не пугаем
+         игрока внутренней формулировкой, но и не врём: защита попыток есть. */
       var note = $('#captchaNote');
-      if (note) note.textContent = T('CAPTCHA не настроена владельцем — вход защищён ограничением попыток на сервере.',
-        'CAPTCHA is not configured — sign-in is still protected by server-side rate limits.');
+      if (note) note.textContent = T('Защита входа: ограничение попыток на сервере.',
+        'Sign-in protection: server-side attempt limits.');
       return;
     }
     resets.login = VG.renderTurnstile($('#captchaLogin'), function (token) { tokens.login = token; });
