@@ -101,6 +101,24 @@
       }).join('');
   }
 
+  /* Наведение/тап по карточке — самое раннее «намерение играть». */
+  function bindWarmup() {
+    if (bindWarmup.bound) return;
+    bindWarmup.bound = true;
+    function warm(card) {
+      var id = card && card.getAttribute('data-game');
+      if (!id) return;
+      var game = games.filter(function (g) { return g.id === id; })[0];
+      if (game && VG.prefetchGame) VG.prefetchGame(game.file);
+    }
+    ['pointerenter', 'pointerdown', 'focusin', 'touchstart'].forEach(function (name) {
+      document.addEventListener(name, function (event) {
+        var card = event.target && event.target.closest && event.target.closest('[data-game]');
+        if (card) warm(card);
+      }, { passive: true, capture: name === 'pointerenter' || name === 'focusin' });
+    });
+  }
+
   function decorate() {
     cards().forEach(function (card, index) {
       var id = card.getAttribute('data-game');
@@ -113,6 +131,9 @@
   }
 
   function openDetails(game) {
+    /* Пока игрок читает описание, файл игры уже скачивается — «Поехали»
+       открывает её без ожидания сети. */
+    if (VG.prefetchGame) VG.prefetchGame(game.file);
     var modal = $('#gameModal');
     if (!modal) {
       modal = VG.el('div', 'modal');
@@ -163,6 +184,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     decorate();
+    bindWarmup();
     buildChips();
     sortCards();
     if (VG.onLangChange) {

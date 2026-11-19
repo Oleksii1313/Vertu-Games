@@ -1162,6 +1162,9 @@
       overlay.innerHTML =
         '<button type="button" class="play-grip" data-grip aria-label="' +
         T('Панель игрока', 'Player panel') + '"></button>' +
+        '<button type="button" class="play-exit-chip" data-close aria-label="' +
+        T('Выйти из игры', 'Exit game') + '">' + icon('chev', 14) +
+        '<span>' + T('Выйти', 'Exit') + '</span></button>' +
         '<button type="button" class="play-fs-float" data-fs-float hidden aria-label="' +
         T('Игра на весь экран', 'Play fullscreen') + '" title="' +
         T('Игра на весь экран', 'Play fullscreen') + '">' + icon('expand', 16) + '</button>' +
@@ -1178,13 +1181,28 @@
         T('Профиль', 'Profile') + '">' +
         (state.user ? avatarHtml(state.user, 28) : '<span class="avatar guest" style="width:28px;height:28px">' + icon('user', 16) + '</span>') +
         '</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-report title="' +
-        T('Сообщить об ошибке', 'Report a problem') + '">' + icon('flag', 15) +
-        '<span>' + T('Ошибка', 'Issue') + '</span></button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-pressed="false" title="' + T('На весь экран', 'Fullscreen') + '">' +
         icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
-        '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
-      overlay.querySelector('[data-close]').addEventListener('click', closeGame);
+        '<div class="play-frame-wrap">' +
+        /* Пока игра грузится, вместо чёрного прямоугольника — аккуратный
+           индикатор: игрок видит, что платформа работает, а не зависла. */
+        '<div class="play-loader" data-loader>' +
+        '<span class="play-loader-ring" aria-hidden="true"></span>' +
+        '<b data-loader-title>' + T('Загрузка игры', 'Loading game') + '</b>' +
+        '<span class="play-loader-hint" data-loader-hint>' + T('Секунду…', 'One moment…') + '</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm play-loader-retry" data-loader-retry hidden>' +
+        T('Обновить', 'Reload') + '</button></div>' +
+        '<iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
+      overlay.querySelectorAll('[data-close]').forEach(function (button) {
+        button.addEventListener('click', closeGame);
+      });
+      var loaderRetry = overlay.querySelector('[data-loader-retry]');
+      if (loaderRetry) loaderRetry.addEventListener('click', function () {
+        var f = overlay.querySelector('.play-frame');
+        if (!f) return;
+        showPlayLoader();
+        try { f.contentWindow.location.reload(); } catch (e) { f.src = f.src; }
+      });
       overlay.querySelector('[data-grip]').addEventListener('click', togglePlayerBar);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
       overlay.querySelector('[data-fs-float]').addEventListener('click', function () {
@@ -1194,7 +1212,6 @@
         pending.then(function () { syncFullscreenButton(); updateFsFloat(); },
           function () { pseudoFullscreen(); });
       });
-      overlay.querySelector('[data-report]').addEventListener('click', openReportDialog);
       overlay.querySelector('[data-action="play-account"]').addEventListener('click', function (event) {
         event.stopPropagation();
         openAccountMenu(event.currentTarget);
@@ -1251,7 +1268,12 @@
     setTimeout(ensureFrameFills, 480);
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
-    frame.onload = function () { ensureGameFocus(frame); };
+    frame.onload = function () {
+      hidePlayLoader();
+      ensureGameFocus(frame);
+      ensureFrameFills();
+    };
+    showPlayLoader();
     frame.src = game.file + '?lang=' + langParam + (LOW_END ? '&perf=low' : '');
     if (focusTimer) clearTimeout(focusTimer);
     focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
@@ -2005,6 +2027,84 @@
     window.addEventListener('orientationchange', function () { setTimeout(ensureFrameFills, 260); }, { passive: true });
   }
 
+  /* --------------------------------------------------- индикатор загрузки */
+  /*
+   * Пока кадр игры не загрузился, поверх него виден индикатор с названием
+   * игры. Это не «украшение»: без него медленный ответ сервера выглядел как
+   * зависшая платформа — чёрный прямоугольник без единого признака жизни.
+   * Через 9 секунд индикатор сам предлагает кнопку «Обновить», поэтому
+   * бесконечной загрузки без выхода не бывает.
+   */
+  var loaderTimer = 0;
+  function showPlayLoader() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var box = overlay.querySelector('[data-loader]');
+    if (!box) return;
+    box.removeAttribute('hidden');
+    box.classList.remove('play-loader-done', 'play-loader-slow');
+    var retry = box.querySelector('[data-loader-retry]');
+    if (retry) retry.hidden = true;
+    var title = box.querySelector('[data-loader-title]');
+    if (title) {
+      var name = VG.activeGame ? (lang() === 'en' ? (VG.activeGame.name_en || VG.activeGame.name) : VG.activeGame.name) : '';
+      title.textContent = name ? name : T('Загрузка игры', 'Loading game');
+    }
+    var hint = box.querySelector('[data-loader-hint]');
+    if (hint) hint.textContent = T('Секунду…', 'One moment…');
+    if (loaderTimer) clearTimeout(loaderTimer);
+    loaderTimer = setTimeout(function () {
+      loaderTimer = 0;
+      var current = overlay.querySelector('[data-loader]');
+      if (!current || current.hasAttribute('hidden')) return;
+      current.classList.add('play-loader-slow');
+      var slow = current.querySelector('[data-loader-hint]');
+      if (slow) slow.textContent = T('Игра грузится дольше обычного…', 'The game is taking longer than usual…');
+      var again = current.querySelector('[data-loader-retry]');
+      if (again) again.hidden = false;
+    }, 9000);
+  }
+  function hidePlayLoader() {
+    if (loaderTimer) { clearTimeout(loaderTimer); loaderTimer = 0; }
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var box = overlay.querySelector('[data-loader]');
+    if (!box) return;
+    box.classList.add('play-loader-done');
+    box.setAttribute('hidden', '');
+  }
+
+  /* ------------------------------------------------------- прогрев игры */
+  /*
+   * Игра открывается мгновенно, если её HTML уже в кеше браузера. Прогреваем
+   * файл в тот момент, когда игрок только собирается играть (наведение,
+   * тап по карточке, открытие описания) — к нажатию «Играть» ответ уже
+   * получен и в iframe остаётся только отрисовать кадр.
+   */
+  var warm = {};
+  function prefetchGame(file) {
+    if (!file || warm[file]) return;
+    warm[file] = 1;
+    try {
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.as = 'document';
+      link.href = file;
+      document.head.appendChild(link);
+    } catch (e) {}
+    try {
+      /* fetch даёт настоящий прогрев соединения и HTTP-кеша даже там, где
+         rel=prefetch игнорируется (Safari, встроенные браузеры). */
+      if (window.fetch) fetch(file, { credentials: 'same-origin', cache: 'no-cache' }).catch(function () {});
+    } catch (e) {}
+    /* Общие скрипты есть у каждой игры — их тоже греем. */
+    ['assets/vg/js/game-kit.js', 'assets/vg/js/sfx.js'].forEach(function (src) {
+      if (warm[src]) return;
+      warm[src] = 1;
+      try { fetch(src, { credentials: 'same-origin', cache: 'no-cache' }).catch(function () {}); } catch (e) {}
+    });
+  }
+
   function closeGame() {
     musicGameMode(false);
     var overlay = $('#playOverlay');
@@ -2038,6 +2138,7 @@
     if (fullscreenElement()) exitFullscreen();
     var frame = overlay.querySelector('.play-frame');
     if (frame) frame.src = 'about:blank';
+    hidePlayLoader();
     overlay.style.position = '';
     overlay.style.inset = '';
     overlay.style.top = '';
@@ -2068,6 +2169,19 @@
   VG.login = login; VG.register = register; VG.logout = logout; VG.changePassword = changePassword;
   VG.requireAuth = requireAuth; VG.renderTurnstile = renderTurnstile;
   VG.purchase = purchase; VG.equip = equip; VG.rename = rename; VG.openGame = openGame; VG.closeGame = closeGame;
+  VG.prefetchGame = prefetchGame;
+
+  /*
+   * PWA: установленное приложение открывается без адресной строки и вкладок
+   * браузера — это и есть «как настоящее приложение». Манифест объявлен в
+   * каждой странице, здесь только регистрируем сквозной service worker
+   * (он ничего не кеширует, чтобы деплой не приносил устаревший код).
+   */
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () {
+      try { navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {}); } catch (e) {}
+    });
+  }
   VG.setLang = setLang; VG.lang = currentLang; VG.LANGS = LANGS;
   VG.currentGameReward = currentGameReward;
   /*

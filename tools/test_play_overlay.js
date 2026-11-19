@@ -163,14 +163,30 @@ function makeEnv(session, opts) {
   const bar = overlay.querySelector('.play-bar');
   check('панель плеера на месте и не перекрывает игру',
     !!bar && !/position:absolute/.test(bar.getAttribute('style') || ''), null);
-  const exitBtn = overlay.querySelector('[data-close]');
+  const exitBtn = bar.querySelector('[data-close]');
   check('кнопка выхода из игры доступна', !!exitBtn, null);
   check('кнопка выхода подписана «Выйти» и лежит в панели плеера',
-    !!exitBtn && exitBtn.closest('.play-bar') === bar &&
-    /Выйти|Exit/.test(exitBtn.textContent || ''), exitBtn && exitBtn.textContent);
+    !!exitBtn && /Выйти|Exit/.test(exitBtn.textContent || ''), exitBtn && exitBtn.textContent);
   check('у кнопки выхода есть подпись для скринридера',
     !!exitBtn && /Выйти|Exit/.test(exitBtn.getAttribute('aria-label') || ''),
     exitBtn && exitBtn.getAttribute('aria-label'));
+  /* Вторая кнопка выхода — поверх игры: панель уезжает через 3 секунды, и
+     без неё выйти можно было только угадав «язычок». */
+  const exitChip = overlay.querySelector('.play-exit-chip');
+  check('поверх игры есть отдельная кнопка «Выйти»', !!exitChip, null);
+  check('кнопка «Выйти» не дублируется: она появляется только без панели',
+    /\.play-exit-chip\{display:none/.test(CSS) &&
+    /\.play-overlay\.bar-hidden \.play-exit-chip\{display:inline-flex\}/.test(CSS), null);
+  /* Индикатор загрузки: без него медленный старт выглядит как зависание. */
+  const loader = overlay.querySelector('[data-loader]');
+  check('пока игра грузится, показан индикатор загрузки', !!loader, null);
+  check('индикатор не висит вечно: есть кнопка «Обновить»',
+    !!loader && !!loader.querySelector('[data-loader-retry]'), null);
+  check('у индикатора есть название игры и подсказка',
+    !!loader && !!loader.querySelector('[data-loader-title]') &&
+    !!loader.querySelector('[data-loader-hint]'), null);
+  /* Кнопку жалобы из игрового интерфейса убрали полностью. */
+  check('кнопки «Ошибка» в плеере больше нет', !overlay.querySelector('[data-report]'), null);
   check('кнопка полного экрана доступна', !!overlay.querySelector('[data-fullscreen]'), null);
 
   /* --------------------------------------------------------- закрытие */
