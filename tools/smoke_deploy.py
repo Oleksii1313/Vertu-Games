@@ -109,7 +109,9 @@ def main() -> int:
         # Локально/в тестах капча может быть выключена — для прода это предупреждение.
         print(f'  ⚠ Turnstile выключен (TURNSTILE_REQUIRED=0): {captcha}')
         if 'onrender.com' in args.base:
-            check('Cloudflare Turnstile включён на проде', False, 'TURNSTILE_REQUIRED нужно выставить в 1')
+            check('Cloudflare Turnstile включён на проде', False,
+                  'нет ключей: выставьте TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY и TURNSTILE_REQUIRED=1 '
+                  'в Environment на Render (см. docs/CAPTCHA.md)')
 
     print('== Публикация колеса')
     status, version = guest.get('/api/version')

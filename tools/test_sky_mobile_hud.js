@@ -9,8 +9,9 @@
  *
  *   1. панель на тач-экране уезжает наверх и стартует свёрнутой;
  *   2. панель можно свернуть/развернуть кнопкой;
- *   3. карточка доставки на телефоне свёрнута по умолчанию;
- *   4. в верхней строке есть кнопка, которая прячет весь HUD и возвращает его;
+ *   3. на телефоне карточка доставки, панель полёта и карта переезжают в одну
+ *      шторку, которая открывается одной кнопкой и закрывается ею же;
+ *   4. на десктопе это та же кнопка, но она просто прячет подсказки;
  *   5. собираемая в игре CSS и базовая вёрстка содержат нужные правила
  *      (безопасные зоны, 100dvh, z-index джойстика выше панели);
  *   6. сборка games/sky-isle.html совпадает с исходником games/sky-isle.js.
@@ -50,6 +51,15 @@ check('CSS игры: HUD выше панели, поэтому джойстик 
 check('CSS игры: у свёрнутой панели одна строка без списка миссий',
   /#lgPanel\.collapsed\{[^}]*flex-direction:row/.test(gameCss) &&
   /#lgPanel\.collapsed #lgRes,#lgPanel\.collapsed #lgMissions\{display:none\}/.test(gameCss), null);
+check('CSS игры: одно меню — шторка со всеми блоками и закрытием',
+  /#lgSheet\{position:fixed/.test(gameCss) && /#lgSheet\.on\{display:flex\}/.test(gameCss) &&
+  /#lgSheetBody\{display:flex/.test(gameCss), null);
+check('CSS игры: внутри шторки блоки статичные, без absolute-наложений',
+  /#lgSheet \.mission\{position:static/.test(gameCss) &&
+  /#lgSheet #lgPanel\{position:static/.test(gameCss) &&
+  /#lgSheet \.map-card\{position:static/.test(gameCss), null);
+check('CSS игры: телеметрия на телефоне уходит под верхнюю строку',
+  /body\[data-input=touch\] \.telemetry\{top:calc\(74px/.test(gameCss), null);
 check('CSS игры: режим «без подсказок» прячет панель, карточку, карту и телеметрию',
   /body\.hud-clean \.hud \.mission,body\.hud-clean \.map-card,/.test(gameCss) &&
   /body\.hud-clean #lgPanel,body\.hud-clean \.telemetry\{display:none!important\}/.test(gameCss), null);
@@ -112,8 +122,8 @@ const panelCode = slice(source, '  /* На телефоне панель сра�
 const missionCode = slice(source, "    if (document.body.dataset.input === 'touch') {\n      missionCard.classList.add('collapsed');",
   "btn.setAttribute('aria-expanded', 'false');\n    }");
 
-/* Верхняя строка: кнопка «убрать подсказки». */
-const hudCode = slice(source, "  const topbar = document.querySelector('.hud .topbar');", 'topbar.appendChild(hudBtn);\n  }');
+/* Верхняя строка: одна кнопка — меню на телефоне, «скрыть HUD» на десктопе. */
+const hudCode = slice(source, "  /* На телефоне весь интерфейс живёт в одном меню", "if (document.hidden) setSheet(false); });\n  }");
 
 function run(input) {
   const dom = makeDom(input);
@@ -130,40 +140,46 @@ function run(input) {
   return { dom, doc, panel, missionCard };
 }
 
-/* --- телефон --- */
+/* --- телефон: одно меню --- */
 const touch = run('touch');
-const tToggle = touch.doc.getElementById('lgToggle');
-check('телефон: у панели появилась кнопка сворачивания', !!tToggle, null);
-check('телефон: панель стартует свёрнутой', touch.panel.classList.contains('collapsed'), touch.panel.className);
-check('телефон: кнопка показывает «развернуть»', tToggle && tToggle.textContent === '+', tToggle && tToggle.textContent);
-check('телефон: карточка доставки свёрнута', touch.missionCard.classList.contains('collapsed'), null);
 const hudBtn = touch.doc.getElementById('hudToggle');
-check('телефон: в верхней строке есть кнопка «убрать подсказки»', !!hudBtn, null);
-
-tToggle.dispatchEvent(new touch.dom.window.Event('click'));
-check('панель разворачивается кликом', !touch.panel.classList.contains('collapsed') && tToggle.textContent === '–',
-  [touch.panel.className, tToggle.textContent]);
-tToggle.dispatchEvent(new touch.dom.window.Event('click'));
-check('панель снова сворачивается', touch.panel.classList.contains('collapsed') && tToggle.textContent === '+', null);
+const sheet = touch.doc.getElementById('lgSheet');
+check('телефон: в верхней строке одна кнопка меню', !!hudBtn && hudBtn.textContent === '☰', hudBtn && hudBtn.textContent);
+check('телефон: меню собрано и закрыто по умолчанию', !!sheet && !sheet.classList.contains('on'), null);
+check('телефон: карточка доставки, панель и карта внутри меню',
+  !!sheet.querySelector('.mission') && sheet.contains(touch.doc.getElementById('lgPanel')) &&
+  !!sheet.querySelector('.map-card'), null);
+check('телефон: карточка доставки больше не висит поверх игры',
+  !touch.doc.querySelector('.hud .mission'), null);
+check('телефон: в меню панель развёрнута, а не свёрнута',
+  !touch.doc.getElementById('lgPanel').classList.contains('collapsed'), null);
 
 hudBtn.dispatchEvent(new touch.dom.window.Event('click'));
-check('кнопка HUD прячет подсказки', touch.doc.body.classList.contains('hud-clean') &&
-  hudBtn.getAttribute('aria-pressed') === 'true' && hudBtn.textContent === '◉', hudBtn.textContent);
+check('телефон: кнопка открывает меню', sheet.classList.contains('on') && hudBtn.textContent === '×',
+  [sheet.className, hudBtn.textContent]);
 hudBtn.dispatchEvent(new touch.dom.window.Event('click'));
-check('кнопка HUD возвращает подсказки', !touch.doc.body.classList.contains('hud-clean') &&
-  hudBtn.getAttribute('aria-pressed') === 'false', null);
+check('телефон: повторное нажатие закрывает меню', !sheet.classList.contains('on') && hudBtn.textContent === '☰', null);
+hudBtn.dispatchEvent(new touch.dom.window.Event('click'));
+touch.doc.getElementById('lgSheetClose').dispatchEvent(new touch.dom.window.Event('click'));
+check('телефон: крестик в меню закрывает его', !sheet.classList.contains('on'), sheet.className);
+check('телефон: меню не переключает режим «без подсказок»', !touch.doc.body.classList.contains('hud-clean'), null);
 
-/* --- десктоп: ничего не сворачиваем насильно --- */
+/* --- десктоп: панели на месте, кнопка прячет подсказки --- */
 const desk = run('desktop');
-check('десктоп: панель развёрнута', !desk.panel.classList.contains('collapsed'), desk.panel.className);
-check('десктоп: карточка доставки развёрнута', !desk.missionCard.classList.contains('collapsed'), null);
-check('десктоп: кнопка HUD тоже доступна', !!desk.doc.getElementById('hudToggle'), null);
-check('десктоп: кнопка панели подписана «свернуть»', desk.doc.getElementById('lgToggle').textContent === '–', null);
+const deskBtn = desk.doc.getElementById('hudToggle');
+check('десктоп: шторки нет', !desk.doc.getElementById('lgSheet'), null);
+check('десктоп: панель полёта вне меню и развёрнута',
+  !!desk.doc.getElementById('lgPanel') && !desk.panel.classList.contains('collapsed'), null);
+check('десктоп: кнопка прячет подсказки', !!deskBtn, null);
+deskBtn.dispatchEvent(new desk.dom.window.Event('click'));
+check('десктоп: режим «без подсказок» включается и выключается',
+  desk.doc.body.classList.contains('hud-clean'), null);
+deskBtn.dispatchEvent(new desk.dom.window.Event('click'));
+check('десктоп: подсказки возвращаются', !desk.doc.body.classList.contains('hud-clean'), null);
 
 /* --- сборка совпадает с исходником --- */
 check('сборка games/sky-isle.html содержит те же правки HUD',
-  built.includes('body.hud-clean .hud .mission,body.hud-clean .map-card') &&
-  built.includes("hudBtn.textContent = clean ? '◉' : '◎';") &&
+  built.includes('#lgSheet{position:fixed') && built.includes("btn.textContent = open ? '×' : '☰';") &&
   built.includes('engine.setHardwareScalingLevel(1)'), null);
 
 const failed = results.filter((r) => r.startsWith('FAIL'));

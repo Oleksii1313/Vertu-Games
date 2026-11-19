@@ -863,12 +863,43 @@ function skyLogistics(ctx) {
   #lgPanel.collapsed #lgRes,#lgPanel.collapsed #lgMissions{display:none}
   #lgPanel.collapsed #lgToggle{position:static;order:-1;top:auto;right:auto}
   #lgPanel.collapsed #lgFuel{min-width:104px}
-  /* Кнопка в верхней строке убирает все подсказки: остаётся только мир. */
+  /* Кнопка в верхней строке: на телефоне открывает одно меню со всеми
+     подсказками, на десктопе просто прячет их — остаётся только мир. */
   body.hud-clean .hud .mission,body.hud-clean .map-card,
   body.hud-clean #lgPanel,body.hud-clean .telemetry{display:none!important}
-  #hudToggle{width:32px;height:32px;min-width:0;min-height:0;padding:0;font-size:14px;line-height:1;
+  #hudToggle{width:32px;height:32px;min-width:0;min-height:0;padding:0;font-size:15px;line-height:1;
     border-radius:10px;display:grid;place-items:center}
   #hudToggle.off{opacity:.55}
+  /* Одно меню на телефоне: карточка доставки, панель полёта и карта живут
+     внутри шторки, а не висят поверх игры и не наезжают на джойстик. */
+  #lgSheet{position:fixed;left:calc(8px + env(safe-area-inset-left,0px));
+    top:calc(64px + env(safe-area-inset-top,0px));z-index:30;width:min(300px,76vw);
+    max-height:calc(100dvh - 170px);display:none;flex-direction:column;background:#fbf8edf7;
+    border:1px solid #fff9;border-radius:16px;box-shadow:0 14px 40px #2c4a5533;overflow:hidden;
+    font:500 11px/1.45 system-ui;color:#46584f}
+  #lgSheet.on{display:flex}
+  #lgSheet>header{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #e4dfca;
+    background:#f6f2e2;font:700 11px system-ui;letter-spacing:.6px;text-transform:uppercase;color:#5c7268}
+  #lgSheet>header b{flex:1}
+  #lgSheetClose{width:28px;height:28px;min-width:0;min-height:0;padding:0;border-radius:9px;
+    border:1px solid #cfd6c2;background:#fff;color:#4d6a5e;font:700 14px/1 system-ui;cursor:pointer}
+  #lgSheetBody{display:flex;flex-direction:column;gap:8px;padding:10px;overflow:auto;
+    -webkit-overflow-scrolling:touch}
+  #lgSheet .mission{position:static;left:auto;top:auto;width:auto;padding:10px 12px;border-radius:12px;
+    box-shadow:none;background:#fffdf2}
+  #lgSheet .mission .collapse,#lgSheet #lgToggle{display:none}
+  #lgSheet #lgPanel{position:static;left:auto;top:auto;bottom:auto;width:auto;max-width:none;
+    border-radius:12px;box-shadow:none;background:#fff9;padding:10px}
+  #lgSheet .map-card{position:static;right:auto;top:auto;width:auto;border-radius:12px;box-shadow:none;
+    display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff9}
+  #lgSheet .map-card canvas{width:152px;height:152px}
+  /* Телеметрия уходит под верхнюю строку: низ экрана целиком отдан
+     управлению (джойстик слева, высота справа), ничего не перекрывается. */
+  body[data-input=touch] .telemetry{top:calc(74px + env(safe-area-inset-top,0px));bottom:auto;
+    left:50%;transform:translateX(-50%);z-index:15}
+  @media (max-height:520px){
+    body[data-input=touch] .telemetry{top:calc(66px + env(safe-area-inset-top,0px))}
+  }
   @media (max-width:720px){
     body[data-input=touch] .hud .mission{top:calc(70px + env(safe-area-inset-top,0px));width:calc(100% - 150px)}
     body[data-input=touch] #lgPanel{left:calc(10px + env(safe-area-inset-left,0px));
@@ -995,27 +1026,80 @@ function skyLogistics(ctx) {
     }
   }
 
-  /* Кнопка «убрать подсказки»: карточка доставки, карта, панель полёта и
-     телеметрия скрываются одним тапом — остаётся только игра. Нажатие ещё раз
-     возвращает интерфейс. */
+  /* На телефоне весь интерфейс живёт в одном меню: карточка доставки, панель
+     полёта и карта переезжают в шторку и больше не наезжают друг на друга,
+     на джойстик и на телеметрию. Обновляются они тем же кодом — узлы просто
+     меняют родителя. */
+  let sheet = null;
+  function setSheet(open) {
+    if (!sheet) return;
+    sheet.classList.toggle('on', open);
+    const btn = document.getElementById('hudToggle');
+    if (btn) {
+      btn.textContent = open ? '×' : '☰';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.title = open ? tr('Закрыть меню', 'Close the menu') : tr('Меню полёта', 'Flight menu');
+    }
+  }
+  function buildSheet() {
+    if (sheet) return sheet;
+    sheet = document.createElement('div');
+    sheet.id = 'lgSheet';
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-label', tr('Меню полёта', 'Flight menu'));
+    sheet.innerHTML = '<header><b>' + tr('ПОЛЁТ', 'FLIGHT') + '</b>' +
+      '<button type="button" id="lgSheetClose" aria-label="' + tr('Закрыть', 'Close') + '">×</button></header>' +
+      '<div id="lgSheetBody"></div>';
+    document.body.appendChild(sheet);
+    const body = sheet.querySelector('#lgSheetBody');
+    const missionNode = document.querySelector('.hud .mission');
+    const mapNode = document.querySelector('.map-card');
+    const panelNode = document.getElementById('lgPanel');
+    if (missionNode) { missionNode.classList.remove('collapsed'); body.appendChild(missionNode); }
+    if (panelNode) { panelNode.classList.remove('collapsed'); body.appendChild(panelNode); }
+    if (mapNode) body.appendChild(mapNode);
+    const close = sheet.querySelector('#lgSheetClose');
+    if (close) close.addEventListener('click', function () { setSheet(false); });
+    return sheet;
+  }
+
+  /* Одна кнопка в верхней строке: на телефоне — меню, на десктопе — «убрать
+     подсказки». Так на экране нет ни одной лишней кнопки. */
   const topbar = document.querySelector('.hud .topbar');
   if (topbar && !document.getElementById('hudToggle')) {
+    const touch = document.body.dataset.input === 'touch';
     const hudBtn = document.createElement('button');
     hudBtn.type = 'button';
     hudBtn.id = 'hudToggle';
     hudBtn.className = 'icon';
-    hudBtn.textContent = '◎';
-    hudBtn.title = tr('Скрыть подсказки', 'Hide the HUD');
-    hudBtn.setAttribute('aria-label', tr('Скрыть подсказки', 'Hide the HUD'));
     hudBtn.setAttribute('aria-pressed', 'false');
-    hudBtn.addEventListener('click', function () {
-      const clean = document.body.classList.toggle('hud-clean');
-      hudBtn.classList.toggle('off', clean);
-      hudBtn.textContent = clean ? '◉' : '◎';
-      hudBtn.setAttribute('aria-pressed', clean ? 'true' : 'false');
-      hudBtn.title = clean ? tr('Показать подсказки', 'Show the HUD') : tr('Скрыть подсказки', 'Hide the HUD');
-    });
+    if (touch) {
+      hudBtn.textContent = '☰';
+      hudBtn.title = tr('Меню полёта', 'Flight menu');
+      hudBtn.setAttribute('aria-label', tr('Меню полёта', 'Flight menu'));
+      hudBtn.setAttribute('aria-expanded', 'false');
+      hudBtn.addEventListener('click', function () {
+        const sheetNode = buildSheet();
+        setSheet(!sheetNode.classList.contains('on'));
+      });
+      buildSheet();
+    } else {
+      hudBtn.textContent = '◎';
+      hudBtn.title = tr('Скрыть подсказки', 'Hide the HUD');
+      hudBtn.setAttribute('aria-label', tr('Скрыть подсказки', 'Hide the HUD'));
+      hudBtn.addEventListener('click', function () {
+        const clean = document.body.classList.toggle('hud-clean');
+        hudBtn.classList.toggle('off', clean);
+        hudBtn.textContent = clean ? '◉' : '◎';
+        hudBtn.setAttribute('aria-pressed', clean ? 'true' : 'false');
+        hudBtn.title = clean ? tr('Показать подсказки', 'Show the HUD') : tr('Скрыть подсказки', 'Hide the HUD');
+      });
+    }
     topbar.appendChild(hudBtn);
+  }
+  /* Меню не должно переживать паузу/интро: закрываем при уходе с экрана. */
+  if (document.body.dataset.input === 'touch') {
+    document.addEventListener('visibilitychange', function () { if (document.hidden) setSheet(false); });
   }
 
   /* Короткая подсказка при первом запуске: три строки, которые объясняют
