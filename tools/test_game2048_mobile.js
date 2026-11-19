@@ -18,28 +18,33 @@ const errors = [];
 vc.on('jsdomError', (e) => { if (!/navigation|Not implemented|resource/i.test(e.message)) errors.push(e.message); });
 vc.on('error', (...a) => errors.push(a.join(' ')));
 
+/* Заглушка 2D-контекста: игра рисует поле, но пиксели нам не нужны.
+   Ставим её в beforeParse — игра берёт контекст canvas сразу при загрузке,
+   и подмена после создания окна уже не успевает (resize() падал на null). */
+const grad = { addColorStop() {} };
+let ctxStub;
 const dom = new JSDOM(html, {
   runScripts: 'dangerously',
   pretendToBeVisual: true,
   url: 'http://localhost/games/game2048.html',
-  virtualConsole: vc
+  virtualConsole: vc,
+  beforeParse(window) {
+    ctxStub = new Proxy({
+      createLinearGradient: () => grad, createRadialGradient: () => grad,
+      measureText: () => ({ width: 10 }), getImageData: (x, y, a, b) => ({ data: new Uint8ClampedArray(a * b * 4) }),
+      putImageData() {}, createImageData: (a, b) => ({ data: new Uint8ClampedArray(a * b * 4) }),
+      setTransform() {}
+    }, { get(t, p) { return p in t ? t[p] : function () {}; }, set(t, p, v) { t[p] = v; return true; } });
+    window.HTMLCanvasElement.prototype.getContext = function () { ctxStub.canvas = this; return ctxStub; };
+    window.HTMLElement.prototype.setPointerCapture = window.HTMLElement.prototype.setPointerCapture || function () {};
+    window.HTMLElement.prototype.releasePointerCapture = window.HTMLElement.prototype.releasePointerCapture || function () {};
+    if (!window.ResizeObserver) window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+    Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+    Object.defineProperty(window, 'devicePixelRatio', { value: 2, configurable: true });
+  }
 });
 const w = dom.window;
-
-/* Заглушка 2D-контекста: игра рисует поле, но пиксели нам не нужны. */
-const grad = { addColorStop() {} };
-const ctxStub = new Proxy({
-  createLinearGradient: () => grad, createRadialGradient: () => grad,
-  measureText: () => ({ width: 10 }), getImageData: (x, y, a, b) => ({ data: new Uint8ClampedArray(a * b * 4) }),
-  putImageData() {}, createImageData: (a, b) => ({ data: new Uint8ClampedArray(a * b * 4) })
-}, { get(t, p) { return p in t ? t[p] : function () {}; }, set(t, p, v) { t[p] = v; return true; } });
-w.HTMLCanvasElement.prototype.getContext = function () { ctxStub.canvas = this; return ctxStub; };
-w.HTMLElement.prototype.setPointerCapture = w.HTMLElement.prototype.setPointerCapture || function () {};
-w.HTMLElement.prototype.releasePointerCapture = w.HTMLElement.prototype.releasePointerCapture || function () {};
-if (!w.ResizeObserver) w.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
-Object.defineProperty(w, 'innerWidth', { value: 390, configurable: true });
-Object.defineProperty(w, 'innerHeight', { value: 844, configurable: true });
-Object.defineProperty(w, 'devicePixelRatio', { value: 2, configurable: true });
 
 const results = [];
 function check(name, ok, extra) {

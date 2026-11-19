@@ -110,6 +110,15 @@ function open(base, page, stored) {
     url: base + '/' + page, virtualConsole: vc,
     beforeParse(window) {
       window.fetch = () => Promise.reject(new Error('offline'));
+      /* jsdom без @napi-rs/canvas отдаёт null из getContext('2d'), и страницы
+         падали на первом же ctx.setTransform — это дефект стенда, не сайта. */
+      const grad = { addColorStop() {} };
+      const ctx2d = new Proxy({
+        createLinearGradient: () => grad, createRadialGradient: () => grad,
+        measureText: () => ({ width: 10 }), setTransform() {}, getImageData: (x, y, a, b) => ({ data: new Uint8ClampedArray(Math.max(1, a * b * 4)) }),
+        createImageData: (a, b) => ({ data: new Uint8ClampedArray(Math.max(1, a * b * 4)) }), putImageData() {}
+      }, { get(t, k) { return k in t ? t[k] : function () {}; }, set(t, k, v) { t[k] = v; return true; } });
+      window.HTMLCanvasElement.prototype.getContext = function (kind) { return kind === '2d' ? ctx2d : null; };
       if (stored) { try { window.localStorage.setItem('vg_lang', stored); } catch (e) {} }
     },
   });

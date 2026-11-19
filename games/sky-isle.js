@@ -13,7 +13,10 @@ try{
  if(!window.BABYLON?.GUI)throw Error('Babylon.js / Babylon GUI did not initialize');
  const B=window.BABYLON,canvas=$('flight');
  const fine=matchMedia('(hover: hover) and (pointer: fine)');function inputMode(){document.body.dataset.input=fine.matches||!navigator.maxTouchPoints?'desktop':'touch'}inputMode();fine.addEventListener('change',inputMode);window.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')document.body.dataset.input='touch';else if(e.pointerType==='mouse'&&fine.matches)document.body.dataset.input='desktop'},{capture:true});
- const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true,antialias:true,powerPreference:'high-performance'});engine.setHardwareScalingLevel(Math.max(1,(devicePixelRatio||1)/1.4));
+ const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true,antialias:true,powerPreference:'high-performance'},true);engine./* Буфер canvas в физических пикселях экрана (adaptToDeviceRatio=true), а
+   рендер — не ниже 2× CSS-пикселя: на retina картинка резкая, но слабый GPU
+   не рисует 3× (это вчетверо дороже, чем 1.5×). */
+setHardwareScalingLevel(Math.max(1,(devicePixelRatio||1)/2));
  const scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#b5d9e5ff');scene.fogMode=B.Scene.FOGMODE_LINEAR;scene.fogStart=450;scene.fogEnd=1900;scene.fogColor=B.Color3.FromHexString('#c7e2e9');scene.ambientColor=B.Color3.Black();
  const camera=new B.FreeCamera('Following camera',new B.Vector3(100,85,100),scene);camera.minZ=.12;camera.maxZ=3400;camera.fov=.82;camera.inputs.clear();scene.activeCamera=camera;
  const hemi=new B.HemisphericLight('Open sky',new B.Vector3(0,1,0),scene);hemi.intensity=.65;hemi.groundColor=B.Color3.FromHexString('#75896d');
@@ -701,7 +704,10 @@ function skyLogistics(ctx) {
  function closeHelp(){$('helpModal').hidden=true;if(helpResume)start();helpResume=false}
  function resetCamera(){cam.yaw=cam.cyaw+Math.atan2(Math.sin(S.heading-cam.cyaw),Math.cos(S.heading-cam.cyaw));cam.pitch=.38;cam.distance=16}
  $('start').onclick=start;$('pause').onclick=pause;$('resume').onclick=start;$('help').onclick=help;$('closeHelp').onclick=closeHelp;$('helpDone').onclick=closeHelp;$('resetCamera').onclick=resetCamera;$('home').onclick=()=>{save();clearInput();if(parent!==window)parent.postMessage({type:'home',game:'skyisle'},location.origin==='null'?'*':location.origin);else location.href='../index.html'};
- document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select'))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ControlLeft','ControlRight','KeyC'].includes(e.code))e.preventDefault();if(e.code==='Escape'){if(!$('helpModal').hidden)closeHelp();else if(mode==='playing')pause();else if(mode==='paused')start();return}if(mode!=='playing')return;keys[e.code]=true;if(!e.repeat&&e.code==='KeyR')resetCamera()});document.addEventListener('keyup',e=>{keys[e.code]=false});
+ /* Платформа пробрасывает клавиши в игру синтетическим событием на document:
+   у такого события e.target — сам документ, а не элемент, и e.target.matches
+   падает с TypeError, из-за чего нажатие терялось. Проверяем защищённо. */
+document.addEventListener('keydown',e=>{const t=e.target;if(t&&t.matches&&t.matches('input,textarea,select'))return;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ControlLeft','ControlRight','KeyC'].includes(e.code))e.preventDefault();if(e.code==='Escape'){if(!$('helpModal').hidden)closeHelp();else if(mode==='playing')pause();else if(mode==='paused')start();return}if(mode!=='playing')return;keys[e.code]=true;if(!e.repeat&&e.code==='KeyR')resetCamera()});document.addEventListener('keyup',e=>{keys[e.code]=false});
  /* Обзор. Сцена Babylon по умолчанию левосторонняя: при камере, которая смотрит
     в -Z, экранное «вправо» — это -X. Поэтому тянуть мышь вправо значит
     увеличивать yaw (взгляд уходит вправо), влево — уменьшать; вверх/вниз — наклон.
@@ -719,7 +725,11 @@ function skyLogistics(ctx) {
 canvas.addEventListener('wheel',e=>{if(mode!=='playing')return;e.preventDefault();cam.distance=Math.max(9,Math.min(24,cam.distance*Math.exp(e.deltaY*.001)))},{passive:false});
  function moveStick(e){if(e.pointerId!==stick.id)return;const r=$('stick').getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,d=Math.hypot(x,y),limit=34,k=d>limit?limit/d:1;stick.x=d>5?x*k/limit:0;stick.y=d>5?y*k/limit:0;$('nub').style.transform='translate('+x*k+'px,'+y*k+'px)'}$('stick').addEventListener('pointerdown',e=>{if(mode!=='playing'||stick.id!==null)return;e.preventDefault();stick.id=e.pointerId;$('stick').setPointerCapture(e.pointerId);moveStick(e)});$('stick').addEventListener('pointermove',moveStick);for(const ev of ['pointerup','pointercancel','lostpointercapture'])$('stick').addEventListener(ev,e=>{if(stick.id!==e.pointerId)return;stick.id=null;stick.x=stick.y=0;$('nub').style.transform='translate(0,0)'});
  for(const btn of [$('up'),$('down')]){btn.addEventListener('pointerdown',e=>{if(mode!=='playing')return;e.preventDefault();altOwners.set(e.pointerId,btn);btn.classList.add('held');btn.setPointerCapture(e.pointerId)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{if(altOwners.get(e.pointerId)!==btn)return;altOwners.delete(e.pointerId);if(![...altOwners.values()].includes(btn))btn.classList.remove('held')})}
- window.addEventListener('blur',()=>{clearInput();if(mode==='playing')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause()});window.addEventListener('resize',()=>{engine.resize();clearInput()});
+ window.addEventListener('blur',()=>{clearInput();if(mode==='playing')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='playing')pause()});/* Смена размера окна (в том числе схлопывание адресной строки на телефоне)
+   не должна сбрасывать ввод: иначе джойстик «отлипает» прямо под пальцем,
+   а зажатая клавиша теряется. Сбрасываем ввод только при потере фокуса,
+   уходе вкладки в фон и повороте экрана. */
+window.addEventListener('resize',()=>{engine.resize()});
 /* Панель браузера (и адресная строка iOS в частности) меняет высоту без события
    resize: тогда canvas остаётся старым по буферу и кадр растягивается. Держим
    буфер в размере видимой области, но НЕ сбрасываем ввод — иначе жест обзора

@@ -5357,7 +5357,7 @@ function mcxScheduleFit() {
    кадры реально не успевают. */
 function mcxApplyDpr() {
   if (!Xe) return;
-  let i = Math.min(devicePixelRatio || 1, fn ? 1.75 : 1.5),
+  let i = Math.min(devicePixelRatio || 1, fn ? 2 : 1.75),
     e = Math.max(1, i - mcxPerf.step * .25);
   Xe.setPixelRatio(e), lo = !0
 }
