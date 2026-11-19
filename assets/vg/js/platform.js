@@ -1162,6 +1162,9 @@
       overlay.innerHTML =
         '<button type="button" class="play-grip" data-grip aria-label="' +
         T('Панель игрока', 'Player panel') + '"></button>' +
+        '<button type="button" class="play-fs-float" data-fs-float hidden aria-label="' +
+        T('Игра на весь экран', 'Play fullscreen') + '" title="' +
+        T('Игра на весь экран', 'Play fullscreen') + '">' + icon('expand', 16) + '</button>' +
         '<div class="play-bar"><button type="button" class="btn btn-ghost btn-sm" data-close>' +
         icon('chev', 15) + T('Назад', 'Back') + '</button><h3></h3>' +
         '<div class="lang play-lang" role="group" aria-label="Language">' +
@@ -1183,6 +1186,13 @@
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
       overlay.querySelector('[data-grip]').addEventListener('click', togglePlayerBar);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
+      overlay.querySelector('[data-fs-float]').addEventListener('click', function () {
+        if (fullscreenElement()) { exitFullscreen(); return; }
+        var pending = requestOn(overlay) || requestOn(document.documentElement);
+        if (!pending) { pseudoFullscreen(); return; }
+        pending.then(function () { syncFullscreenButton(); updateFsFloat(); },
+          function () { pseudoFullscreen(); });
+      });
       overlay.querySelector('[data-report]').addEventListener('click', openReportDialog);
       overlay.querySelector('[data-action="play-account"]').addEventListener('click', function (event) {
         event.stopPropagation();
@@ -1216,8 +1226,10 @@
        адресную строку и боковые кнопки, и игра занимает весь экран. Вызов
        идёт из обработчика клика, поэтому браузер считает его действием
        пользователя; если нельзя (iOS Safari) — мягко уходим в CSS-режим. */
+    overlay.removeAttribute('data-fs-retry');
     if (coarsePointer()) enterFullscreenOnOpen();
     setupPlayerBar(overlay);
+    updateFsFloat();
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
     frame.onload = function () { ensureGameFocus(frame); };
@@ -1604,34 +1616,100 @@
     return document.fullscreenElement || document.webkitFullscreenElement
       || document.mozFullScreenElement || document.msFullscreenElement || null;
   }
+  /*
+   * Запрос полного экрана «как умеет браузер».
+   *
+   * Сначала зовём requestFullscreen() БЕЗ аргументов: часть мобильных браузеров
+   * (встроенные оболочки, старые Chromium) спотыкается на объекте опций и
+   * молча отказывает — а это ровно то, из-за чего игра оставалась с адресной
+   * строкой и боковыми кнопками браузера. Если без опций не вышло — пробуем с
+   * navigationUI, затем с префиксами.
+   */
+  function requestOn(el) {
+    if (!el) return null;
+    var fns = [el.requestFullscreen, el.webkitRequestFullscreen,
+      el.mozRequestFullScreen, el.msRequestFullscreen].filter(Boolean);
+    if (!fns.length) return null;
+    for (var i = 0; i < fns.length; i++) {
+      try {
+        var maybe = fns[i].call(el);
+        return (maybe && typeof maybe.then === 'function') ? maybe : Promise.resolve();
+      } catch (e) { /* пробуем следующий вариант */ }
+      try {
+        var withUi = fns[i].call(el, { navigationUI: 'hide' });
+        return (withUi && typeof withUi.then === 'function') ? withUi : Promise.resolve();
+      } catch (e2) { /* и следующий */ }
+    }
+    return Promise.reject(new Error('fullscreen-rejected'));
+  }
+
   /* Просим полный экран у оверлея (или у документа). Если браузер отказал —
      включаем «псевдополный» режим: игра всё равно займёт 100dvh, а шапка и
-     подвал сайта уже скрыты классом vg-playing. */
+     подвал сайта уже скрыты классом vg-playing. Плюс «взводим» повторную
+     попытку: следующий тап по игре — снова действие пользователя. */
   function enterFullscreenOnOpen() {
     var overlay = $('#playOverlay');
     if (!overlay || fullscreenElement()) return;
     var targets = [overlay, document.documentElement];
-    for (var i = 0; i < targets.length; i++) {
-      var t = targets[i];
-      var fn = t && (t.requestFullscreen || t.webkitRequestFullscreen
-        || t.mozRequestFullScreen || t.msRequestFullscreen);
-      if (!fn) continue;
-      try {
-        var maybe = fn.call(t, { navigationUI: 'hide' });
-        if (maybe && typeof maybe.then === 'function') {
-          maybe.then(function () { syncFullscreenButton(); }, function () {
-            enterPseudoFullscreenClasses(); syncFullscreenButton();
-          });
-        } else {
-          setTimeout(function () {
-            if (!fullscreenElement()) { enterPseudoFullscreenClasses(); syncFullscreenButton(); }
-          }, 320);
-        }
+    var index = 0;
+    function attempt() {
+      if (index >= targets.length) {
+        enterPseudoFullscreenClasses();
+        syncFullscreenButton();
+        armFullscreenRetry();
+        updateFsFloat();
         return;
-      } catch (e) {}
+      }
+      var target = targets[index++];
+      var pending = requestOn(target);
+      if (!pending) { attempt(); return; }
+      pending.then(function () {
+        overlay.classList.remove('pseudo-full');
+        document.body.classList.remove('vg-pseudo-full');
+        syncFullscreenButton();
+        updateFsFloat();
+      }, function () { attempt(); });
     }
-    enterPseudoFullscreenClasses();
-    syncFullscreenButton();
+    attempt();
+  }
+
+  /* Браузер отказал на открытии (или запрос потерялся) — пробуем ещё раз на
+     первом же тапе: он снова считается действием пользователя. */
+  function armFullscreenRetry() {
+    var overlay = $('#playOverlay');
+    if (!overlay || overlay.getAttribute('data-fs-retry') === '1') return;
+    overlay.setAttribute('data-fs-retry', '1');
+    overlay.addEventListener('pointerdown', retryFullscreenOnce, { capture: true });
+  }
+  function retryFullscreenOnce(event) {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    /* Тап по «Назад» — это выход из игры, а не просьба развернуть её. */
+    if (event && event.target && event.target.closest && event.target.closest('[data-close]')) return;
+    overlay.removeEventListener('pointerdown', retryFullscreenOnce, { capture: true });
+    overlay.removeAttribute('data-fs-retry');
+    if (!overlay.classList.contains('open') || fullscreenElement()) return;
+    var pending = requestOn(overlay) || requestOn(document.documentElement);
+    if (!pending) return;
+    pending.then(function () {
+      overlay.classList.remove('pseudo-full');
+      document.body.classList.remove('vg-pseudo-full');
+      syncFullscreenButton();
+      updateFsFloat();
+    }, function () {});
+  }
+
+  /* Маленькая кнопка «⛶» рядом с «язычком» панели: панель на телефоне сама
+     уезжает через 3 секунды, и до кнопки «Экран» было не добраться. Кнопка
+     видна только пока полный экран не включён. */
+  function updateFsFloat() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    var btn = overlay.querySelector('[data-fs-float]');
+    if (!btn) return;
+    var open = overlay.classList.contains('open');
+    var active = !!fullscreenElement() || overlay.classList.contains('pseudo-full');
+    btn.hidden = !(open && coarsePointer() && !active);
   }
   function exitFullscreen() {
     var call = document.exitFullscreen || document.webkitExitFullscreen
@@ -1714,6 +1792,7 @@
     if (!button) return;
     var active = !!fullscreenElement() || overlay.classList.contains('pseudo-full');
     button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    updateFsFloat();
     var label = button.querySelector('span');
     if (label) label.textContent = active ? T('Выйти', 'Exit') : T('Экран', 'Screen');
     // Иконка меняется между «развернуть» и «свернуть» вместе с состоянием.
@@ -1758,6 +1837,8 @@
     if (!overlay) return;
     overlay.classList.remove('open');
     overlay.classList.remove('immersive', 'bar-hidden', 'pseudo-full');
+    overlay.removeAttribute('data-fs-retry');
+    updateFsFloat();
     if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
     if (fullscreenElement()) exitFullscreen();
     var frame = overlay.querySelector('.play-frame');

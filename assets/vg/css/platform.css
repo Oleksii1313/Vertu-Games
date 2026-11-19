@@ -497,6 +497,20 @@ body.vg-playing .mobile-nav{display:none!important}
 .play-grip::after{content:'';display:block;width:46px;height:5px;margin:6px auto 0;border-radius:99px;
   background:rgba(255,255,255,.64);box-shadow:0 1px 4px rgba(0,0,0,.45);transition:opacity .2s ease}
 .play-overlay.immersive:not(.bar-hidden) .play-grip::after{opacity:.22}
+/* Кнопка «на весь экран» рядом с «язычком» панели. На телефоне панель сама
+   уезжает через 3 секунды, и кнопка «Экран» из неё становится недоступной —
+   а адресную строку с боковыми кнопками браузера убирает только настоящий
+   полноэкранный режим. Кнопка живёт в нашей полосе над игрой, поэтому не
+   перекрывает HUD игры, и исчезает, как только полный экран включён. */
+.play-fs-float{position:absolute;top:calc(env(safe-area-inset-top,0px) + 1px);
+  left:calc(50% + 42px);z-index:9;width:30px;height:30px;min-width:0;min-height:0;padding:0;
+  display:none;align-items:center;justify-content:center;border-radius:10px;
+  border:1px solid rgba(255,255,255,.18);background:rgba(8,12,18,.62);color:#e6f0f4;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;opacity:.72;transition:opacity .18s ease}
+.play-overlay.open .play-fs-float:not([hidden]){display:inline-flex}
+.play-fs-float:hover,.play-fs-float:focus-visible{opacity:1}
+.play-fs-float svg{width:16px;height:16px}
+html[data-lowend="1"] .play-fs-float{box-shadow:none}
 
 /* Телефон в ландшафте: игра на весь экран, панель плеера — тонкая полоса сверху,
    кнопки «Назад/Экран» остаются под большим пальцем. */
