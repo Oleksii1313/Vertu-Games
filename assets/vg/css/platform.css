@@ -456,7 +456,9 @@ html[data-lowend="1"] .game-grid{content-visibility:auto;contain-intrinsic-size:
 
 /* ---------- game play overlay ---------- */
 .play-overlay{position:fixed;inset:0;z-index:150;display:none;flex-direction:column;background:#05060a;
-  width:100vw;height:100vh;height:100dvh;
+  /* 100% растягивает оверлей по экрану даже там, где 100dvh не поддержан
+     (старые WebView): игра не должна сжиматься в прямоугольник по центру. */
+  width:100%;height:100vh;height:100dvh;min-height:100%;
   /* Пока игра открыта, страница под ней не «резинит» на iOS и не уезжает от
      свайпа: жесты остаются внутри игры. */
   overscroll-behavior:none;overscroll-behavior-y:none;touch-action:manipulation;
@@ -464,6 +466,13 @@ html[data-lowend="1"] .game-grid{content-visibility:auto;contain-intrinsic-size:
 body.vg-playing{overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
 body.vg-playing .site-header,body.vg-playing .site-footer{overscroll-behavior:none}
 .play-overlay.open{display:flex}
+/* Кнопка выхода. Выход из игры — главное действие панели, поэтому она
+   отличается от служебных кнопок: рамка и лёгкая подсветка при наведении. */
+.play-bar .play-exit{order:-1;flex:0 0 auto;border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.05);color:#f3f7fb;gap:4px;min-height:34px}
+.play-bar .play-exit:hover,.play-bar .play-exit:focus-visible{background:rgba(255,45,149,.16);
+  border-color:rgba(255,45,149,.5);color:#fff}
+.play-bar .play-exit svg{width:14px;height:14px;flex:0 0 auto}
 .play-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(10,12,18,.96);
   padding-top:calc(10px + env(safe-area-inset-top,0px));flex-shrink:0}
 .play-bar h3{font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -542,7 +551,7 @@ html[data-lowend="1"] .play-fs-float{box-shadow:none}
 .play-overlay:fullscreen .play-bar,.play-overlay:-webkit-full-screen .play-bar,
 .play-overlay.pseudo-full .play-bar{position:absolute;top:0;left:0;right:0;z-index:6;
   border:0;background:linear-gradient(180deg,rgba(5,6,10,.9),rgba(5,6,10,0));
-  opacity:.35;transition:opacity .18s ease}
+  opacity:.55;transition:opacity .18s ease}
 .play-overlay:fullscreen .play-bar:hover,.play-overlay:fullscreen .play-bar:focus-within,
 .play-overlay.pseudo-full .play-bar:hover,.play-overlay.pseudo-full .play-bar:focus-within{opacity:1}
 /* Телефон: панель плеера компактная, чтобы у игры оставалась высота экрана. */

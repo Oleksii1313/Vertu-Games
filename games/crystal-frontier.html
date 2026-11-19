@@ -1027,8 +1027,10 @@ const faceCache={};
    Текстура 256×256 на прозрачном фоне, поэтому край овала не виден на голове,
    а оттенок кожи и посадка глаз слегка отличаются у каждого жителя (seed из
    цвета волос) — толпа не выглядит клонированной. */
-function faceMesh(hair,face){
-  const k=String(hair)+'_'+(face||'');
+/* Текстура лица. Вариаций две: рот закрыт и рот приоткрыт — вторая нужна,
+   чтобы говорящий житель шевелил губами, а не стоял с каменным лицом. */
+function faceTex(hair,face,open){
+  const k=String(hair)+'_'+(face||'')+(open?'_o':'');
   if(!faceCache[k])faceCache[k]=tex(cv(256,256,(x)=>{
     const hc='#'+(hair>>>0).toString(16).padStart(6,'0');
     let seed=(hair>>>0)%997;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff};
@@ -1039,7 +1041,7 @@ function faceMesh(hair,face){
     const dark=['#b9855a','#a9764c','#9d6b44','#8e5f3c'][Math.floor(tone*4)];
     const iris=['#5b7f9e','#6b4a2e','#4e6b4a','#7a5a3c'][Math.floor(((hair>>>3)%4))];
     const lipCol='#b26a63';
-    const eyeY=cy-16+rnd()*3, eyeDx=30+rnd()*5, eyeW=20+rnd()*3, eyeH=11+rnd()*1.5;
+    const eyeY=cy-18+rnd()*3, eyeDx=29+rnd()*4, eyeW=16.5+rnd()*2.5, eyeH=8.6+rnd()*1.2;
 
     x.clearRect(0,0,256,256);
 
@@ -1180,23 +1182,39 @@ function faceMesh(hair,face){
       x.restore();
     }
 
-    /* --- губы --- */
+    /* --- губы: закрытые или приоткрытые (речь) --- */
     const my=cy+52, mw=26+rnd()*4;
     x.beginPath();
-    x.moveTo(cx-mw,my);
-    x.quadraticCurveTo(cx-mw*.55,my-9,cx,my-3.5);
-    x.quadraticCurveTo(cx+mw*.55,my-9,cx+mw,my);
-    x.quadraticCurveTo(cx+mw*.5,my+5,cx,my+4);
-    x.quadraticCurveTo(cx-mw*.5,my+5,cx-mw,my);
-    x.closePath();
-    g=x.createLinearGradient(0,my-9,0,my+5);
-    g.addColorStop(0,lipCol);g.addColorStop(.5,'#a85b57');g.addColorStop(1,'#92504f');
-    x.fillStyle=g;x.fill();
-    x.strokeStyle='rgba(120,60,58,.55)';x.lineWidth=1.6;x.stroke();
-    /* линия губ и блик */
-    x.strokeStyle='rgba(90,44,42,.55)';x.lineWidth=2;x.beginPath();
-    x.moveTo(cx-mw*.92,my);x.quadraticCurveTo(cx,my+2.5,cx+mw*.92,my);x.stroke();
-    x.fillStyle='rgba(255,255,255,.20)';x.beginPath();x.ellipse(cx-mw*.10,my+3.4,mw*.42,1.9,0,0,7);x.fill();
+    if(open){
+      /* Приоткрытый рот: тень нёба, зубы сверху, язык снизу. Форма мягкая,
+         без «мультяшной» дырки — иначе лицо снова становится пластиковым. */
+      x.moveTo(cx-mw*.94,my-1.5);
+      x.quadraticCurveTo(cx,my-8.5,cx+mw*.94,my-1.5);
+      x.quadraticCurveTo(cx+mw*.52,my+13,cx,my+13);
+      x.quadraticCurveTo(cx-mw*.52,my+13,cx-mw*.94,my-1.5);
+      x.closePath();
+      g=x.createLinearGradient(0,my-8,0,my+13);
+      g.addColorStop(0,'#2b1211');g.addColorStop(1,'#4a211f');
+      x.fillStyle=g;x.fill();
+      x.fillStyle='#f3ece3';x.beginPath();x.ellipse(cx,my-.6,mw*.56,3.1,0,0,7);x.fill();
+      x.fillStyle='#a8595a';x.beginPath();x.ellipse(cx,my+9.4,mw*.44,3.6,0,0,7);x.fill();
+      x.strokeStyle='rgba(140,72,66,.85)';x.lineWidth=2.4;x.stroke();
+    }else{
+      x.moveTo(cx-mw,my);
+      x.quadraticCurveTo(cx-mw*.55,my-9,cx,my-3.5);
+      x.quadraticCurveTo(cx+mw*.55,my-9,cx+mw,my);
+      x.quadraticCurveTo(cx+mw*.5,my+5,cx,my+4);
+      x.quadraticCurveTo(cx-mw*.5,my+5,cx-mw,my);
+      x.closePath();
+      g=x.createLinearGradient(0,my-9,0,my+5);
+      g.addColorStop(0,lipCol);g.addColorStop(.5,'#a85b57');g.addColorStop(1,'#92504f');
+      x.fillStyle=g;x.fill();
+      x.strokeStyle='rgba(120,60,58,.55)';x.lineWidth=1.6;x.stroke();
+      /* линия губ и блик */
+      x.strokeStyle='rgba(90,44,42,.55)';x.lineWidth=2;x.beginPath();
+      x.moveTo(cx-mw*.92,my);x.quadraticCurveTo(cx,my+2.5,cx+mw*.92,my);x.stroke();
+      x.fillStyle='rgba(255,255,255,.20)';x.beginPath();x.ellipse(cx-mw*.10,my+3.4,mw*.42,1.9,0,0,7);x.fill();
+    }
 
     /* --- усы (кузнец и торговец) --- */
     if(face==='beard'||face==='moustache'){
@@ -1260,14 +1278,261 @@ function faceMesh(hair,face){
     x.beginPath();x.ellipse(cx,cy,rx-1.5,ry-1.5,0,0,7);x.stroke();
     x.restore();
   }));
+  return faceCache[k]}
+/*
+ * Лицо — портрет, натянутый на череп. Раньше это была плоская картинка перед
+ * шаром: в профиль она «отклеивалась» и висела в воздухе. Теперь вершины
+ * плоскости выгнуты по эллипсоиду головы, поэтому портрет повторяет её форму,
+ * а прозрачные края уходят внутрь черепа.
+ */
+function faceMesh(hair,face){
+  const closed=faceTex(hair,face,false),open=faceTex(hair,face,true);
+  const mat=new THREE.MeshStandardMaterial({map:closed,transparent:true,alphaTest:.10,roughness:.7,metalness:0});
+  const geo=new THREE.PlaneGeometry(.30,.30,16,16);
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), y=pos.getY(i)+.073;
+    /* Точная поверхность черепа (эллипсоид .098 × .1117 × .09996 с центром
+       на .086) плюс отступ: портрет повторяет голову, но не проваливается
+       в неё — иначе на щеках появляются «просветы» из полигонов черепа. */
+    const dx=x/.098, dy=(y-.086)/.1117;
+    const d=1-dx*dx-dy*dy;
+    /* К краю портрет «вкладывается» в голову: без этого по овалу лица
+       оставался видимый бортик. */
+    const rr=(x/.0984)*(x/.0984)+((y-.073)/.117)*((y-.073)/.117);
+    const rim=Math.max(0,Math.min(1,(1-rr)/.45));
+    pos.setZ(i, d>0 ? .09996*Math.sqrt(d)+.005*rim : -.024);
+  }
+  pos.needsUpdate=true;
+  geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,mat);
+  m.position.set(0,.073,0);
+  m.userData.closed=closed;m.userData.open=open;
+  return m;
+}
+/* ------------------------------------------------------------------ люди */
+/*
+ * Жители деревни. Раньше это были четыре коробки и шар: людей выдавали
+ * прямые углы, «палка» вместо рук и плоская голова. Теперь фигура собрана из
+ * скруглённых объёмов с настоящими пропорциями (≈7.5 головы на рост 1.75 м):
+ * сужающаяся талия, покатые плечи, локти и колени на шарнирах, кисти с
+ * большим пальцем, стопы с каблуком, шея и челюсть.
+ *
+ * Почему всё «склеено»: на телефоне вызовы отрисовки дороже полигонов.
+ * Статичные части одного материала сливаются в одну геометрию, цвет каждой
+ * части запекается в вершинные цвета. У жителя получается ~12 мешей вместо
+ * сорока, а материал (кожа/ткань/волосы) — один на всю деревню.
+ */
+const HUM={mat:{},tex:{}};
+/* Ткань, кожа и обувь получают процедурный рисунок: равномерный цвет и есть
+   та самая «пластиковость». Текстура серая, цвет приходит из вершин. */
+function humTex(kind){
+  if(HUM.tex[kind])return HUM.tex[kind];
+  const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  x.fillStyle='#ffffff';x.fillRect(0,0,128,128);
+  let i;
+  if(kind==='cloth'){
+    /* плетение: тонкая сетка нитей + потёртости */
+    for(i=0;i<128;i+=2){x.fillStyle='rgba(0,0,0,.055)';x.fillRect(0,i,128,1);x.fillStyle='rgba(255,255,255,.05)';x.fillRect(i,0,1,128)}
+    for(i=0;i<700;i++){x.fillStyle='rgba(0,0,0,'+(Math.random()*.07).toFixed(3)+')';x.fillRect(Math.random()*128|0,Math.random()*128|0,1,1)}
+    for(i=0;i<26;i++){x.fillStyle='rgba(255,255,255,'+(Math.random()*.06).toFixed(3)+')';x.fillRect(Math.random()*128|0,Math.random()*128|0,1+(Math.random()*5|0),1)}
+  }else if(kind==='skin'){
+    /* кожа: очень мелкая неоднородность, без «крупных родинок» */
+    for(i=0;i<2400;i++){x.fillStyle='rgba(120,70,50,'+(Math.random()*.055).toFixed(3)+')';x.fillRect(Math.random()*128|0,Math.random()*128|0,1,1)}
+  }else{
+    /* кожаная обувь и пояса: потёртости и тонкие прожилки */
+    for(i=0;i<520;i++){x.fillStyle='rgba(0,0,0,'+(Math.random()*.10).toFixed(3)+')';x.fillRect(Math.random()*128|0,Math.random()*128|0,1+(Math.random()*3|0),1)}
+    for(i=0;i<36;i++){x.strokeStyle='rgba(255,255,255,.055)';x.lineWidth=1;x.beginPath();x.moveTo(Math.random()*128,0);x.lineTo(Math.random()*128,128);x.stroke()}
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,2);
+  HUM.tex[kind]=t;return t;
+}
+function humMat(kind){
+  if(HUM.mat[kind])return HUM.mat[kind];
+  const opt={vertexColors:true,metalness:0,roughness:kind==='skin'?.62:.94};
+  if(kind==='skin'){opt.map=humTex('skin');opt.roughness=.6}
+  else if(kind==='leather'){opt.map=humTex('leather');opt.roughness=.8}
+  else if(kind==='hair'){opt.roughness=.74}
+  else {opt.map=humTex('cloth');opt.roughness=.95}
+  HUM.mat[kind]=new THREE.MeshStandardMaterial(opt);
+  return HUM.mat[kind];
+}
+/* Оттенок тела берём тем же сдвигом, что и в текстуре лица: иначе кисти рук
+   не совпадали бы с лицом. */
+function skinToneOf(hair){
+  let seed=(hair>>>0)%997;
+  const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff};
+  rnd();rnd();const tone=rnd();
+  return [0xf2cba6,0xe8bb93,0xdcab80,0xcf9b70][Math.floor(tone*4)]||0xe8bb93;
+}
+function humCyl(rt,rb,h,seg){return new THREE.CylinderGeometry(rt,rb,h,seg||10,1)}
+function humSph(r,w,h){return new THREE.SphereGeometry(r,w||12,h||9)}
+function humBox(w,h,d){return new THREE.BoxGeometry(w,h,d)}
+/* Матрица части: положение + поворот + масштаб одной строкой. */
+function humM(x,y,z,rot,scl){
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion();
+  if(rot)q.setFromEuler(new THREE.Euler(rot[0]||0,rot[1]||0,rot[2]||0));
+  m.compose(new THREE.Vector3(x||0,y||0,z||0),q,
+    new THREE.Vector3(scl?scl[0]:1,scl?scl[1]:1,scl?scl[2]:1));
+  return m;
+}
+/* Слияние частей в одну геометрию: позиции, нормали, uv и цвет вершины. */
+function humMerge(parts){
+  const pos=[],nor=[],uv=[],col=[],c=new THREE.Color();
+  for(let p=0;p<parts.length;p++){
+    const part=parts[p];
+    let g=part.geo.index?part.geo.toNonIndexed():part.geo.clone();
+    if(part.m) g.applyMatrix4(part.m);
+    const P=g.attributes.position.array, N=g.attributes.normal.array;
+    const U=g.attributes.uv?g.attributes.uv.array:null;
+    c.set(part.c==null?0xffffff:part.c);
+    for(let i=0;i<P.length;i++)pos.push(P[i]);
+    for(let i=0;i<N.length;i++)nor.push(N[i]);
+    const n=P.length/3;
+    if(U){for(let i=0;i<U.length;i++)uv.push(U[i])}
+    else{for(let i=0;i<n;i++)uv.push(0,0)}
+    for(let i=0;i<n;i++)col.push(c.r,c.g,c.b);
+  }
+  const out=new THREE.BufferGeometry();
+  out.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  out.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+  out.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  out.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  return out;
+}
+function humPartMesh(parts,kind){
+  return new THREE.Mesh(humMerge(parts),humMat(kind||'cloth'));
+}
+function mkHuman(tun,hair,hat,face,opts){
+  const g=new THREE.Group(),root=new THREE.Group(),a={root:root};
+  g.add(root);
+  const skinC=skinToneOf(hair);
+  const shirtC=tun>>>0;
+  const trouserC=0x38302a, bootC=0x33251a, beltC=0x4a3524;
+  /* Кому идёт длинное платье, решает вызывающий код (по роли), а не случайный
+     хеш: кузнец в юбке выглядел бы ошибкой. */
+  const female=!!(opts&&opts.dress);
+  const dressC=(hair>>>3)%2?0x6b3f5a:0x3a4d6b;
 
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(.36,.36),new THREE.MeshStandardMaterial({map:faceCache[k],transparent:true,alphaTest:.08,roughness:.72,metalness:0}));
-  m.position.set(0,1.6,.205);return m}
-function mkHuman(tun,hair,hat,face){const g=new THREE.Group(),sk=EM(0xd7a176),tm=EM(tun),pm=EM(0x3a2f27),hm=EM(hair),a={};const torso=new THREE.Mesh(new THREE.BoxGeometry(.5,.65,.3),tm);torso.position.y=1.05;torso.castShadow=true;g.add(torso);
-  g.add(ball(.2,sk,0,1.6,0),(()=>{const h=ball(.22,hm,0,1.66,-.04,1,.8,1);return h})());g.add(faceMesh(hair,face));if(hat){const c=new THREE.Mesh(new THREE.ConeGeometry(.3,.35,8),EM(hat));c.position.set(0,1.9,0);g.add(c)}
-  a.lL=limb(pm,.18,.7,.2,-.13,.72,0);a.lR=limb(pm,.18,.7,.2,.13,.72,0);a.aL=limb(tm,.14,.6,.16,-.34,1.35,0);a.aR=limb(tm,.14,.6,.16,.34,1.35,0);g.add(a.lL,a.lR,a.aL,a.aR);
-  const sp=document.createElement('canvas');sp.width=sp.height=64;const c=sp.getContext('2d');c.fillStyle='#f2c14e';c.font='bold 54px Georgia,serif';c.textAlign='center';c.fillText('!',32,52);const mk=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sp),depthTest:false}));mk.scale.set(.5,.5,1);mk.position.y=2.35;mk.renderOrder=12;g.add(mk);a.mark=mk;return{g,a}}
-function addNPC(id,name,x,z,tun,hair,hat,role,face){const m=mkHuman(tun,hair,hat,face);scene.add(m.g);const n={id,name,role,x,z,y:groundAt(x,z),yaw:0,hx:x,hz:z,wx:x,wz:z,wt:rr(1,4),g:m.g,a:m.a,ph:R()*6,panic:0,talking:false,still:false,home:null};n.g.position.set(x,n.y,z);npcs.push(n);
+  /* --- корпус: бёдра → талия → грудь → плечи --- */
+  const body=[];
+  body.push({geo:humCyl(.150,.190,.22,14),c:dressC,m:humM(0,.855,0,null,[1,1,.80])});          // подол туники
+  body.push({geo:humCyl(.146,.166,.26,14),c:shirtC,m:humM(0,1.095,0,null,[1,1,.74])});         // талия
+  body.push({geo:humCyl(.174,.150,.24,14),c:shirtC,m:humM(0,1.295,0,null,[1,1,.72])});         // грудь
+  body.push({geo:humSph(.156,16,10),c:shirtC,m:humM(0,1.368,0,null,[1,.54,.70])});             // плечи
+  body.push({geo:humCyl(.078,.090,.055,12),c:0x2e2419,m:humM(0,1.462,0,null,[1,1,.92])});      // воротник
+  body.push({geo:humCyl(.158,.158,.055,14),c:beltC,m:humM(0,1.020,0,null,[1,1,.80])});         // пояс
+  body.push({geo:humBox(.052,.048,.022),c:0xb08a3a,m:humM(0,1.020,.128)});                     // пряжка
+  /* складки у пояса: два мягких валика, ткань не «прилипает» к телу */
+  body.push({geo:humSph(.055,8,6),c:shirtC,m:humM(-.085,.975,.055,null,[1.5,.5,.7])});
+  body.push({geo:humSph(.055,8,6),c:shirtC,m:humM(.085,.975,.055,null,[1.5,.5,.7])});
+  const bodyMesh=humPartMesh(body,'cloth');
+  bodyMesh.castShadow=true;root.add(bodyMesh);
+
+  /* --- шея и голова --- */
+  const neck=humPartMesh([{geo:humCyl(.053,.060,.10,10),c:skinC,m:humM(0,1.455,0)}],'skin');
+  root.add(neck);
+  const head=new THREE.Group();head.position.set(0,1.515,0);root.add(head);
+  const skull=[
+    {geo:humSph(.098,16,12),c:skinC,m:humM(0,.086,0,null,[1,1.14,1.02])},        // череп
+    {geo:humSph(.076,14,10),c:skinC,m:humM(0,.046,.008,null,[1,.80,.90])},       // челюсть
+    {geo:humSph(.030,8,6),c:skinC,m:humM(0,.028,.050,null,[1,.9,.9])},           // подбородок
+    {geo:humSph(.026,8,6),c:skinC,m:humM(-.097,.082,0,null,[.55,1,.85])},        // уши
+    {geo:humSph(.026,8,6),c:skinC,m:humM(.097,.082,0,null,[.55,1,.85])},
+    {geo:new THREE.ConeGeometry(.017,.048,8),c:skinC,m:humM(0,.076,.096,[Math.PI*.5,0,0])},  // нос
+    {geo:humBox(.052,.012,.014),c:skinC,m:humM(0,.112,.093)}                     // надбровье
+  ];
+  const headMesh=humPartMesh(skull,'skin');headMesh.castShadow=true;head.add(headMesh);
+
+  /* --- волосы: шапка по черепу + масса на затылке, у части жителей — хвост --- */
+  const hs=(hair&&hair!==0x000000)?hair:0x2a211b;
+  /* Шапка волос закрывает только свод черепа и затылок: линия роста волос
+     проходит по лбу, иначе лицо «утонуло» бы в шевелюре. */
+  const hairParts=[
+    {geo:new THREE.SphereGeometry(.105,16,10,0,6.283,0,Math.PI*.42),c:hs,m:humM(0,.086,-.010,null,[1.035,1.135,1.05])},
+    {geo:humSph(.090,12,9),c:hs,m:humM(0,.074,-.046,null,[1,.92,.70])},
+    {geo:humSph(.034,8,6),c:hs,m:humM(-.066,.132,.014,null,[.9,.62,.9])},
+    {geo:humSph(.034,8,6),c:hs,m:humM(.066,.132,.014,null,[.9,.62,.9])},
+    {geo:humSph(.046,8,6),c:hs,m:humM(0,.150,.026,null,[1.5,.55,.9])}          // чёлка
+  ];
+  if(female){
+    hairParts.push({geo:humCyl(.045,.028,.22,8),c:hs,m:humM(0,.000,-.085,null,[1,1,.8])});
+    hairParts.push({geo:humSph(.046,8,6),c:hs,m:humM(0,-.105,-.085)});
+  }
+  const hairMesh=humPartMesh(hairParts,'hair');head.add(hairMesh);
+
+  /* --- лицо: портрет на плоскости, прижатый к черепу --- */
+  const faceMeshMesh=faceMesh(hair,face);
+  head.add(faceMeshMesh);a.face=faceMeshMesh;
+
+  /* --- шляпа (старейшина, торговец) --- */
+  if(hat){
+    const hatMesh=humPartMesh([
+      {geo:humCyl(.175,.185,.020,14),c:hat,m:humM(0,.196,0)},
+      {geo:new THREE.ConeGeometry(.115,.20,12),c:hat,m:humM(0,.300,0)}
+    ],'cloth');
+    head.add(hatMesh);
+  }
+
+  /* --- руки: плечо → локоть → кисть --- */
+  function arm(sign){
+    const sh=new THREE.Group();
+    sh.position.set(sign*.167,1.362,0);
+    sh.rotation.z=-sign*.075;
+    sh.rotation.x=-.05;
+    const upper=humPartMesh([
+      {geo:humSph(.053,10,8),c:shirtC,m:humM(0,-.014,0,null,[1,.86,1])},           // плечевой сустав
+      {geo:humCyl(.055,.047,.30,10),c:shirtC,m:humM(0,-.152,0)},
+      {geo:humCyl(.050,.052,.032,10),c:shirtC,m:humM(0,-.292,0)}                   // манжета
+    ],'cloth');
+    upper.castShadow=true;sh.add(upper);
+    const el=new THREE.Group();el.position.set(0,-.30,0);el.rotation.x=-.14;sh.add(el);
+    const fore=humPartMesh([
+      {geo:humCyl(.046,.034,.245,10),c:skinC,m:humM(0,-.122,0)},
+      {geo:humSph(.034,8,6),c:skinC,m:humM(0,-.248,0)},                            // запястье
+      {geo:humBox(.068,.088,.042),c:skinC,m:humM(0,-.298,.004,[.06,0,0])},         // кисть
+      {geo:humBox(.028,.042,.026),c:skinC,m:humM(-sign*.036,-.278,.014,[0,0,sign*.5])} // большой палец
+    ],'skin');
+    el.add(fore);
+    return {sh:sh,el:el};
+  }
+  const armL=arm(-1),armR=arm(1);
+  root.add(armL.sh,armR.sh);
+
+  /* --- ноги: бедро → колено → стопа --- */
+  function leg(sign){
+    const hip=new THREE.Group();hip.position.set(sign*.083,.845,0);
+    const thigh=humPartMesh([
+      {geo:humCyl(.096,.072,.40,12),c:trouserC,m:humM(0,-.200,0)},
+      {geo:humSph(.076,10,8),c:trouserC,m:humM(0,-.392,0,null,[1,.72,1])}
+    ],'cloth');
+    thigh.castShadow=true;hip.add(thigh);
+    const knee=new THREE.Group();knee.position.set(0,-.40,0);hip.add(knee);
+    const shin=humPartMesh([
+      {geo:humCyl(.070,.052,.30,12),c:trouserC,m:humM(0,-.150,0)},                 // голень
+      {geo:humCyl(.058,.064,.13,10),c:bootC,m:humM(0,-.360,0)},                    // голенище
+      {geo:humBox(.100,.066,.20),c:bootC,m:humM(0,-.424,.036)},                    // стопа
+      {geo:humBox(.102,.032,.058),c:0x241a12,m:humM(0,-.452,.030)}                 // каблук/подошва
+    ],'cloth');
+    knee.add(shin);
+    return {hip:hip,knee:knee};
+  }
+  const legL=leg(-1),legR=leg(1);
+  root.add(legL.hip,legR.hip);
+
+  a.lL=legL.hip;a.lR=legR.hip;a.knL=legL.knee;a.knR=legR.knee;
+  a.aL=armL.sh;a.aR=armR.sh;a.elL=armL.el;a.elR=armR.el;
+  a.head=head;a.body=bodyMesh;
+
+  /* --- маркер задания --- */
+  const sp=document.createElement('canvas');sp.width=sp.height=64;const ctx=sp.getContext('2d');
+  ctx.fillStyle='#f2c14e';ctx.font='bold 54px Georgia,serif';ctx.textAlign='center';ctx.fillText('!',32,52);
+  const mk=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sp),depthTest:false}));
+  mk.scale.set(.46,.46,1);mk.position.y=2.05;mk.renderOrder=12;g.add(mk);a.mark=mk;
+  return {g:g,a:a};
+}
+function addNPC(id,name,x,z,tun,hair,hat,role,face){const m=mkHuman(tun,hair,hat,face,{dress:id==='mira'||id==='lena'||id==='wren'});scene.add(m.g);const n={id,name,role,x,z,y:groundAt(x,z),yaw:0,hx:x,hz:z,wx:x,wz:z,wt:rr(1,4),g:m.g,a:m.a,ph:R()*6,panic:0,talking:false,still:false,home:null};n.g.position.set(x,n.y,z);npcs.push(n);
   interactables.push({getPos:()=>[n.x,n.y+1.2,n.z],r:3.2,label:()=>`Поговорить с ${n.name} [E]`,act:()=>talk(n)});return n}
 function initNPCs(){const V=VILLAGE;
   addNPC('mira',((window.VGT&&window.VGT('Старейшина Мира','Elder Mira'))||'Старейшина Мира'),ELDER.x,ELDER.z,0x6a3a8a,0xe8e8e8,0x6a3a8a,((window.VGT&&window.VGT('Старейшина деревни','Village Elder'))||'Старейшина деревни'),'wrinkles').still=true;
@@ -1284,7 +1549,44 @@ function updateNPCs(dt,t){const day=dayF;for(const n of npcs){if(zone!=='surface
   else if(n.panic>0&&near){const ax=n.x-near.x,az=n.z-near.z,l=Math.hypot(ax,az)||1;tx=n.x+ax/l*5;tz=n.z+az/l*5;sp=4.8}
   else if(n.wander){n.wt-=dt;if(day<.12){const a=n.homeA;tx=VILLAGE.x+Math.cos(a)*12;tz=VILLAGE.z+Math.sin(a)*12;if(Math.hypot(tx-n.x,tz-n.z)>2.5)sp=2}else{if(n.wt<0){n.wt=rr(3,8);n.wx=n.hx+rr(-n.wander,n.wander);n.wz=n.hz+rr(-n.wander,n.wander)}if(Math.hypot(n.wx-n.x,n.wz-n.z)>1.2){tx=n.wx;tz=n.wz;sp=1.6}}}
   if(tx!==null&&sp>0){const ax=tx-n.x,az=tz-n.z,l=Math.hypot(ax,az)||1;n.yaw=Math.atan2(ax,az);const p={x:n.x+ax/l*sp*dt,z:n.z+az/l*sp*dt};collide(p,.4);n.x=p.x;n.z=p.z}
-  n.y=groundAt(n.x,n.z);n.ph+=dt*sp*2.4;const w=sp>0?Math.sin(n.ph):0;n.a.lL.rotation.x=w*.6;n.a.lR.rotation.x=-w*.6;n.a.aL.rotation.x=-w*.5;n.a.aR.rotation.x=w*.5;
+  n.y=groundAt(n.x,n.z);
+  /* Походка. Раньше ноги и руки раскачивались как маятники на одном шарнире —
+     отсюда «деревянность». Теперь бедро и колено работают в противофазе,
+     локти сгибаются, корпус приподнимается на каждом шаге, а голова
+     поворачивается к игроку, а не смотрит в пустоту. */
+  n.ph+=dt*(sp>0?sp*2.55:1.05);
+  const w=sp>0?Math.sin(n.ph):0;
+  const amp=Math.min(1,sp/1.7);
+  n.a.lL.rotation.x=w*.60*amp;
+  n.a.lR.rotation.x=-w*.60*amp;
+  n.a.knL.rotation.x=Math.max(0,-w)*1.05*amp;
+  n.a.knR.rotation.x=Math.max(0,w)*1.05*amp;
+  n.a.aL.rotation.x=-w*.52*amp-.05;
+  n.a.aR.rotation.x=w*.52*amp-.05;
+  n.a.elL.rotation.x=-.14-Math.max(0,-w)*.30*amp;
+  n.a.elR.rotation.x=-.14-Math.max(0,w)*.30*amp;
+  n.a.root.position.y=sp>0?Math.abs(Math.sin(n.ph))*.028*amp:Math.sin(t*1.5+n.ph)*.007;
+  const hdx=P.x-n.x,hdz=P.z-n.z,hd=Math.hypot(hdx,hdz)||1;
+  let wantYaw=0,wantPitch=Math.sin(t*.8+n.ph)*.05;
+  if(n.talking||hd<10){
+    let dy=Math.atan2(hdx,hdz)-n.yaw;
+    while(dy>Math.PI)dy-=6.283185;
+    while(dy<-Math.PI)dy+=6.283185;
+    wantYaw=Math.max(-.9,Math.min(.9,dy));
+    wantPitch=Math.max(-.22,Math.min(.22,-(P.y+1.55-(n.y+1.62))/hd));
+  }
+  n.a.head.rotation.y+=(wantYaw-n.a.head.rotation.y)*Math.min(1,dt*5);
+  n.a.head.rotation.x+=(wantPitch-n.a.head.rotation.x)*Math.min(1,dt*5);
+  /* Речь: приоткрытый рот, пока идёт диалог. */
+  if(n.a.face){
+    const fm=n.a.face.material;
+    if(n.talking){
+      n.mouthT=(n.mouthT||0)+dt;
+      const op=Math.sin(n.mouthT*12)>-.15;
+      const want=op?n.a.face.userData.open:n.a.face.userData.closed;
+      if(fm.map!==want)fm.map=want;
+    }else if(fm.map!==n.a.face.userData.closed){fm.map=n.a.face.userData.closed;n.mouthT=0}
+  }
   if(n.work==='smith'&&!n.talking&&n.panic<=0){n.a.aR.rotation.x=-1.2+Math.sin(t*7)*.7;n.a.aL.rotation.x=-.5;n.hamT=(n.hamT||0)-dt;if(n.hamT<0){n.hamT=1.1;if(Math.hypot(P.x-n.x,P.z-n.z)<28)sfx.mine('iron');for(let i=0;i<3;i++)fxGlow.emit(n.x+Math.sin(n.yaw)*.8,n.y+1,n.z+Math.cos(n.yaw)*.8,rr(-1,1),rr(.5,2),rr(-1,1),.4,1,.6,.2)}}
   else if(n.still&&sp===0){n.a.aR.rotation.x=Math.sin(t*1.2+n.ph)*.08;n.a.aL.rotation.x=-Math.sin(t*1.2+n.ph)*.08;if(n.id==='tomas')n.a.aR.rotation.z=-.5+Math.sin(t*2)*.2}
   n.g.position.set(n.x,n.y,n.z);n.g.rotation.y=n.yaw;n.a.mark.visible=hasQuestMark(n)}}

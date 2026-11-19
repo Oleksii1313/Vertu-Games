@@ -111,6 +111,10 @@
     window.addEventListener('message', function (event) {
       var data = event.data;
       if (data && (data.type === 'vg:focus' || data.type === 'focusGame')) focusGame();
+      /* Плеер перешёл в полный экран (или вышел из него). Событие resize
+         внутри iframe приходит не во всех браузерах, а игра должна заново
+         занять кадр — иначе остаётся полоса или поле по центру. */
+      if (data && (data.type === 'vg:resize' || data.type === 'player:resize')) refit();
     });
   }
 
