@@ -448,6 +448,30 @@ body.vg-playing .site-header,body.vg-playing .site-footer{overscroll-behavior:no
   display:flex;align-items:stretch;justify-content:stretch}
 .play-frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000}
 body.vg-pseudo-full .site-header,body.vg-pseudo-full .site-footer{display:none!important}
+/* Пока открыта игра, сайта не видно вообще: ни шапки, ни подвала, ни мобильного
+   меню. Раньше шапка оставалась в потоке страницы, и на телефоне её было видно
+   над игрой, а панель плеера наезжала на собственный HUD игры. */
+body.vg-playing .site-header,
+body.vg-playing .site-footer,
+body.vg-playing .mobile-nav{display:none!important}
+
+/* Телефон (любая ориентация): игра занимает кадр целиком, а панель плеера
+   становится всплывающей. Она сама уходит через пару секунд, чтобы не спорить
+   с HUD игры и не занимать экран, и возвращается по тапу на «язычок» сверху.
+   Так выйти из игры можно всегда, но интерфейс сайта не висит над игрой. */
+.play-overlay.immersive .play-frame-wrap{position:absolute;inset:0;flex:none;height:100%;width:100%}
+.play-overlay.immersive .play-bar{position:absolute;top:0;left:0;right:0;z-index:8;border:0;
+  background:linear-gradient(180deg,rgba(5,6,10,.94),rgba(5,6,10,.72) 68%,rgba(5,6,10,0));
+  padding-top:calc(6px + env(safe-area-inset-top,0px));
+  transition:opacity .22s ease,transform .22s ease}
+.play-overlay.immersive.bar-hidden .play-bar{opacity:0;transform:translateY(-104%);pointer-events:none}
+.play-grip{display:none;position:absolute;top:calc(env(safe-area-inset-top,0px) + 1px);left:50%;
+  transform:translateX(-50%);z-index:9;width:74px;height:24px;padding:0;border:0;background:transparent;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.play-overlay.immersive .play-grip{display:block}
+.play-grip::after{content:'';display:block;width:46px;height:5px;margin:6px auto 0;border-radius:99px;
+  background:rgba(255,255,255,.64);box-shadow:0 1px 4px rgba(0,0,0,.45);transition:opacity .2s ease}
+.play-overlay.immersive:not(.bar-hidden) .play-grip::after{opacity:.22}
 
 /* Телефон в ландшафте: игра на весь экран, панель плеера — тонкая полоса сверху,
    кнопки «Назад/Экран» остаются под большим пальцем. */

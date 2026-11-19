@@ -182,6 +182,30 @@
   body>.info{display:none}
   body>.controls button{min-height:36px;height:36px}
 }
+
+/* --- Телефон: безопасные зоны и настоящая высота экрана --------------------
+   Страница объявляет viewport-fit=cover, поэтому контент может уехать под
+   вырез и под полосу home-indicator. Раньше это не учитывалось, и игра на
+   телефоне не занимала всю высоту, а шапка залезала под «чёлку». */
+html,body{height:100%;height:100dvh}
+#flight{height:100%;height:100dvh}
+.topbar{top:calc(18px + env(safe-area-inset-top,0px));left:calc(24px + env(safe-area-inset-left,0px));right:calc(24px + env(safe-area-inset-right,0px))}
+.mission{left:calc(24px + env(safe-area-inset-left,0px));top:calc(98px + env(safe-area-inset-top,0px))}
+.map-card{right:calc(24px + env(safe-area-inset-right,0px));top:calc(98px + env(safe-area-inset-top,0px))}
+.stick{left:calc(24px + env(safe-area-inset-left,0px));bottom:calc(34px + env(safe-area-inset-bottom,0px))}
+.alt-buttons{right:calc(24px + env(safe-area-inset-right,0px));bottom:calc(29px + env(safe-area-inset-bottom,0px))}
+.telemetry{bottom:calc(25px + env(safe-area-inset-bottom,0px))}
+@media(max-width:700px){
+  .topbar{top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));right:calc(12px + env(safe-area-inset-right,0px))}
+  .mission{left:calc(12px + env(safe-area-inset-left,0px));top:calc(83px + env(safe-area-inset-top,0px))}
+  .map-card{right:calc(12px + env(safe-area-inset-right,0px));top:calc(83px + env(safe-area-inset-top,0px))}
+  .stick{left:calc(18px + env(safe-area-inset-left,0px));bottom:calc(37px + env(safe-area-inset-bottom,0px))}
+  .alt-buttons{right:calc(18px + env(safe-area-inset-right,0px))}
+  .telemetry{bottom:calc(34px + env(safe-area-inset-bottom,0px))}
+}
+@media(max-height:500px){
+  .topbar{top:calc(8px + env(safe-area-inset-top,0px))}
+}
 </style>
 <script src="/assets/vg/js/game-kit.js"></script>
 </head><body data-mode="intro" data-input="desktop">
@@ -320,10 +344,12 @@ try{
  if(!window.BABYLON?.GUI)throw Error('Babylon.js / Babylon GUI did not initialize');
  const B=window.BABYLON,canvas=$('flight');
  const fine=matchMedia('(hover: hover) and (pointer: fine)');function inputMode(){document.body.dataset.input=fine.matches||!navigator.maxTouchPoints?'desktop':'touch'}inputMode();fine.addEventListener('change',inputMode);window.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')document.body.dataset.input='touch';else if(e.pointerType==='mouse'&&fine.matches)document.body.dataset.input='desktop'},{capture:true});
- const engine=new B.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true,antialias:true,powerPreference:'high-performance'},true);engine./* Буфер canvas в физических пикселях экрана (adaptToDeviceRatio=true), а
-   рендер — не ниже 2× CSS-пикселя: на retina картинка резкая, но слабый GPU
-   не рисует 3× (это вчетверо дороже, чем 1.5×). */
-setHardwareScalingLevel(Math.max(1,(devicePixelRatio||1)/2));
+ /* preserveDrawingBuffer игре не нужен (скриншотов нет), а без него WebGL
+   отдаёт честное мультисэмплирование — края на телефоне перестают «лестенить».
+   Плотность рендера = физические пиксели экрана (1:1), это максимум резкости.
+   Если телефон не тянет, цикл кадров ниже один раз снижает плотность до 1.5. */
+ const engine=new B.Engine(canvas,true,{stencil:true,antialias:true,powerPreference:'high-performance'},true);
+ engine.setHardwareScalingLevel(1);
  const scene=new B.Scene(engine);scene.clearColor=B.Color4.FromHexString('#b5d9e5ff');scene.fogMode=B.Scene.FOGMODE_LINEAR;scene.fogStart=450;scene.fogEnd=1900;scene.fogColor=B.Color3.FromHexString('#c7e2e9');scene.ambientColor=B.Color3.Black();
  const camera=new B.FreeCamera('Following camera',new B.Vector3(100,85,100),scene);camera.minZ=.12;camera.maxZ=3400;camera.fov=.82;camera.inputs.clear();scene.activeCamera=camera;
  const hemi=new B.HemisphericLight('Open sky',new B.Vector3(0,1,0),scene);hemi.intensity=.65;hemi.groundColor=B.Color3.FromHexString('#75896d');
@@ -804,7 +830,7 @@ function skyLogistics(ctx) {
   #lgButtons button{flex:1;padding:6px 0;border-radius:9px;border:1px solid #cfd6c2;background:#fff;color:#49625a;
     font:700 10.5px system-ui;cursor:pointer}
   #lgButtons button:active{background:#e9eddd}
-  #lgTow{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:13;padding:9px 16px;border-radius:12px;
+  #lgTow{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:16;padding:9px 16px;border-radius:12px;
     border:0;background:#c2604f;color:#fff;font:800 12px system-ui;cursor:pointer;box-shadow:0 8px 22px #0003;display:none}
   #lgTow.on{display:block}
   #lgStation{position:fixed;inset:0;z-index:45;background:#385b6259;display:none;place-items:center;padding:16px}
@@ -825,6 +851,30 @@ function skyLogistics(ctx) {
     .lgMission .t{font-size:10px}
   }
   @media (max-height:520px){#lgPanel{bottom:8px;width:200px}#lgRes{gap:4px}}
+  /* Панель полёта не стоит на джойстике (раньше она закрывала стик, и на
+     телефоне казалось, что управления нет): на тач-экране она переезжает
+     влево вверх, под карточку доставки, и стартует свёрнутой в одну строку. */
+  .hud{z-index:14}
+  #lgToggle{position:absolute;right:6px;top:-12px;width:28px;height:22px;border-radius:8px;
+    border:1px solid #cfd6c2;background:#fbf8ed;color:#4d6a5e;font:700 12px/1 system-ui;cursor:pointer;
+    box-shadow:0 2px 6px #38575a1a}
+  #lgPanel.collapsed{width:auto;max-width:calc(100% - 20px);flex-direction:row;flex-wrap:wrap;
+    align-items:center;padding:6px 8px;gap:6px}
+  #lgPanel.collapsed #lgRes,#lgPanel.collapsed #lgMissions{display:none}
+  #lgPanel.collapsed #lgToggle{position:static;order:-1;top:auto;right:auto}
+  #lgPanel.collapsed #lgFuel{min-width:104px}
+  /* Кнопка в верхней строке убирает все подсказки: остаётся только мир. */
+  body.hud-clean .hud .mission,body.hud-clean .map-card,
+  body.hud-clean #lgPanel,body.hud-clean .telemetry{display:none!important}
+  #hudToggle{width:32px;height:32px;min-width:0;min-height:0;padding:0;font-size:14px;line-height:1;
+    border-radius:10px;display:grid;place-items:center}
+  #hudToggle.off{opacity:.55}
+  @media (max-width:720px){
+    body[data-input=touch] .hud .mission{top:calc(70px + env(safe-area-inset-top,0px));width:calc(100% - 150px)}
+    body[data-input=touch] #lgPanel{left:calc(10px + env(safe-area-inset-left,0px));
+      top:calc(132px + env(safe-area-inset-top,0px));bottom:auto}
+    .hud .mission .collapse{width:26px;height:26px;font-size:14px}
+  }
   `;
   document.head.appendChild(style);
 
@@ -839,6 +889,23 @@ function skyLogistics(ctx) {
   /* Панель живёт в body, а не в .hud: у hud стоит pointer-events:none и он
      скрывается на время интро, из-за чего кнопки панели были бы недоступны. */
   document.body.appendChild(panel);
+  /* На телефоне панель сразу свёрнута: иначе она накрывает джойстик. */
+  if (panel && !panel.querySelector('#lgToggle')) {
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.id = 'lgToggle';
+    toggle.setAttribute('aria-label', tr('Свернуть панель полёта', 'Collapse the flight panel'));
+    const touch = document.body.dataset.input === 'touch';
+    if (touch) { panel.classList.add('collapsed'); toggle.textContent = '+'; }
+    else toggle.textContent = '–';
+    toggle.setAttribute('aria-expanded', touch ? 'false' : 'true');
+    toggle.addEventListener('click', function () {
+      const collapsed = panel.classList.toggle('collapsed');
+      toggle.textContent = collapsed ? '+' : '–';
+      toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    });
+    panel.appendChild(toggle);
+  }
 
   const tow = document.createElement('button');
   tow.id = 'lgTow';
@@ -921,6 +988,34 @@ function skyLogistics(ctx) {
       btn.textContent = missionCard.classList.contains('collapsed') ? '+' : '–';
     });
     missionCard.appendChild(btn);
+    if (document.body.dataset.input === 'touch') {
+      missionCard.classList.add('collapsed');
+      btn.textContent = '+';
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  /* Кнопка «убрать подсказки»: карточка доставки, карта, панель полёта и
+     телеметрия скрываются одним тапом — остаётся только игра. Нажатие ещё раз
+     возвращает интерфейс. */
+  const topbar = document.querySelector('.hud .topbar');
+  if (topbar && !document.getElementById('hudToggle')) {
+    const hudBtn = document.createElement('button');
+    hudBtn.type = 'button';
+    hudBtn.id = 'hudToggle';
+    hudBtn.className = 'icon';
+    hudBtn.textContent = '◎';
+    hudBtn.title = tr('Скрыть подсказки', 'Hide the HUD');
+    hudBtn.setAttribute('aria-label', tr('Скрыть подсказки', 'Hide the HUD'));
+    hudBtn.setAttribute('aria-pressed', 'false');
+    hudBtn.addEventListener('click', function () {
+      const clean = document.body.classList.toggle('hud-clean');
+      hudBtn.classList.toggle('off', clean);
+      hudBtn.textContent = clean ? '◉' : '◎';
+      hudBtn.setAttribute('aria-pressed', clean ? 'true' : 'false');
+      hudBtn.title = clean ? tr('Показать подсказки', 'Show the HUD') : tr('Скрыть подсказки', 'Hide the HUD');
+    });
+    topbar.appendChild(hudBtn);
   }
 
   /* Короткая подсказка при первом запуске: три строки, которые объясняют
@@ -1048,7 +1143,13 @@ window.addEventListener('pageshow',fitStage);
 if(window.visualViewport){visualViewport.addEventListener('resize',fitStage);visualViewport.addEventListener('scroll',fitStage)}
 if(window.ResizeObserver&&canvas.parentElement)new ResizeObserver(fitStage).observe(canvas.parentElement);window.addEventListener('pagehide',save);canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();pause();message(tr(((window.VGT&&window.VGT('Восстанавливаем графику…','Restoring the graphics…'))||'Восстанавливаем графику…'),'Restoring graphics…'))});
  refreshTarget();updateUI();$('start').disabled=false;$('loading').textContent=storageOK?tr(((window.VGT&&window.VGT('Дрон готов. Посылки никуда не спешат.','The drone is ready. The parcels are in no hurry.'))||'Дрон готов. Посылки никуда не спешат.'),'Drone ready. The parcels are in no hurry.'):tr(((window.VGT&&window.VGT('Хранилище недоступно: прогресс до закрытия вкладки.','Storage unavailable: progress lasts until you close the tab.'))||'Хранилище недоступно: прогресс до закрытия вкладки.'),'Storage unavailable: progress lasts until this tab closes.');
- engine.runRenderLoop(()=>{if(!runLoop)return;update(engine.getDeltaTime()/1000);scene.render()});
+ let slowStreak=0,qualityLocked=false;
+ engine.runRenderLoop(()=>{if(!runLoop)return;const ms=engine.getDeltaTime();update(ms/1000);scene.render();
+  /* Адаптивное качество: сначала рисуем в физических пикселях, но если кадр
+     стабильно дольше 30 мс, один раз уходим на 1.5 (это 2× CSS-пикселя) —
+     без «мигания» туда-обратно и без потери резкости. */
+  if(!qualityLocked&&ms>0){slowStreak=ms>30?slowStreak+1:Math.max(0,slowStreak-2);
+   if(slowStreak>90){qualityLocked=true;engine.setHardwareScalingLevel(1.5);engine.resize()}}});
 
  // --- Графика: параллакс, частицы и свет. Модуль ниже подключается после старта сцены. ---
  const gfx=window.__skyGfx;

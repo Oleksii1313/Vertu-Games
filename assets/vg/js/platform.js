@@ -1133,6 +1133,8 @@
        * переключатель языка и кнопка профиля.
        */
       overlay.innerHTML =
+        '<button type="button" class="play-grip" data-grip aria-label="' +
+        T('Панель игрока', 'Player panel') + '"></button>' +
         '<div class="play-bar"><button type="button" class="btn btn-ghost btn-sm" data-close>' +
         icon('chev', 15) + T('Назад', 'Back') + '</button><h3></h3>' +
         '<div class="lang play-lang" role="group" aria-label="Language">' +
@@ -1152,6 +1154,7 @@
         icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
         '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
+      overlay.querySelector('[data-grip]').addEventListener('click', togglePlayerBar);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
       overlay.querySelector('[data-report]').addEventListener('click', openReportDialog);
       overlay.querySelector('[data-action="play-account"]').addEventListener('click', function (event) {
@@ -1182,6 +1185,7 @@
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     document.body.classList.add('vg-playing');
+    setupPlayerBar(overlay);
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
     frame.onload = function () { ensureGameFocus(frame); };
@@ -1501,6 +1505,47 @@
     window.addEventListener('message', VG._gameHandler);
   }
 
+  /* ------------------------------------------------------------------------
+     Всплывающая панель плеера на телефоне.
+     ------------------------------------------------------------------------
+     На тач-устройстве панель наезжает на HUD игры (у Sky-Isle сверху своя
+     строка с монетами, у MiniCraft — свой тулбар), и игрок видел две шапки
+     друг на друге. Поэтому на телефоне панель живёт поверх игры, сама уходит
+     через 3 секунды и возвращается по тапу на «язычок» сверху кадра.
+     ---------------------------------------------------------------------- */
+  var playerBarTimer = 0;
+  function coarsePointer() {
+    try { return !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
+    catch (e) { return false; }
+  }
+  function hidePlayerBar() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
+    overlay.classList.add('bar-hidden');
+  }
+  function showPlayerBar(autoHide) {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('bar-hidden');
+    if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
+    if (autoHide !== false) playerBarTimer = setTimeout(hidePlayerBar, 4200);
+  }
+  function togglePlayerBar() {
+    var overlay = $('#playOverlay');
+    if (!overlay) return;
+    if (overlay.classList.contains('bar-hidden')) showPlayerBar();
+    else hidePlayerBar();
+  }
+  /* Один раз на открытие игры: включаем режим и через 3 с убираем панель. */
+  function setupPlayerBar(overlay) {
+    var touch = coarsePointer();
+    if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
+    overlay.classList.remove('bar-hidden');
+    overlay.classList.toggle('immersive', touch);
+    if (touch) playerBarTimer = setTimeout(hidePlayerBar, 3000);
+  }
+
   /* Псевдополноэкранный режим: overlay уже position:fixed/inset:0, добавляем
      класс, который прячет полосу плеера на телефоне и просит браузер спрятать
      адресную строку (100dvh + safe-area). */
@@ -1508,6 +1553,7 @@
     var overlay = $('#playOverlay');
     if (!overlay) return;
     enterPseudoFullscreenClasses();
+    showPlayerBar();
     /* Ориентацию НЕ фиксируем: Flappy Bird и остальные игры сами держат
        портретную сцену, а принудительный landscape выкидывал игрока из
        привычного положения телефона. */
@@ -1582,6 +1628,7 @@
       var overlay = $('#playOverlay');
       if (!overlay || !overlay.classList.contains('open')) return;
       if (overlay.classList.contains('pseudo-full')) { exitPseudoFullscreen(); return; }
+      if (!fullscreenElement() && overlay.classList.contains('bar-hidden')) { showPlayerBar(); return; }
       if (!fullscreenElement() && overlay.classList.contains('immersive')) {
         overlay.classList.remove('immersive');
       }
@@ -1649,6 +1696,8 @@
     var overlay = $('#playOverlay');
     if (!overlay) return;
     overlay.classList.remove('open');
+    overlay.classList.remove('immersive', 'bar-hidden');
+    if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
     var frame = overlay.querySelector('.play-frame');
     if (frame) frame.src = 'about:blank';
     document.body.style.overflow = '';

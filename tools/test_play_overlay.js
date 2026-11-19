@@ -39,7 +39,8 @@ const rule = (selector) => {
 
 const GUEST = { user: null, csrf: 'csrf', achievements: 0, captcha: { enabled: false, siteKey: '' }, games: [] };
 
-function makeEnv(session) {
+function makeEnv(session, opts) {
+  const coarse = !!(opts && opts.coarse);
   const errors = [];
   const vc = new VirtualConsole();
   vc.on('jsdomError', (e) => { if (!/navigation|Not implemented/.test(e.message)) errors.push('[jsdom] ' + e.message); });
@@ -48,10 +49,11 @@ function makeEnv(session) {
     url: 'http://localhost/index.html', pretendToBeVisual: true, virtualConsole: vc,
     runScripts: 'outside-only',
     beforeParse(w) {
-      w.matchMedia = w.matchMedia || ((query) => ({
-        matches: false, media: query, addEventListener() {}, removeEventListener() {},
+      w.matchMedia = (query) => ({
+        matches: /pointer:\s*coarse/.test(query) ? coarse : false,
+        media: query, addEventListener() {}, removeEventListener() {},
         addListener() {}, removeListener() {},
-      }));
+      });
       w.fetch = (url) => Promise.resolve({
         ok: true, status: 200,
         headers: { get: () => 'application/json' },
@@ -87,6 +89,15 @@ function makeEnv(session) {
     /\.play-overlay:fullscreen \.play-bar/.test(CSS) && /opacity:\.35/.test(CSS), null);
   check('в ландшафте телефона панель не отнимает высоту у игры',
     /orientation:landscape\) and \(max-height:560px\)/.test(CSS) && /\.play-frame-wrap\{position:absolute;inset:0/.test(CSS), null);
+  /* Пока игра открыта, сайта на экране быть не должно ни в каком режиме. */
+  check('во время игры шапка и подвал сайта скрыты',
+    /body\.vg-playing \.site-header/.test(CSS) && /body\.vg-playing \.site-footer/.test(CSS) &&
+    /body\.vg-playing \.mobile-nav\{display:none!important\}/.test(CSS), null);
+  check('на телефоне панель плеера всплывающая, а игра — на весь кадр',
+    /\.play-overlay\.immersive \.play-frame-wrap\{position:absolute;inset:0/.test(CSS) &&
+    /\.play-overlay\.immersive\.bar-hidden \.play-bar/.test(CSS), null);
+  check('есть «язычок», возвращающий панель',
+    /\.play-grip\{/.test(CSS) && /\.play-overlay\.immersive \.play-grip\{display:block\}/.test(CSS), null);
 
   /* ------------------------------------------------------ открытие игры */
   const game = { id: 'flappy', name: 'Flappy Bird', name_en: 'Flappy Bird', file: 'games/flappy.html', reward: 2 };
@@ -123,6 +134,34 @@ function makeEnv(session) {
   await wait(60);
 
   check('нет ошибок в консоли', signed.errors.length === 0, signed.errors.slice(0, 3));
+
+  /* ---------------------------------------------- телефон: панель уезжает */
+  const phone = makeEnv(GUEST, { coarse: true });
+  await wait(120);
+  phone.w.VG.openGame(game);
+  await wait(80);
+  const phoneOverlay = phone.doc.getElementById('playOverlay');
+  check('телефон: включён всплывающий режим панели',
+    phoneOverlay.classList.contains('immersive'), phoneOverlay.className);
+  check('телефон: панель сначала видна', !phoneOverlay.classList.contains('bar-hidden'), null);
+  const grip = phoneOverlay.querySelector('[data-grip]');
+  check('телефон: «язычок» панели есть в разметке', !!grip, null);
+  /* Панель уходит сама через 3 секунды — ждём реального таймера. */
+  await wait(3400);
+  check('телефон: панель сама уходит с экрана, чтобы не закрывать HUD игры',
+    phoneOverlay.classList.contains('bar-hidden'), phoneOverlay.className);
+  grip.dispatchEvent(new phone.w.Event('click'));
+  check('телефон: тап по «язычку» возвращает панель',
+    !phoneOverlay.classList.contains('bar-hidden'), phoneOverlay.className);
+  grip.dispatchEvent(new phone.w.Event('click'));
+  check('телефон: повторный тап снова её прячет',
+    phoneOverlay.classList.contains('bar-hidden'), null);
+  phone.w.VG.closeGame();
+  await wait(80);
+  check('телефон: после выхода режим и таймер убраны',
+    !phoneOverlay.classList.contains('immersive') && !phoneOverlay.classList.contains('bar-hidden'),
+    phoneOverlay.className);
+  check('телефон: ошибок в консоли нет', phone.errors.length === 0, phone.errors.slice(0, 3));
 
   const failed = results.filter((r) => r.startsWith('FAIL'));
   console.log(results.join('\n'));
