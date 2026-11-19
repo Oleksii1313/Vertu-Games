@@ -316,7 +316,8 @@ def build_catalog() -> str:
 def build_shop() -> str:
     kinds = {
         'avatar': ('Аватары', 'Avatars'), 'color': ('Цвета профиля', 'Profile colors'),
-        'title': ('Титулы', 'Titles'), 'boost': ('Пакеты V', 'V packs'),
+        'title': ('Титулы', 'Titles'), 'service': ('Услуги', 'Services'),
+        'boost': ('Пакеты V', 'V packs'),
     }
     blocks = []
     for kind, (ru, en) in kinds.items():
@@ -328,11 +329,13 @@ def build_shop() -> str:
   </div>
   <h4>{E(i['name_ru'])}</h4>
   <div class="price">{'<span data-ico="coin"></span>' if i['price'] else ''} {str(i['price']) + ' V' if i['price'] else 'Бесплатно'}</div>
-  <button class="btn btn-sm btn-primary btn-block" data-buy="{E(i['id'])}">{'Купить' if i['price'] else 'Получить'}</button>
+  <button class="btn btn-sm btn-primary btn-block" {'data-rename' if i['kind'] == 'service' else 'data-buy'}="{E(i['id'])}">{E('Сменить ник' if i['kind'] == 'service' else ('Купить' if i['price'] else 'Получить'))}</button>
 </div>''' for i in items)
+        note = ('<p class="muted" style="font-size:13.5px;margin:-6px 0 14px">Разовая услуга: '
+                '1000 V списываются один раз, ник меняется сразу.</p>' if kind == 'service' else '')
         blocks.append(f'''<div class="card panel" id="kind-{kind}">
   <div class="section-head" style="margin-bottom:14px"><div><span class="eyebrow">{E(en)}</span><h2 style="font-size:20px">{E(ru)}</h2></div></div>
-  <div class="shop-grid">{cards}</div>
+  {note}<div class="shop-grid">{cards}</div>
 </div>''')
     return f'''{head('Магазин', 'Магазин Vert Games: аватары, цвета профиля, титулы и пакеты V-монет. Покупки на сервере.', 'shop')}
 {header('shop')}
@@ -348,6 +351,7 @@ def build_shop() -> str:
       <button class="chip on" data-jump="kind-avatar">Аватары</button>
       <button class="chip" data-jump="kind-color">Цвета</button>
       <button class="chip" data-jump="kind-title">Титулы</button>
+      <button class="chip" data-jump="kind-service">Услуги</button>
       <button class="chip" data-jump="kind-boost">Пакеты V</button>
       <button class="chip" data-jump="kind-owned">Мои покупки</button>
     </div>
@@ -1016,6 +1020,7 @@ def build_api() -> str:
         ('GET', '/api/shop', 'Каталог магазина и статус покупок.'),
         ('POST', '/api/shop/buy', 'Покупка предмета: {"item"}.'),
         ('POST', '/api/shop/equip', 'Надеть предмет: {"item"}.'),
+        ('POST', '/api/shop/rename', 'Смена ника: сервер списывает 1000 V и меняет ник. Поле: {"name"}.'),
         ('GET', '/api/casino/rules', 'Правила казино, вероятности, RTP и лимиты.'),
         ('POST', '/api/casino/wheel', 'Вращение колеса: {"stake", "free"}. Результат считает сервер.'),
         ('POST', '/api/casino/slots', 'Ставка в слотах: {"stake"}.'),

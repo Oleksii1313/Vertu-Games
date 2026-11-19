@@ -205,7 +205,13 @@ UI_EN = {
     "Аватары": "Avatars",
     "Цвета": "Colours",
     "Титулы": "Titles",
+    "Услуги": "Services",
     "Пакеты V": "V packs",
+    # Услуга смены ника: карточка, кнопка, пояснение и заголовок окна.
+    "Смена ника": "Change username",
+    "Сменить ник": "Change username",
+    "Разовая услуга: 1000 V списываются один раз, ник меняется сразу.":
+        "One-time service: 1000 V is charged once and the username changes immediately.",
     "Мои покупки": "My purchases",
     "Бесплатно": "Free",
     "Получить": "Claim",
@@ -327,6 +333,8 @@ UI_EN = {
     "Каталог магазина и статус покупок.": "Shop catalog and purchase status.",
     "Покупка предмета: {\"item\"}.": "Buy an item: {\"item\"}.",
     "Надеть предмет: {\"item\"}.": "Equip an item: {\"item\"}.",
+    "Смена ника: сервер списывает 1000 V и меняет ник. Поле: {":
+        "Username change: the server charges 1000 V and renames the account. Field: {",
     "Правила казино, вероятности, RTP и лимиты.": "Casino rules, odds, RTP and limits.",
     "Вращение колеса: {\"stake\", \"free\"}. Результат считает сервер.":
         "Wheel spin: {\"stake\", \"free\"}. The server resolves the result.",

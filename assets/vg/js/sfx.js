@@ -144,6 +144,31 @@
       return enabled;
     },
     enabled: function () { return enabled; },
+    /* ------------------------------------------------------------- Flappy Bird
+       Короткие «мультяшные» сигналы: взмах, очко, удар, конец игры, старт.
+       Все синтезируются на лету и звучат один раз на событие — наложения нет.
+       ---------------------------------------------------------------------- */
+    flap: function () {
+      tone({ freq: 480, to: 760, duration: 0.07, type: 'triangle', gain: 0.13 });
+    },
+    score: function () {
+      tone({ freq: 880, duration: 0.08, type: 'sine', gain: 0.15 });
+      tone({ freq: 1320, duration: 0.1, delay: 0.07, type: 'sine', gain: 0.11 });
+    },
+    hit: function () {
+      tone({ freq: 190, to: 90, duration: 0.16, type: 'square', gain: 0.16 });
+      click({ freq: 420, gain: 0.18, duration: 0.06 });
+    },
+    over: function () {
+      [392, 330, 262].forEach(function (freq, index) {
+        tone({ freq: freq, duration: 0.22, delay: 0.1 + index * 0.13, type: 'triangle', gain: 0.14 });
+      });
+    },
+    start: function () {
+      [392, 523, 659].forEach(function (freq, index) {
+        tone({ freq: freq, duration: 0.12, delay: index * 0.08, type: 'triangle', gain: 0.13 });
+      });
+    },
     /* Разблокировка по первому жесту — вызывать из любого обработчика клика. */
     unlock: function () { return !!ensure(); }
   };

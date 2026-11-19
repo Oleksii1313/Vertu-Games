@@ -371,11 +371,15 @@ SHOP_ITEMS = [
      'icon': '', 'payload': 'Ас', 'order': 32},
     {'id': 't:legend', 'kind': 'title', 'name_ru': 'Легенда', 'name_en': 'Legend', 'price': 260,
      'icon': '', 'payload': 'Легенда', 'order': 33},
+    # Услуги (не «предмет навсегда», а разовое действие за V)
+    {'id': 'username_change', 'kind': 'service',
+     'name_ru': 'Смена ника', 'name_en': 'Change username',
+     'price': 1000, 'icon': 'user', 'payload': '', 'order': 40}
 ]
 
 # Только косметика. Пакеты V (в том числе за V-монеты) удалены: монеты
 # нельзя ни купить, ни обменять — их зарабатывают в играх и казино.
-SHOP_KINDS = ['avatar', 'color', 'title']
+SHOP_KINDS = ['avatar', 'color', 'title', 'service']
 
 # Пакеты V за реальные деньги (выключены, пока не задан SHOP_PROVIDER).
 # Продажа V-монет за реальные деньги удалена из продукта.
