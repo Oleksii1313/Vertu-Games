@@ -1227,7 +1227,7 @@
        идёт из обработчика клика, поэтому браузер считает его действием
        пользователя; если нельзя (iOS Safari) — мягко уходим в CSS-режим. */
     overlay.removeAttribute('data-fs-retry');
-    if (coarsePointer()) enterFullscreenOnOpen();
+    if (touchLike()) enterFullscreenOnOpen();
     setupPlayerBar(overlay);
     updateFsFloat();
     VG.activeGame = game;
@@ -1562,6 +1562,23 @@
     try { return !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
     catch (e) { return false; }
   }
+  /*
+   * «Как на телефоне»: грубый указатель ИЛИ узкий экран с сенсором. Часть
+   * мобильных браузеров (в частности оболочки на Android) рапортуют
+   * pointer:fine для сенсорного экрана — из-за этого не включался ни
+   * всплывающий режим панели, ни полный экран, и над игрой оставалась
+   * широкая чёрная полоса от скрытой панели.
+   */
+  function touchLike() {
+    try {
+      if (coarsePointer()) return true;
+      var hasTouch = (navigator.maxTouchPoints || 0) > 0;
+      var narrow = (window.innerWidth || 0) <= 900
+        || !!(window.matchMedia && window.matchMedia('(max-width: 900px)').matches);
+      if (hasTouch && narrow) return true;
+    } catch (e) {}
+    return false;
+  }
   function hidePlayerBar() {
     var overlay = $('#playOverlay');
     if (!overlay) return;
@@ -1583,7 +1600,7 @@
   }
   /* Один раз на открытие игры: включаем режим и через 3 с убираем панель. */
   function setupPlayerBar(overlay) {
-    var touch = coarsePointer();
+    var touch = touchLike();
     if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
     overlay.classList.remove('bar-hidden');
     overlay.classList.toggle('immersive', touch);
@@ -1709,7 +1726,7 @@
     if (!btn) return;
     var open = overlay.classList.contains('open');
     var active = !!fullscreenElement() || overlay.classList.contains('pseudo-full');
-    btn.hidden = !(open && coarsePointer() && !active);
+    btn.hidden = !(open && touchLike() && !active);
   }
   function exitFullscreen() {
     var call = document.exitFullscreen || document.webkitExitFullscreen

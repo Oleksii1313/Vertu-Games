@@ -41,6 +41,9 @@ const GUEST = { user: null, csrf: 'csrf', achievements: 0, captcha: { enabled: f
 
 function makeEnv(session, opts) {
   const coarse = !!(opts && opts.coarse);
+  /* narrow — экран телефона, но браузер рапортует pointer:fine (так делают
+     некоторые оболочки на Android). */
+  const narrow = !!(opts && opts.narrow);
   const errors = [];
   const vc = new VirtualConsole();
   vc.on('jsdomError', (e) => { if (!/navigation|Not implemented/.test(e.message)) errors.push('[jsdom] ' + e.message); });
@@ -50,10 +53,12 @@ function makeEnv(session, opts) {
     runScripts: 'outside-only',
     beforeParse(w) {
       w.matchMedia = (query) => ({
-        matches: /pointer:\s*coarse/.test(query) ? coarse : false,
+        matches: /pointer:\s*coarse/.test(query) ? coarse
+          : (/max-width:\s*900px/.test(query) ? narrow : false),
         media: query, addEventListener() {}, removeEventListener() {},
         addListener() {}, removeListener() {},
       });
+      try { Object.defineProperty(w.navigator, 'maxTouchPoints', { value: (coarse || narrow) ? 5 : 0, configurable: true }); } catch (e) {}
       w.fetch = (url) => Promise.resolve({
         ok: true, status: 200,
         headers: { get: () => 'application/json' },
@@ -110,6 +115,9 @@ function makeEnv(session, opts) {
   check('во время игры шапка и подвал сайта скрыты',
     /body\.vg-playing \.site-header/.test(CSS) && /body\.vg-playing \.site-footer/.test(CSS) &&
     /body\.vg-playing \.mobile-nav\{display:none!important\}/.test(CSS), null);
+  check('скрытая панель отдаёт своё место игре (нет чёрной полосы сверху)',
+    /\.play-overlay\.bar-hidden \.play-frame-wrap\{position:absolute;inset:0/.test(CSS) &&
+    /\.play-overlay\.bar-hidden \.play-bar\{position:absolute/.test(CSS), null);
   check('на телефоне панель плеера всплывающая, а игра — на весь кадр',
     /\.play-overlay\.immersive \.play-frame-wrap\{position:absolute;inset:0/.test(CSS) &&
     /\.play-overlay\.immersive\.bar-hidden \.play-bar/.test(CSS), null);
@@ -248,6 +256,24 @@ function makeEnv(session, opts) {
     !!denied.doc.fullscreenElement && !deniedOverlay.classList.contains('pseudo-full'),
     [!!denied.doc.fullscreenElement, deniedOverlay.className]);
   check('отказ браузера: ошибок в консоли нет', denied.errors.length === 0, denied.errors.slice(0, 3));
+
+  /* --------------------------------- узкий экран, но pointer:fine (оболочки) */
+  /* Половина мобильных оболочек сообщает pointer:fine. Тогда не включался ни
+     всплывающий режим, ни полный экран, и над игрой висела чёрная полоса. */
+  const narrowEnv = makeEnv(GUEST, { narrow: true });
+  await wait(120);
+  narrowEnv.w.VG.openGame(game);
+  await wait(120);
+  const narrowOverlay = narrowEnv.doc.getElementById('playOverlay');
+  check('узкий сенсорный экран: включается всплывающий режим панели',
+    narrowOverlay.classList.contains('immersive'), narrowOverlay.className);
+  check('узкий сенсорный экран: просится настоящий полный экран',
+    narrowEnv.fsCalls.some((c) => /play-overlay/.test(c)), narrowEnv.fsCalls);
+  const narrowGrip = narrowOverlay.querySelector('[data-grip]');
+  check('узкий сенсорный экран: «язычок» доступен', !!narrowGrip, null);
+  narrowEnv.w.VG.closeGame();
+  await wait(80);
+  check('узкий сенсорный экран: ошибок нет', narrowEnv.errors.length === 0, narrowEnv.errors.slice(0, 3));
 
   const failed = results.filter((r) => r.startsWith('FAIL'));
   console.log(results.join('\n'));

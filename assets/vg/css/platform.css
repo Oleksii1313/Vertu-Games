@@ -490,6 +490,11 @@ body.vg-playing .mobile-nav{display:none!important}
   padding-top:calc(6px + env(safe-area-inset-top,0px));
   transition:opacity .22s ease,transform .22s ease}
 .play-overlay.immersive.bar-hidden .play-bar{opacity:0;transform:translateY(-104%);pointer-events:none}
+/* Панель спряталась — её место немедленно отдаём игре. Раньше скрытая панель
+   продолжала занимать высоту в потоке, и сверху кадра оставалась широкая
+   чёрная полоса, а у Flappy поле ужималось и по бокам появлялись пустые поля. */
+.play-overlay.bar-hidden .play-frame-wrap{position:absolute;inset:0;flex:none;height:100%;width:100%}
+.play-overlay.bar-hidden .play-bar{position:absolute;top:0;left:0;right:0;z-index:8}
 .play-grip{display:none;position:absolute;top:calc(env(safe-area-inset-top,0px) + 1px);left:50%;
   transform:translateX(-50%);z-index:9;width:74px;height:24px;padding:0;border:0;background:transparent;
   cursor:pointer;-webkit-tap-highlight-color:transparent}
