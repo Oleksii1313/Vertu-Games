@@ -271,6 +271,30 @@ GAMES = [
         'controls_ru': 'WASD — движение, мышь — обзор, E — взаимодействие',
         'controls_en': 'WASD — move, mouse — look, E — interact',
     },
+    {
+        'id': 'crystal', 'name': 'Кристальный рубеж', 'name_en': 'Crystal Frontier',
+        'file': 'games/crystal-frontier.html', 'icon': 'gem', 'tag': 'NEW',
+        'cat': ['Приключения', 'Песочницы'], 'cat_en': ['Adventure', 'Sandbox'],
+        'desc': 'Остров в сумерках: жители, руда и осколки Сердца',
+        'desc_en': 'A twilight island of villagers, ore and Heart shards',
+        'reward': 5, 'daily': 300, 'event': 'fragment',
+        # Единица — осколок Сердца, закрытый квест или победа над колоссом:
+        # за забег их не больше десяти, поэтому сервер ограничивает итог десятью.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 10,
+        'session_units_per_sec': 0.015,
+        'how_ru': 'Осколки Сердца, находки, квесты и победа над колоссом приносят V: 5 V за '
+                  'единицу, до 50 V за забег и 300 V в сутки.',
+        'how_en': 'Heart shards, finds, quests and the Colossus pay V: 5 V per unit, up to '
+                  '50 V per run and 300 V per day.',
+        'long_ru': 'Трёхмерный остров в сумерках: деревня с жителями, шахты, руины и лес. '                   'Собирайте руду и травы, крафтите кирку, меч и броню, выполняйте поручения '                   'старейшины и возвращайте пять осколков Сердца на алтарь.\n\nМир освещают '                   'кристальные фонари, под землёй ждут пещеры и стражи, а в финале — колосс. '                   'Прогресс сохраняется в браузере, таймера на исследование нет.',
+        'long_en': 'A three-dimensional island at dusk: a village with locals, mines, ruins and '                   'forest. Mine ore and gather herbs, craft a pickaxe, sword and armour, take the '                   "elder's errands and return the five Heart shards to the altar.\n\nCrystal "                   'lanterns light the world, caves and guardians wait underground, and the '                   'Colossus closes the story. Progress is saved in the browser and there is no '                   'exploration timer.',
+        'controls_ru': 'WASD — движение, Shift — бег, мышь — обзор, ЛКМ — копать/бить/ставить, '
+                       'E — действие и разговор, I — инвентарь, L — фонарь, Esc — пауза. '
+                       'На телефоне: стик слева, кнопки прыжка, кирки, атаки и действия справа.',
+        'controls_en': 'WASD — move, Shift — run, mouse — look, LMB — dig/hit/place, E — act and '
+                       'talk, I — inventory, L — lantern, Esc — pause. On a phone: the stick on '
+                       'the left, jump/mine/attack/action buttons on the right.',
+    },
 ]
 
 GAME_IDS = {g['id'] for g in GAMES}
@@ -439,7 +463,7 @@ ACHIEVEMENTS = [
 # Версия сборки: попадает в <meta name="vert-build">, в заголовок X-Build и в
 # /api/version. По ней видно, какая именно версия страниц реально отдаётся
 # сервером (а не закеширована браузером). Меняется при правках казино/колеса.
-APP_VERSION = '2026-11-25-frame-fill-v1'
+APP_VERSION = '2026-11-25-crystal-frontier-v1'
 
 # Колесо «Рулетки Vert»: 20 одинаковых секторов по 18°, только целые множители.
 #

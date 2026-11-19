@@ -19,7 +19,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 const GAMES = [
   'flappy', 'game2048', 'platformer', 'pong', 'shooter', 'doodle', 'snake',
-  'minicraft', 'sky-isle', 'chefs-rover', 'redline',
+  'minicraft', 'sky-isle', 'chefs-rover', 'redline', 'crystal-frontier',
 ];
 const BOOT_2D = ['flappy', 'game2048', 'platformer', 'pong', 'shooter', 'doodle', 'snake'];
 
