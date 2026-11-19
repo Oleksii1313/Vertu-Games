@@ -9936,12 +9936,13 @@ function mcbTplHip(b, x0, z0, x1, z1, y, id, ridgeId) {
 
 /* Зубцы по периметру: каждый второй блок сверху. */
 function mcbTplCrenels(b, x0, z0, x1, z1, y, id) {
-  for (var x = x0; x <= x1; x++) {
-    for (var z = z0; z <= z1; z++) {
-      if (x !== x0 && x !== x1 && z !== z0 && z !== z1) continue;
-      if ((x + z) % 2 === 0) b.put(x, y, z, id);
-    }
-  }
+  /* Обход периметра: зубцы стоят через клетку по всему кругу. Шахматка по
+     (x + z) на узкой стене (2 клетки в ширину) давала рваный верх. */
+  var i = 0, x, z;
+  for (x = x0; x <= x1; x++) if ((i++ & 1) === 0) b.put(x, y, z0, id);
+  for (z = z0 + 1; z <= z1; z++) if ((i++ & 1) === 0) b.put(x1, y, z, id);
+  for (x = x1 - 1; x >= x0; x--) if ((i++ & 1) === 0) b.put(x, y, z1, id);
+  for (z = z1 - 1; z > z0; z--) if ((i++ & 1) === 0) b.put(x0, y, z, id);
 }
 
 /* Лестница внутри дома: у каждой ступени сплошная опора до пола, поэтому
@@ -10187,9 +10188,22 @@ var MCB_TEMPLATES = [
         b.fill(cx, 0, cz, cx + 2, 0, cz + 2, SB);
         mcbTplWalls(b, cx, cz, cx + 2, cz + 2, 1, 7, SB, CB);
         mcbTplCrenels(b, cx, cz, cx + 2, cz + 2, 8, CB);
+        b.put(cx + 1, 4, cz + 1, SB);                      // ярус боевого хода
         b.put(cx + 1, 4, cz, GL); b.put(cx + 1, 6, cz + 2, GL);
         b.put(cx, 4, cz + 1, GL); b.put(cx + 2, 6, cz + 1, GL);
       }
+      /* Донжон в центре двора: кирпичная коробка выше стены, с зубцами,
+         дверью и окнами с подоконниками. */
+      mcbTplWalls(b, 4, 4, 8, 8, 1, 7, SB);
+      mcbTplDoor(b, 6, 4, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplPlate(b, 4, 4, 8, 8, 8, PL);                   // крыша-площадка
+      mcbTplCrenels(b, 4, 4, 8, 8, 9, SB);
+      b.put(5, 4, 8, GL); b.put(5, 3, 8, DW);              // окна с подоконником
+      b.put(5, 6, 8, GL); b.put(5, 5, 8, DW);
+      b.put(8, 4, 6, GL); b.put(8, 3, 6, DW);
+      b.put(8, 6, 6, GL); b.put(8, 5, 6, DW);
+      b.put(4, 4, 6, GL); b.put(4, 3, 6, DW);
+      b.fill(6, 0, 1, 6, 0, 3, SL);                        // дорожка от ворот к донжону
       /* Лестница на стену, флаг на угловой башне и фонари у ворот. */
       mcbTplStairs(b, 3, 1, 1, 3, SB);
       b.put(0, 9, 0, Xh); b.put(0, 10, 0, Xh); b.put(0, 11, 0, DW);
@@ -10197,8 +10211,13 @@ var MCB_TEMPLATES = [
     },
     meta: {
       foot: [0, 0, 12, 12],
-      walls: [{ rect: [0, 0, 12, 12], y0: 1, y1: 4, open: [[5, 1, 0], [6, 1, 0], [7, 1, 0], [5, 2, 0], [6, 2, 0], [7, 2, 0]] }],
+      walls: [
+        { rect: [0, 0, 12, 12], y0: 1, y1: 4, open: [[5, 1, 0], [6, 1, 0], [7, 1, 0], [5, 2, 0], [6, 2, 0], [7, 2, 0]] },
+        { rect: [4, 4, 8, 8], y0: 1, y1: 7, open: [[6, 1, 4], [6, 2, 4]] }
+      ],
       gate: { x0: 5, x1: 7, z: 0, y0: 1 },
+      door: { x: 6, z: 4, y0: 1, h: 2 },
+      glass: [[5, 4, 8], [5, 6, 8], [8, 4, 6], [8, 6, 6], [4, 4, 6]],
       towers: [[0, 0], [10, 0], [0, 10], [10, 10]]
     }
   },
@@ -10233,42 +10252,42 @@ var MCB_TEMPLATES = [
   {
     key: 'fantasyTower', cat: 'fort', ru: 'Волшебная башня', en: 'Fantasy tower',
     build: function (b) {
-      var W = 7, D = 7, x, z, y;
-      b.fill(-1, 0, -1, W, 0, D, SB);                      // цоколь
-      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, SL);
-      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 4, SB, CB);
-      mcbTplPlate(b, 1, 1, W - 2, D - 2, 3, PL);           // межъярусный настил
-      /* Пояс стеклянных окон по всему периметру — после настила. */
-      for (x = 1; x <= W - 2; x++) { b.put(x, 3, 0, GL); b.put(x, 3, D - 1, GL); }
-      for (z = 1; z <= D - 2; z++) { b.put(0, 3, z, GL); b.put(W - 1, 3, z, GL); }
-      mcbTplWalls(b, 0, 0, W - 1, D - 1, 5, 8, PS, Xh);    // верхний ярус
-      for (x = 1; x <= W - 2; x++) { b.put(x, 7, 0, GL); b.put(x, 7, D - 1, GL); }
-      for (z = 1; z <= D - 2; z++) { b.put(0, 7, z, GL); b.put(W - 1, 7, z, GL); }
-      /* Балкон-кольцо вокруг верхнего яруса. */
-      b.fill(-1, 5, -1, W, 5, D, DW);
-      b.erase(-1, 5, -1); b.erase(W, 5, -1); b.erase(-1, 5, D); b.erase(W, 5, D);
-      mcbTplDoor(b, 3, 0, 1, { dx: 0, dz: -1 }, DW, SB);
+      var S = 5, x, z;
+      b.fill(-1, 0, -1, S, 0, S, SB);                      // цоколь
+      mcbTplPlate(b, 0, 0, S - 1, S - 1, 0, SL);
+      mcbTplWalls(b, 0, 0, S - 1, S - 1, 1, 7, SB, CB);    // нижний ярус
+      mcbTplPlate(b, 1, 1, S - 2, S - 2, 3, PL);           // настил
+      b.erase(1, 3, 1); b.erase(1, 3, 2);                  // проём для лестницы
+      for (x = 1; x <= S - 2; x++) { b.put(x, 4, 0, GL); b.put(x, 4, S - 1, GL); }
+      for (z = 1; z <= S - 2; z++) { b.put(0, 4, z, GL); b.put(S - 1, 4, z, GL); }
+      /* Перекрытие, балкон-кольцо и узкий верхний ярус. */
+      b.fill(0, 8, 0, S - 1, 8, S - 1, DW);
+      for (x = -1; x <= S; x++) { b.put(x, 8, -1, DW); b.put(x, 8, S, DW); }
+      for (z = 0; z < S; z++) { b.put(-1, 8, z, DW); b.put(S, 8, z, DW); }
+      mcbTplWalls(b, 1, 1, 3, 3, 9, 14, PS, Xh);           // верхний ярус
+      b.put(2, 12, 1, GL); b.put(2, 12, 3, GL);
+      b.put(1, 12, 2, GL); b.put(3, 12, 2, GL);
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, SB);
       mcbTplStairs(b, 1, 1, 1, 3, PL);
-      b.erase(1, 3, 1); b.erase(1, 3, 2); b.erase(1, 3, 3);
-      /* Шатровый шпиль с навершием. */
-      var top = mcbTplHip(b, 0, 0, W - 1, D - 1, 9, RF, SL);
-      b.put(3, top, 3, SL);
-      b.put(3, top + 1, 3, GL);
-      b.put(3, top + 2, 3, SL);
-      mcbTplChimney(b, 5, 5, 9, 11, SB, SL);
+      /* Крыша и высокий шпиль с навершием. */
+      var top = mcbTplHip(b, 1, 1, 3, 3, 15, RF, SL);
+      b.put(2, top, 2, SL);
+      b.put(2, top + 1, 2, GL);
+      b.put(2, top + 2, 2, SL);
+      b.put(2, top + 3, 2, SB);
       /* Фонари у входа. */
       b.put(1, 1, -1, Xh); b.put(1, 2, -1, GL);
-      b.put(W - 2, 1, -1, Xh); b.put(W - 2, 2, -1, GL);
+      b.put(S - 2, 1, -1, Xh); b.put(S - 2, 2, -1, GL);
     },
     meta: {
-      foot: [0, 0, 6, 6], wallTop: 8, roof: { rect: [0, 0, 6, 6], y: 9, open: [[5, 5]] },
+      foot: [0, 0, 4, 4], wallTop: 14, roof: { rect: [1, 1, 3, 3], y: 15 },
       walls: [
-        { rect: [0, 0, 6, 6], y0: 1, y1: 4, open: [[3, 1, 0], [3, 2, 0]] },
-        { rect: [0, 0, 6, 6], y0: 5, y1: 8, open: [] }
+        { rect: [0, 0, 4, 4], y0: 1, y1: 7, open: [[2, 1, 0], [2, 2, 0]] },
+        { rect: [1, 1, 3, 3], y0: 9, y1: 14, open: [] }
       ],
-      door: { x: 3, z: 0, y0: 1, h: 2 },
-      glass: [[1, 3, 0], [2, 3, 0], [4, 3, 0], [5, 3, 0], [0, 3, 2], [6, 3, 4], [1, 7, 0], [5, 7, 0], [0, 7, 3], [6, 7, 3]],
-      floors: [{ y: 3, rect: [1, 1, 5, 5], holes: [[1, 1, 1, 3]] }]
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[1, 4, 0], [3, 4, 0], [0, 4, 2], [4, 4, 2], [2, 12, 1], [2, 12, 3], [1, 12, 2], [3, 12, 2]],
+      floors: [{ y: 3, rect: [1, 1, 3, 3], holes: [[1, 1, 1, 2]] }]
     }
   },
   {
@@ -10278,7 +10297,9 @@ var MCB_TEMPLATES = [
       b.fill(-1, 0, -1, 2, 0, L, CB);                      // фундамент
       b.fill(0, 0, 0, 1, 3, L - 1, CB);                    // тело стены
       b.fill(0, 3, 0, 1, 3, L - 1, SB);                    // боевой ход
-      mcbTplCrenels(b, 0, 0, 1, L - 1, 4, SB);
+      for (z = 0; z < L; z += 2) if (z !== 4) {              // зубцы на всю ширину
+        b.put(0, 4, z, SB); b.put(1, 4, z, SB);
+      }
       /* Проход с перемычкой и бойницы. */
       for (x = 0; x <= 1; x++) { b.erase(x, 1, 4); b.erase(x, 2, 4); b.put(x, 3, 4, SB); }
       b.put(0, 2, 2, GL); b.put(1, 2, 2, GL);
@@ -10335,7 +10356,7 @@ var MCB_TEMPLATES = [
       }
       b.put(-1, 2, 0, Xh); b.put(1, 2, 0, Xh);             // входные столбы
       b.put(-1, 2, L - 1, Xh); b.put(1, 2, L - 1, Xh);
-      b.put(-1, 2, 0, GL);
+      b.put(-1, 3, 0, GL); b.put(1, 3, L - 1, GL);         // фонари на столбах
     },
     meta: {
       bridge: { deck: [-1, 0, 1], z0: 0, z1: 10, railY: 1 }
@@ -10388,21 +10409,21 @@ var MCB_TEMPLATES = [
       /* Четыре стойки и решётка прилавка. */
       var corners = [[0, 0], [W - 1, 0], [0, D - 1], [W - 1, D - 1]], c;
       for (c = 0; c < corners.length; c++) {
-        for (var y = 1; y <= 3; y++) b.put(corners[c][0], y, corners[c][1], Xh);
+        for (var y = 1; y <= 4; y++) b.put(corners[c][0], y, corners[c][1], Xh);
       }
       b.fill(0, 1, 0, W - 1, 1, 0, DW);                    // прилавок
       b.fill(0, 1, D - 1, W - 1, 1, D - 1, DW);
       b.put(1, 2, 0, Bl); b.put(2, 2, 0, SB); b.put(3, 2, 0, Wh);   // товар
       b.put(1, 2, D - 1, GL); b.put(2, 2, D - 1, PL); b.put(3, 2, D - 1, Bl);
-      b.fill(0, 4, 0, W - 1, 4, D - 1, RF);                // навес
-      b.fill(-1, 3, -1, W, 3, D, DW);                      // бахрома навеса
-      b.erase(-1, 3, -1); b.erase(W, 3, -1); b.erase(-1, 3, D); b.erase(W, 3, D);
-      b.put(2, 5, 2, SL);                                  // конёк навеса
-      b.put(2, 2, 2, GL);                                  // фонарь в центре
-      b.put(2, 1, 2, Xh);
+      b.put(2, 1, 2, Xh); b.put(2, 2, 2, GL);              // фонарь в центре
+      /* Бахрома только по внешнему краю: прилавок и проход остаются открытыми. */
+      for (x = -1; x <= W; x++) { b.put(x, 4, -1, DW); b.put(x, 4, D, DW); }
+      for (z = 0; z < D; z++) { b.put(-1, 4, z, DW); b.put(W, 4, z, DW); }
+      b.fill(0, 5, 0, W - 1, 5, D - 1, RF);                // навес над прилавком
+      b.put(2, 6, 2, SL);                                  // конёк навеса
     },
     meta: {
-      foot: [0, 0, 4, 4], wallTop: 3, roof: { rect: [0, 0, 4, 4], y: 4, flat: true }
+      foot: [0, 0, 4, 4], wallTop: 4, roof: { rect: [0, 0, 4, 4], y: 5, flat: true }
     }
   },
   {
