@@ -111,10 +111,6 @@
     window.addEventListener('message', function (event) {
       var data = event.data;
       if (data && (data.type === 'vg:focus' || data.type === 'focusGame')) focusGame();
-      /* Плеер перешёл в полный экран (или вышел из него). Событие resize
-         внутри iframe приходит не во всех браузерах, а игра должна заново
-         занять кадр — иначе остаётся полоса или поле по центру. */
-      if (data && (data.type === 'vg:resize' || data.type === 'player:resize')) refit();
     });
   }
 
@@ -183,17 +179,7 @@
     /* Адресная строка мобильного браузера и «резинка» прокрутки не должны
        сдвигать поле: фон остаётся на месте, страница не тянется. */
     'html{overscroll-behavior:none;-webkit-text-size-adjust:100%}',
-    'body{overscroll-behavior:none}',
-    /* Безопасные зоны внутри плеера. Игра занимает экран от края до края, но
-       кнопки управления не должны попадать под «домашнюю» полосу iPhone или
-       под вырез: платформа присылает их размеры сообщением vg:safe, а мы
-       поднимаем органы управления ровно на эту величину. Чёрных полос при
-       этом не появляется — сдвигаются только кнопки. */
-    'html.vg-safe body>.controls{padding-bottom:calc(6px + var(--vg-safe-bottom,0px));',
-    '  padding-left:calc(8px + var(--vg-safe-left,0px));padding-right:calc(8px + var(--vg-safe-right,0px))}',
-    'html.vg-safe body>.info{padding-top:calc(4px + var(--vg-safe-top,0px))}',
-    'html.vg-safe .dpad,html.vg-safe body>.dpad{',
-    '  margin-bottom:calc(4px + var(--vg-safe-bottom,0px))}'
+    'body{overscroll-behavior:none}'
   ].join('');
 
   var CLASSIC_CSS = [
@@ -286,37 +272,6 @@
     var height = Math.max(200, baseH - Math.min(chrome, Math.round(viewH * 0.45)));
     return { width: width, height: height, row: row, infoHeight: blockHeight('body>.info') };
   }
-
-  /*
-   * Безопасные зоны: платформа измеряет вырез экрана и «домашнюю» полосу и
-   * присылает их в кадр. Мы складываем значения в CSS-переменные, которыми
-   * пользуется BASE_CSS выше.
-   */
-  (function () {
-    function apply(data) {
-      var root = document.documentElement;
-      if (!root) return;
-      var map = { top: '--vg-safe-top', right: '--vg-safe-right', bottom: '--vg-safe-bottom', left: '--vg-safe-left' };
-      Object.keys(map).forEach(function (key) {
-        var value = Math.max(0, Math.round(Number(data[key]) || 0));
-        root.style.setProperty(map[key], value + 'px');
-      });
-      root.classList.add('vg-safe');
-      if (window.VGGame) window.VGGame.safeInsets = {
-        top: Number(data.top) || 0, right: Number(data.right) || 0,
-        bottom: Number(data.bottom) || 0, left: Number(data.left) || 0
-      };
-      /* Поле не меняет размер от сдвига кнопок, но игры, меряющие панели,
-         должны пересчитать кадр. */
-      try { window.dispatchEvent(new Event('resize')); } catch (e) {}
-    }
-    window.addEventListener('message', function (event) {
-      if (event.origin !== location.origin && event.origin !== 'null') return;
-      var data = event.data;
-      if (!data || typeof data !== 'object' || data.type !== 'vg:safe') return;
-      apply(data);
-    });
-  })();
 
   function style(id, css) {
     var node = document.getElementById(id);

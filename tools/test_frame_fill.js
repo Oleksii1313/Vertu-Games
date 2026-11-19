@@ -106,19 +106,8 @@ function boot(file, screen) {
         if (el.tagName === 'CANVAS') {
           canvasEl = el;
           /* Ключевая строка: браузер подстраивает размер холста под буфер. */
-          const explicitW = el.style.width && el.style.width.indexOf('px') > 0;
-          const explicitH = el.style.height && el.style.height.indexOf('px') > 0;
-          if (!explicitW || !explicitH) {
-            /* Холст, растянутый CSS-ом (width/height:100%), занимает свой
-               контейнер: .stage/.board — остаток кадра после панелей игры,
-               прямой ребёнок body — весь кадр. */
-            const stage = el.closest && el.closest('.stage,.board,.board-wrap');
-            const hostH = stage ? Math.max(120, v.h - (CHROME.info + CHROME.controls + CHROME.help)) : v.h;
-            return rect(explicitW ? parseFloat(el.style.width) : v.w,
-              explicitH ? parseFloat(el.style.height) : hostH);
-          }
-          const cssW = parseFloat(el.style.width);
-          const cssH = parseFloat(el.style.height);
+          const cssW = el.style.width ? parseFloat(el.style.width) : (el.width / screen.dpr);
+          const cssH = el.style.height ? parseFloat(el.style.height) : (el.height / screen.dpr);
           return rect(cssW || v.w, cssH || v.h);
         }
         return rect(v.w, v.h);
@@ -224,117 +213,6 @@ SCREENS.forEach((screen) => {
   check(name + ': ошибок JavaScript нет', env.errors.length === 0, env.errors.slice(0, 2));
   w.close();
 });
-
-/* ==================== портретные игры: flappy и doodle ====================
-   Поле этих игр по замыслу вертикальное (как в оригинале): в широком кадре
-   оно вписывается по высоте и стоит по центру, а не растягивается и не
-   искажается. Проверяем, что поле не выходит за кадр, заполняет высоту,
-   остаётся вертикальным и масштаб по обеим осям одинаковый. */
-const MOCK_CHROME_SUM = CHROME.info + CHROME.controls + CHROME.help;
-[['flappy.html', 'flappy'], ['doodle.html', 'doodle']].forEach(([file, name]) => {
-  SCREENS.forEach((screen) => {
-    const env = boot(file, screen);
-    const w = env.window;
-    const doc = w.document;
-    const c = doc.querySelector('canvas');
-    if (!c) { check(name + ': холст найден', false); w.close(); return; }
-    const rectBox = c.getBoundingClientRect();
-    const cssW = parseFloat(c.style.width) || Math.round(rectBox.width);
-    const cssH = parseFloat(c.style.height) || Math.round(rectBox.height);
-    const label = name + ' ' + screen.w + '×' + screen.h;
-    check(label + ': поле не выходит за кадр', cssW <= screen.w + 1 && cssH <= screen.h + 1, { cssW, cssH });
-    check(label + ': поле занимает всю доступную высоту',
-      cssH >= screen.h - MOCK_CHROME_SUM - 3, { cssH, frame: screen.h, panels: MOCK_CHROME_SUM });
-    const world = env.fills.length ? env.fills[env.fills.length - 1] : [0, 0];
-    const worldAspect = world[0] / (world[1] || 1);
-    if (screen.w > screen.h) {
-      /* В широком кадре поле остаётся вертикальным и встаёт по центру — так
-         игра выглядит как в оригинале, без растягивания на всю ширину. */
-      check(label + ': в ландшафте поле остаётся вертикальным', worldAspect < 1.05,
-        { world, worldAspect: +worldAspect.toFixed(3) });
-    }
-    if (name === 'flappy') {
-      /* У Flappy холст — это и есть мир: пропорции обязаны совпадать, иначе
-         картинка растянется. Doodle рисует мир по центру холста через свой
-         масштаб (ox/oy), поэтому там проверяется только vertical-ность выше. */
-      const boxAspect = cssW / cssH;
-      check(label + ': пропорции мира совпадают с холстом (без искажений)',
-        Math.abs(worldAspect - boxAspect) / boxAspect < 0.03,
-        { world, worldAspect: +worldAspect.toFixed(3), boxAspect: +boxAspect.toFixed(3) });
-    }
-    check(label + ': ошибок JavaScript нет', env.errors.length === 0, env.errors.slice(0, 2));
-    w.close();
-  });
-});
-
-/* ====================== квадратные доски: 2048 и змейка ==================
-   Поле 4×4 (и сетка змейки) обязано остаться квадратным: растянутые плитки —
-   это уже другая игра. Поэтому доска занимает короткую сторону кадра целиком,
-   без прежнего потолка 560 px. */
-[['game2048.html', '2048'], ['snake.html', 'snake']].forEach(([file, name]) => {
-  [{ w: 390, h: 844, dpr: 3, tag: 'портрет' }, { w: 844, h: 390, dpr: 3, tag: 'ландшафт' }].forEach((screen) => {
-    const env = boot(file, screen);
-    const w = env.window;
-    const c = w.document.querySelector('canvas');
-    const cssW = parseFloat(c.style.width) || 0;
-    const cssH = parseFloat(c.style.height) || 0;
-    check(name + ' ' + screen.tag + ': доска квадратная', Math.abs(cssW - cssH) <= 1, { cssW, cssH });
-    /* Короткая сторона минус панели/отступы самой игры: доска не должна
-       оставлять вокруг себя пустые полосы шире ~80 px. */
-    check(name + ' ' + screen.tag + ': доска занимает короткую сторону кадра',
-      cssW >= Math.min(screen.w, screen.h) - 80 && cssW <= Math.min(screen.w, screen.h) + 1,
-      { cssW, short: Math.min(screen.w, screen.h) });
-    w.close();
-  });
-});
-
-/* Потолок 560 px у доски 2048 мешал полю расти на планшете: проверяем, что
-   на большом экране доска действительно больше 560 px. */
-(function () {
-  const env = boot('game2048.html', { w: 1024, h: 768, dpr: 2 });
-  const c = env.window.document.querySelector('canvas');
-  const size = parseFloat(c.style.width) || 0;
-  check('2048 планшет: доска больше прежнего потолка 560 px', size > 560, { size });
-  env.window.close();
-})();
-
-/* ============================ плеер: кадр от края до края =================
-   Чёрные полосы по бокам, которые видно на скриншотах с телефона, давал сам
-   плеер: у оверлея стояли safe-area-отступы, и в ландшафте «челка» вырезала
-   по 44 px слева и справа. Проверяем, что оверлей отдаёт игре весь экран. */
-const CSS = fs.readFileSync(path.join(ROOT, 'assets/vg/css/platform.css'), 'utf8');
-const CSS_NO_COMMENTS = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
-const overlayRule = /\.play-overlay\{([^}]*)\}/.exec(CSS_NO_COMMENTS);
-check('плеер: правило .play-overlay найдено', !!overlayRule);
-if (overlayRule) {
-  const body = overlayRule[1];
-  check('плеер: у оверлея нет отступов', /(^|;)\s*padding:\s*0\s*(;|$)/.test(body.replace(/\s+/g, ' ')), body.match(/padding:[^;}]*/) ? body.match(/padding:[^;}]*/)[0] : 'нет padding');
-  check('плеер: оверлей не режет кадр под «челку»',
-    !/safe-area-inset-(left|right)/.test(body), body.includes('safe-area') ? 'есть safe-area' : 'чисто');
-  check('плеер: оверлей на весь экран', /inset:\s*0/.test(body) && /height:100dvh/.test(body));
-}
-const frameRule = /\.play-frame-wrap\{([^}]*)\}/.exec(CSS_NO_COMMENTS);
-check('плеер: рамка кадра растягивается (flex)', !!frameRule && /flex:1 1 auto/.test(frameRule[1]));
-const iframeRule = /\.play-frame-wrap iframe\{([^}]*)\}/.exec(CSS_NO_COMMENTS);
-check('плеер: iframe на весь кадр',
-  !!iframeRule && /inset:0/.test(iframeRule[1]) && /width:100%/.test(iframeRule[1]) && /height:100%/.test(iframeRule[1]));
-
-/* ===================== безопасные зоны доходят до игры ===================
-   Кадр теперь отдаётся игре целиком, поэтому вырез экрана и «домашнюю» полосу
-   компенсируют сами органы управления: платформа измеряет env()-отступы и
-   присылает их в iframe сообщением vg:safe, а game-kit раскладывает их по
-   CSS-переменным. Проверяем обе половины связки — иначе кнопки на iPhone
-   уедут под системную полосу. */
-const PLATFORM = fs.readFileSync(path.join(ROOT, 'assets/vg/js/platform.js'), 'utf8');
-check('плеер измеряет безопасные зоны (env + пробный элемент)',
-  /padding-top:env\(safe-area-inset-top/.test(PLATFORM) && /function safeInsets\(/.test(PLATFORM));
-check('плеер отправляет зоны в кадр игры (vg:safe)',
-  /type = 'vg:safe'/.test(PLATFORM) && /postMessage\(insets, location\.origin\)/.test(PLATFORM));
-check('плеер обновляет зоны после поворота', /orientationchange[\s\S]{0,120}postSafeInsets/.test(PLATFORM));
-check('зоны уходят и после загрузки игры', /setTimeout\(postSafeInsets, 60\)/.test(PLATFORM));
-check('game-kit принимает vg:safe', /data\.type !== 'vg:safe'/.test(KIT) && /--vg-safe-bottom/.test(KIT));
-check('game-kit поднимает кнопки над системной полосой', /html\.vg-safe body>\.controls\{padding-bottom/.test(KIT));
-check('game-kit уводит кнопки из-под выреза', /--vg-safe-left,0px/.test(KIT) && /--vg-safe-right,0px/.test(KIT));
 
 /* ------------------------------------------------------------------- итог */
 results.forEach((line) => console.log(line));

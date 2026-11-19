@@ -295,6 +295,41 @@ GAMES = [
                        'talk, I — inventory, L — lantern, Esc — pause. On a phone: the stick on '
                        'the left, jump/mine/attack/action buttons on the right.',
     },
+    {
+        'id': 'omnom', 'name': 'Om Nom Паркур', 'name_en': 'Om Nom Parkour',
+        'file': 'games/om-nom-parkour.html', 'icon': 'bolt', 'tag': 'NEW',
+        'cat': ['Аркады', 'Экшен'], 'cat_en': ['Arcades', 'Action'],
+        'desc': '50 уровней паркура с конфетами и ловушками',
+        'desc_en': '50 parkour stages with candy and traps',
+        'reward': 5, 'daily': 300, 'event': 'minutes',
+        # Единица награды — минута игры: единицы присылает мост самой игры,
+        # сервер сам сверяет их со временем забега и режет суточным лимитом.
+        'session_claim': True, 'session_award': 'units', 'session_max_units': 20,
+        'session_units_per_sec': 0.017,
+        'how_ru': 'Проходи уровни и собирай конфеты. Каждая минута забега — 5 V '
+                  '(до 100 V за забег и 300 V в сутки).',
+        'how_en': 'Clear stages and collect candy. Every minute of a run pays 5 V '
+                  '(up to 100 V per run and 300 V a day).',
+        'long_ru': 'Трёхмерный паркур с зелёным сладкоежкой: 50 уровней в десяти '
+                   'ступенях сложности, свои декорации и цвета у каждой ступени. '
+                   'Прыгай по платформам, уворачивайся от вращающихся неоновых балок, '
+                   'прессов, пил и лазеров, собирай конфеты и звёзды.\n\nКаждые десять '
+                   'уровней — событие: конфетный дождь, поднимающаяся лава, ускорение, '
+                   'хаос гравитации и финальная трасса-босс. Прогресс, звёзды и рекорды '
+                   'сохраняются в браузере.',
+        'long_en': 'A three-dimensional parkour game starring a green sweet-tooth: 50 '
+                   'stages across ten difficulty tiers, each with its own scenery and '
+                   'palette. Jump across platforms, dodge spinning neon bars, crushers, '
+                   'saws and lasers, and grab candy and stars.\n\nEvery ten stages brings '
+                   'an event: candy rain, rising lava, a speed boost, gravity chaos and a '
+                   'final boss course. Progress, stars and best times are saved in the browser.',
+        'controls_ru': 'WASD / стрелки — бег, пробел — прыжок (держи дольше — выше), '
+                       'Shift — рывок, мышь — камера, Esc — пауза. На телефоне: стик слева, '
+                       'кнопки прыжка и рывка справа.',
+        'controls_en': 'WASD / arrows — run, Space — jump (hold longer to jump higher), '
+                       'Shift — sprint, mouse — camera, Esc — pause. On a phone: the stick on '
+                       'the left, jump and sprint buttons on the right.',
+    },
 ]
 
 GAME_IDS = {g['id'] for g in GAMES}
@@ -463,7 +498,7 @@ ACHIEVEMENTS = [
 # Версия сборки: попадает в <meta name="vert-build">, в заголовок X-Build и в
 # /api/version. По ней видно, какая именно версия страниц реально отдаётся
 # сервером (а не закеширована браузером). Меняется при правках казино/колеса.
-APP_VERSION = '2026-11-29-portrait-fields-v1'
+APP_VERSION = '2026-11-30-omnom-parkour-v1'
 
 # Колесо «Рулетки Vert»: 20 одинаковых секторов по 18°, только целые множители.
 #

@@ -61,12 +61,6 @@ def head(title: str, description: str, page: str, extra_css: str = '') -> str:
 <meta name="vert-build" content="{E(APP_VERSION)}">
 <title>{E(title)} — Vert Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="VERTGAMES">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="/assets/vg/img/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" media="print" onload="this.media='all'">
