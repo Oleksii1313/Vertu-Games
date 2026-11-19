@@ -5655,14 +5655,15 @@ function $g(i, e = i) {
     mcxSun.target.position.set(F.x, F.y, F.z);
     mcxSun.target.updateMatrixWorld()
   }
-  fo(), F.swing = Math.max(0, F.swing - i), Ei.rotation.x = -Math.sin(F.swing / .3 * Math.PI) * 1.2, Wt.getWorldDirection(Gn);
+  fo();
+  try { mcbTick(); } catch (mcbErr) {}
+  F.swing = Math.max(0, F.swing - i), Ei.rotation.x = -Math.sin(F.swing / .3 * Math.PI) * 1.2, Wt.getWorldDirection(Gn);
   let c = zl(F.x, F.y + 1.62, F.z, Gn.x, Gn.y, Gn.z);
   er.visible = !!c, c && er.position.set(c.x + .5, c.y + .5, c.z + .5), (F.dirty || (F.x - F.lastX) ** 2 + (F.z - F.lastZ) ** 2 > 16) && Jh(), $h(), Fl += i, Fl > .1 && (Fl = 0, os())
 }
 
 function jh(i) {
   ao = requestAnimationFrame(jh);
-  try { mcbTick(); } catch (mcbErr) {}
   let e = Math.max(0, (i - oo) / 1e3),
     t = Math.min(e, .05);
   oo = i, mcxPerfTick(e), Mt === "playing" ? ($g(t, e), Xe.render(Ht, Wt)) : lo && (Xe.render(Ht, Wt), lo = !1)

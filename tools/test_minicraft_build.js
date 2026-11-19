@@ -533,6 +533,63 @@ function findSpot(A) {
   player.yaw = savedF.yaw; player.pitch = savedF.pitch;
   frames(3);
 
+  /* ---------- 17в. постановка со всех шести сторон ---------- */
+  if (cam) {
+    const A2 = api();
+    const Fp = A2.F();
+    const saved2 = { x: Fp.x, y: Fp.y, z: Fp.z };
+    /* Опорный блок в воздухе: вокруг расчищаем, чтобы попадание было однозначным. */
+    const cx = Math.floor(saved2.x) + 3, cy = Math.floor(saved2.y) + 6, cz = Math.floor(saved2.z) + 3;
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dz = -2; dz <= 2; dz++) A2.ui(cx + dx, cy + dy, cz + dz, A2.Ai);
+      }
+    }
+    A2.ui(cx, cy, cz, 3);                 /* камень (Hh) */
+    Fp.x = cx + 40; Fp.z = cz + 40;        /* игрок в стороне */
+    A2.select(A2.mats[4].id);              /* «Камень» для постановки */
+    const sides = [
+      { name: '+X', from: [cx + 3.5, cy + .5, cz + .5], target: [cx + 1, cy, cz] },
+      { name: '−X', from: [cx - 2.5, cy + .5, cz + .5], target: [cx - 1, cy, cz] },
+      { name: '+Y', from: [cx + .5, cy + 3.5, cz + .5], target: [cx, cy + 1, cz] },
+      { name: '−Y', from: [cx + .5, cy - 2.5, cz + .5], target: [cx, cy - 1, cz] },
+      { name: '+Z', from: [cx + .5, cy + .5, cz + 3.5], target: [cx, cy, cz + 1] },
+      { name: '−Z', from: [cx + .5, cy + .5, cz - 2.5], target: [cx, cy, cz + 1 - 1] }
+    ];
+    sides[sides.length - 1].target = [cx, cy, cz - 1];
+    for (const side of sides) {
+      cam.position.set(side.from[0], side.from[1], side.from[2]);
+      cam.lookAt(cx + .5, cy + .5, cz + .5);
+      cam.updateMatrixWorld(true);
+      const hit = A2.aim();
+      const cell = hit ? [hit.px, hit.py, hit.pz] : null;
+      check('прицел со стороны ' + side.name + ': попадание в опорный блок',
+        !!hit && hit.x === cx && hit.y === cy && hit.z === cz, hit && [hit.x, hit.y, hit.z]);
+      check('клетка постановки со стороны ' + side.name + ' — соседняя по нормали',
+        !!cell && cell.join(',') === side.target.join(','), [cell, side.target]);
+      const reason = cell ? A2.placeReason(cell[0], cell[1], cell[2], A2.mcb().selected) : 'noaim';
+      check('со стороны ' + side.name + ' ставить можно', reason === '', reason);
+      if (cell && reason === '') {
+        const ok = A2.place(cell[0], cell[1], cell[2]);
+        check('блок поставлен со стороны ' + side.name,
+          ok === true && A2.cs(cell[0], cell[1], cell[2]) === A2.mcb().selected,
+          [ok, A2.cs(cell[0], cell[1], cell[2])]);
+        A2.brk(cell[0], cell[1], cell[2]);
+      }
+    }
+    /* В сам опорный блок ставить нельзя — только рядом. */
+    check('нельзя ставить внутрь существующего блока',
+      A2.placeReason(cx, cy, cz, A2.mcb().selected) === 'busy',
+      A2.placeReason(cx, cy, cz, A2.mcb().selected));
+    /* За границей мира — нельзя. */
+    check('за границей мира ставить нельзя',
+      A2.placeReason(-1, 5, 5, A2.mcb().selected) === 'bounds' &&
+      A2.placeReason(A2.ct, 5, 5, A2.mcb().selected) === 'bounds' &&
+      A2.placeReason(5, A2.dn, 5, A2.mcb().selected) === 'bounds');
+    Fp.x = saved2.x; Fp.y = saved2.y; Fp.z = saved2.z;
+    frames(2);
+  }
+
   /* ---------- 17б. шаблоны: структура, предпросмотр, подтверждение ---------- */
   const tpls = api().templates;
   check('в библиотеке 17 шаблонов', tpls.length === 17, tpls.length);
