@@ -62,10 +62,14 @@ function makeEnv(session, opts) {
     },
   });
   const w = dom.window;
-  /* Заглушка Fullscreen API: запоминаем, просил ли плеер настоящий полный экран. */
+  /* Заглушка Fullscreen API: запоминаем, просил ли плеер настоящий полный экран.
+     opts.failFs — сколько первых запросов «браузер» отклоняет (как встроенные
+     оболочки и iOS), чтобы проверить мягкий откат и повтор по тапу. */
   const fsCalls = [];
+  let failLeft = (opts && opts.failFs) || 0;
   w.Element.prototype.requestFullscreen = function () {
     fsCalls.push(this.className || this.tagName);
+    if (failLeft > 0) { failLeft--; return Promise.reject(new Error('denied')); }
     /* Как настоящий браузер: заявляем документу текущий fullscreen-элемент. */
     Object.defineProperty(w.document, 'fullscreenElement', { value: this, configurable: true });
     return Promise.resolve();
@@ -109,6 +113,15 @@ function makeEnv(session, opts) {
   check('на телефоне панель плеера всплывающая, а игра — на весь кадр',
     /\.play-overlay\.immersive \.play-frame-wrap\{position:absolute;inset:0/.test(CSS) &&
     /\.play-overlay\.immersive\.bar-hidden \.play-bar/.test(CSS), null);
+  /* Полный экран на телефоне: игра должна занимать весь экран, поэтому у плеера
+     есть своя кнопка «⛶» — панель игрока сама уезжает через 3 секунды. */
+  check('есть кнопка «на весь экран» рядом с «язычком»',
+    /\.play-fs-float\{/.test(CSS) && /\.play-overlay\.open \.play-fs-float:not\(\[hidden\]\)\{display:inline-flex\}/.test(CSS), null);
+  check('кнопка не перекрывает HUD игры: живёт в полосе над кадром',
+    /\.play-fs-float\{[^}]*top:calc\(env\(safe-area-inset-top/.test(CSS) &&
+    /\.play-fs-float\{[^}]*z-index:9/.test(CSS), null);
+  check('запрос полного экрана не передаёт объект опций первым (совместимость)',
+    /var maybe = fns\[i\]\.call\(el\);/.test(PLATFORM), null);
   check('есть «язычок», возвращающий панель',
     /\.play-grip\{/.test(CSS) && /\.play-overlay\.immersive \.play-grip\{display:block\}/.test(CSS), null);
 
@@ -182,6 +195,59 @@ function makeEnv(session, opts) {
     !phoneOverlay.classList.contains('immersive') && !phoneOverlay.classList.contains('bar-hidden'),
     phoneOverlay.className);
   check('телефон: ошибок в консоли нет', phone.errors.length === 0, phone.errors.slice(0, 3));
+
+  /* ------------------------------------- кнопка «на весь экран» и повтор */
+  const phoneFs = makeEnv(GUEST, { coarse: true });
+  await wait(120);
+  phoneFs.w.VG.openGame(game);
+  await wait(80);
+  const fsOverlay = phoneFs.doc.getElementById('playOverlay');
+  const fsBtn = fsOverlay.querySelector('[data-fs-float]');
+  check('телефон: кнопка «⛶» есть в плеере', !!fsBtn, null);
+  check('телефон: когда полный экран включён, кнопка спрятана',
+    !!fsBtn && fsBtn.hidden === true, fsBtn && fsBtn.hidden);
+  /* Выходим из настоящего полного экрана — кнопка обязана появиться снова. */
+  Object.defineProperty(phoneFs.doc, 'fullscreenElement', { value: null, configurable: true });
+  phoneFs.doc.dispatchEvent(new phoneFs.w.Event('fullscreenchange'));
+  check('телефон: без полного экрана кнопка «⛶» снова видна',
+    !!fsBtn && fsBtn.hidden === false, fsBtn && fsBtn.hidden);
+  const beforeClicks = phoneFs.fsCalls.length;
+  fsBtn.dispatchEvent(new phoneFs.w.Event('click'));
+  await wait(60);
+  check('телефон: тап по «⛶» просит настоящий полный экран',
+    phoneFs.fsCalls.length > beforeClicks, phoneFs.fsCalls);
+  phoneFs.w.VG.closeGame();
+  await wait(80);
+  check('телефон: после выхода кнопка «⛶» скрыта вместе с плеером',
+    !!fsBtn && fsBtn.hidden === true, fsBtn && fsBtn.hidden);
+  check('телефон: ошибок после кнопки «⛶» нет', phoneFs.errors.length === 0, phoneFs.errors.slice(0, 3));
+
+  /* Браузер отказал в полном экране на открытии (встроенные оболочки, iOS):
+     плеер уходит в CSS-режим, а первый тап по игре пробует ещё раз и — если
+     браузер передумал — возвращает настоящий полноэкранный режим. */
+  const denied = makeEnv(GUEST, { coarse: true, failFs: 2 });
+  await wait(120);
+  denied.w.VG.openGame(game);
+  await wait(120);
+  const deniedOverlay = denied.doc.getElementById('playOverlay');
+  check('отказ браузера: включается запасной режим на весь экран',
+    deniedOverlay.classList.contains('pseudo-full') && denied.doc.body.classList.contains('vg-pseudo-full'),
+    deniedOverlay.className);
+  check('отказ браузера: попытка была у оверлея и у <html>',
+    denied.fsCalls.length >= 2, denied.fsCalls);
+  check('отказ браузера: игра всё равно открылась',
+    deniedOverlay.classList.contains('open') && /games\/flappy\.html/.test(
+      deniedOverlay.querySelector('.play-frame').getAttribute('src') || ''), null);
+  const tap = new denied.w.Event('pointerdown', { bubbles: true, cancelable: true });
+  Object.assign(tap, { pointerId: 1, pointerType: 'touch', button: 0, clientX: 10, clientY: 10 });
+  deniedOverlay.querySelector('.play-frame').dispatchEvent(tap);
+  await wait(80);
+  check('отказ браузера: тап по игре повторяет запрос полного экрана',
+    denied.fsCalls.length >= 3, denied.fsCalls);
+  check('отказ браузера: настоящий полный экран включается со второй попытки',
+    !!denied.doc.fullscreenElement && !deniedOverlay.classList.contains('pseudo-full'),
+    [!!denied.doc.fullscreenElement, deniedOverlay.className]);
+  check('отказ браузера: ошибок в консоли нет', denied.errors.length === 0, denied.errors.slice(0, 3));
 
   const failed = results.filter((r) => r.startsWith('FAIL'));
   console.log(results.join('\n'));
