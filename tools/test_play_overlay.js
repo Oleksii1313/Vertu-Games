@@ -97,7 +97,14 @@ function makeEnv(session, opts) {
   const overlayCss = rule('.play-overlay');
   check('оверлей не даёт странице «резинить»', /overscroll-behavior:\s*none/.test(overlayCss), overlayCss.slice(0, 90));
   check('оверлей не даёт зумиться двойным тапом', /touch-action:\s*manipulation/.test(overlayCss), null);
-  check('оверлей учитывает вырез экрана', /safe-area-inset-top/.test(overlayCss) && /safe-area-inset-bottom/.test(overlayCss), null);
+  /* Игра идёт от края до края: у оверлея больше нет safe-area-отступов, иначе
+     в ландшафте «челка» вырезала по 44 px слева и справа (чёрные полосы на
+     скриншотах с телефона). Безопасные зоны соблюдает только интерфейс
+     плеера — панель и кнопка «Выйти». */
+  const overlayCssPlain = overlayCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+  check('оверлей отдаёт игре весь экран (без отступов)', /(^|;)\s*padding:\s*0\s*(;|$)/.test(overlayCssPlain),
+    overlayCss.match(/padding:[^;}]*/) ? overlayCss.match(/padding:[^;}]*/)[0] : 'нет padding');
+  check('оверлей не режет кадр под «челку»', !/safe-area-inset-(left|right)/.test(overlayCss), null);
   const wrapCss = rule('.play-frame-wrap');
   check('рамка кадра держит прокрутку внутри себя', /overscroll-behavior:\s*contain/.test(wrapCss), wrapCss.slice(0, 90));
   const playingCss = rule('body.vg-playing');

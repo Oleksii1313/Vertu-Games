@@ -58,7 +58,9 @@ function boot(box) {
       // Заглушка размеров: .stage получает заданный прямоугольник.
       win.Element.prototype.getBoundingClientRect = function () {
         if (this.classList && this.classList.contains('stage')) {
-          const pad = 16;
+          /* .stage заполняет кадр целиком: в CSS у него padding:0, поэтому
+             поле тянется от края до края — ни рамки, ни полос. */
+          const pad = 0;
           return { width: box.w - pad, height: box.h - pad, top: 0, left: 0, right: box.w, bottom: box.h, x: 0, y: 0 };
         }
         return { width: box.w, height: box.h, top: 0, left: 0, right: box.w, bottom: box.h, x: 0, y: 0 };
@@ -104,7 +106,7 @@ let a = boot({ w: 390, h: 844 });
 let cb = canvasBox(a.win);
 check('portrait phone: vertical field', cb.ratio < 1, `ratio=${cb.ratio.toFixed(4)}`);
 check('portrait phone: fits the screen', cb.cssW <= 390 && cb.cssH <= 844, `${cb.cssW}x${cb.cssH}`);
-check('portrait phone: uses the whole width (no side bars)', Math.abs(cb.cssW - 374) <= 2, `${cb.cssW}x${cb.cssH}`);
+check('portrait phone: uses the whole width (no side bars)', Math.abs(cb.cssW - 390) <= 2, `${cb.cssW}x${cb.cssH}`);
 check('portrait phone: buffer = css*dpr', Math.abs(cb.bw - Math.round(cb.cssW * 2)) <= 1, `buffer=${cb.bw}x${cb.bh}`);
 check('portrait phone: uniform scale (no distortion)',
   Math.abs(cb.bw / cb.cssW - cb.bh / cb.cssH) < 0.01, `scale=${(cb.bw / cb.cssW).toFixed(4)}/${(cb.bh / cb.cssH).toFixed(4)}`);
@@ -122,7 +124,12 @@ check('game advances', a.win.eval('frame') > 0, 'frame=' + a.win.eval('frame'));
 // 2. Поворот в ландшафт посреди игры
 a.box.w = 844; a.box.h = 390; a.win.dispatchEvent(new a.win.Event('resize'));
 cb = canvasBox(a.win);
-check('landscape: field stays vertical', cb.ratio < 1, `ratio=${cb.ratio.toFixed(4)}`);
+/* Мир подстраивается под кадр: в ландшафте он расширяется, а не встаёт
+   вертикальной полоской с чёрными полосами по бокам. */
+check('landscape: field fills the frame', Math.abs(cb.cssW - 844) <= 2 && Math.abs(cb.cssH - 390) <= 2,
+  `${cb.cssW}x${cb.cssH}`);
+check('landscape: world matches frame (no letterbox)', Math.abs(cb.ratio - 844 / 390) < 0.02,
+  `ratio=${cb.ratio.toFixed(4)}`);
 check('landscape: fits inside height', cb.cssH <= 390 && cb.cssW <= 844, `${cb.cssW}x${cb.cssH}`);
 check('landscape: no distortion (buffer matches css)', Math.abs(cb.bw - Math.round(cb.cssW * 2)) <= 1 && Math.abs(cb.bh - Math.round(cb.cssH * 2)) <= 1, `${cb.bw}x${cb.bh}`);
 check('landscape: state kept (score)', a.win.eval('score') === 3, 'score=' + a.win.eval('score'));
@@ -140,18 +147,19 @@ check('play continues after rotation', a.win.eval('frame') > f0, `frame ${f0} ->
 // 4. Обратный поворот без перезапуска
 a.box.w = 390; a.box.h = 844; a.win.dispatchEvent(new a.win.Event('resize'));
 cb = canvasBox(a.win);
-check('rotate back: field vertical again', cb.ratio < 1, `ratio=${cb.ratio.toFixed(4)}`);
+check('rotate back: field fills the portrait frame again', Math.abs(cb.cssW - 390) <= 2 && Math.abs(cb.cssH - 844) <= 2,
+  `${cb.cssW}x${cb.cssH}`);
 check('rotate back: no restart (score kept)', a.win.eval('score') === 3);
 check('rotate back: still running', a.win.eval('running') === true);
 
 // 5. Десктоп 1440 × 800 — поле не растягивается на всю ширину
 let d = boot({ w: 1440, h: 800 });
 cb = canvasBox(d.win);
-/* На широком экране высота мира упирается в верхнюю границу (1100 против 560 в
-   нижней): поле остаётся вертикальным, но не превращается в узкую полоску. */
-check('desktop: field stays vertical and sane', cb.ratio > 0.5 && cb.ratio < 1, `ratio=${cb.ratio.toFixed(4)}`);
-check('desktop: letterboxed (not full width)', cb.cssW < 600, `${cb.cssW}x${cb.cssH}`);
+/* Широкий экран — тоже весь кадр: поле расширяется миром, а не полосами. */
+check('desktop: field fills the width', Math.abs(cb.cssW - 1440) <= 2, `${cb.cssW}x${cb.cssH}`);
 check('desktop: uses available height', cb.cssH > 700, `h=${cb.cssH}`);
+check('desktop: world matches frame (no letterbox)', Math.abs(cb.ratio - 1440 / 800) < 0.02,
+  `ratio=${cb.ratio.toFixed(4)}`);
 
 // 6. Набор размеров: поле вертикальное, без искажений и без обрезки
 const sizes = [[320, 568], [360, 640], [375, 667], [390, 844], [414, 896], [430, 932], [768, 1024], [1024, 768], [1920, 1080], [667, 375]];
@@ -159,19 +167,18 @@ let sizesOk = true, bad = [];
 for (const [w, h] of sizes) {
   const t = boot({ w, h });
   const b = canvasBox(t.win);
-  const vertical = b.ratio < 1;
-  const fits = b.cssW <= w && b.cssH <= h;
+  const fits = b.cssW <= w + 1 && b.cssH <= h + 1;
   const uniform = Math.abs(b.bw / b.cssW - b.bh / b.cssH) < 0.01;
-  /* Телефон вжимает поле в экран: по ширине полос быть не должно. На планшете
-     высота мира упирается в нижнюю границу (560) — там поле остаётся
-     вертикальным, с узкими полями по краям. */
-  const fills = w > 560 || w > h || Math.abs(b.cssW - (w - 16)) <= 2;
-  if (!vertical || !fits || !uniform || !fills) {
+  /* Главное требование: поле занимает кадр целиком по обеим осям, масштаб
+     одинаковый (без искажений), мир по пропорциям совпадает с кадром. */
+  const fills = Math.abs(b.cssW - w) <= 2 && Math.abs(b.cssH - h) <= 2;
+  const matchFrame = Math.abs(b.ratio - w / h) < 0.03;
+  if (!fits || !uniform || !fills || !matchFrame) {
     sizesOk = false;
     bad.push(`${w}x${h}->${b.cssW}x${b.cssH}${uniform ? '' : ' искажение'}${fills ? '' : ' полосы'}`);
   }
 }
-check('all viewport sizes: vertical, uniform, filling the screen',
+check('all viewport sizes: uniform and filling the whole frame',
   sizesOk, bad.join(', ') || `${sizes.length} sizes`);
 
 // 7. Фиксированный шаг физики: 120 Гц не ускоряет игру вдвое
