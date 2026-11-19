@@ -689,5 +689,21 @@ init();loop();
   addEventListener('load', grab);
 })();
 </script>
+<style id="vg-fill-frame">
+/* -------------------------------------------------------------------------
+   Игра занимает весь кадр в любом браузере — в том числе когда ссылку открыли
+   из Telegram, ВКонтакте или другого приложения со своим встроенным браузером.
+   Размеры страницы фиксируем по видимой области: адресная строка и «шторки»
+   больше не растягивают страницу и не сдвигают поле. Ничего не удаляем:
+   меняются только size-правила.
+   ------------------------------------------------------------------------- */
+html{width:100%;height:100%;max-width:none;margin:0;overflow:hidden;overscroll-behavior:none}
+body{position:fixed;inset:0;width:auto;height:var(--vg-vh,auto);max-width:none;max-height:none;
+  margin:0;overflow:hidden;overscroll-behavior:none}
+/* Размер холста задаёт игра (VGGame.frameSize → пиксели), а в строчной
+   раскладке телефона — flex. CSS ширину не навязывает: иначе поле выдавит
+   колонку кнопок. */
+body>canvas{display:block}
+</style>
 </body>
 </html>

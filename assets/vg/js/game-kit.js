@@ -221,6 +221,58 @@
     '}'
   ].join('');
 
+  /*
+   * Свободная площадь кадра: всё окно минус панели самой игры.
+   *
+   * Зачем: браузер подгоняет собственный размер холста под соотношение его
+   * буфера (ширина буфера / высота буфера). Если игру измерять по самому
+   * холсту, этот круг замыкается — поле «залипает» прямоугольником по центру,
+   * и никакие правки CSS его не растягивают. Поэтому размер берём у окна и
+   * страницы, а не у холста.
+   *
+   * Во встроенных браузерах (Telegram, ВКонтакте, «шторки» iOS) window.innerHeight
+   * занижен относительно видимой области — берём большее из двух значений.
+   */
+  function frameSize() {
+    var doc = document.documentElement;
+    var host = document.body;
+    var rect = (host && host.getBoundingClientRect) ? host.getBoundingClientRect() : { width: 0, height: 0 };
+    function blockHeight(selector) {
+      var el = document.querySelector(selector);
+      if (!el) return 0;
+      var cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return 0;
+      var box = el.getBoundingClientRect();
+      return box && box.height ? Math.round(box.height) : 0;
+    }
+    var vv = window.visualViewport;
+    var viewW = Math.round((vv && vv.width) || window.innerWidth || doc.clientWidth || 360);
+    var viewH = Math.round((vv && vv.height) || window.innerHeight || doc.clientHeight || 640);
+    var hostRect = { width: Math.round(rect.width || 0), height: Math.round(rect.height || 0) };
+    var dock = document.querySelector('body>.controls');
+    var dockFixed = !!dock && getComputedStyle(dock).position === 'fixed';
+    /* Строчная раскладка (телефон в ландшафте: поле слева, кнопки справа):
+       размеры поля там задаёт flex, поэтому свои пиксели игра не навязывает и
+       панели из высоты не вычитаются. */
+    var row = false;
+    try { row = getComputedStyle(host).flexDirection.indexOf('row') === 0; } catch (e) { row = false; }
+    var chrome = row ? 0 : (blockHeight('body>.info')
+      + (dockFixed ? 0 : blockHeight('body>.controls'))
+      + blockHeight('body>.help') + blockHeight('body>.hint'));
+    /* Панели не могут занять больше 45% высоты — иначе от игры осталась бы щель.
+       Высоту берём как МЕНЬШЕЕ из страницы и видимой области: во встроенных
+       браузерах панель Telegram перекрывает низ страницы, и кнопки уезжают
+       под неё; лишняя полоска фона внизу заметно менее вредна. */
+    /* content box, а не border box: у страницы бывают padding'и под «челку»
+       (env(safe-area-inset-*)), и поле не должно уезжать за них. */
+    var hostW = Math.max(0, host.clientWidth || hostRect.width || 0);
+    var hostH = Math.max(0, host.clientHeight || hostRect.height || 0);
+    var width = Math.max(240, Math.min(hostW || viewW, viewW));
+    var baseH = Math.min(hostH || viewH, viewH);
+    var height = Math.max(200, baseH - Math.min(chrome, Math.round(viewH * 0.45)));
+    return { width: width, height: height, row: row, infoHeight: blockHeight('body>.info') };
+  }
+
   function style(id, css) {
     var node = document.getElementById(id);
     if (!node) {
@@ -248,12 +300,35 @@
     try { window.dispatchEvent(new Event('resize')); } catch (e) {}
   }
 
+  /*
+   * Видимая высота кадра для встроенных браузеров.
+   *
+   * В Telegram, ВКонтакте и Safari панель приложения лежит ПОВЕРХ страницы:
+   * window.innerHeight её не учитывает, и низ игры (кнопки управления) уезжает
+   * под панель. visualViewport.height даёт именно видимую область, поэтому
+   * отдаём её в CSS-переменную --vg-vh, а страница фиксируется по ней.
+   */
+  function syncViewport() {
+    var root = document.documentElement;
+    if (!root) return;
+    var vv = window.visualViewport;
+    var h = Math.round((vv && vv.height) || window.innerHeight || 0);
+    var w = Math.round((vv && vv.width) || window.innerWidth || 0);
+    if (h > 0 && Math.abs(h - Number(root.style.getPropertyValue('--vg-vh').replace('px', '') || 0)) >= 1) {
+      root.style.setProperty('--vg-vh', h + 'px');
+    }
+    if (w > 0 && Math.abs(w - Number(root.style.getPropertyValue('--vg-vw').replace('px', '') || 0)) >= 1) {
+      root.style.setProperty('--vg-vw', w + 'px');
+    }
+  }
+
   function bindViewport() {
     var root = document.documentElement;
     var lastH = window.innerHeight, lastW = window.innerWidth;
     function mark() {
       var mode = viewMode();
       if (root.getAttribute('data-vg-view') !== mode) root.setAttribute('data-vg-view', mode);
+      syncViewport();
     }
     mark();
     window.addEventListener('resize', function () {
@@ -494,6 +569,8 @@
   window.VGGame.sharpCanvas = sharpCanvas;
   window.VGGame.lowEnd = lowEnd;
   window.VGGame.maxDpr = maxDpr;
+  window.VGGame.frameSize = frameSize;
+  window.VGGame.syncViewport = syncViewport;
   window.VGGame.sharpenEngine = sharpenEngine;
   window.VGGame.focus = focusGame;
   window.VGGame.dpr = dpr;
