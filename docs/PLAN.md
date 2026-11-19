@@ -15,7 +15,7 @@
   `nl_users` (аккаунты, баланс, покупки, сессия).
 * `index.html`, `casino.html` + `casino-app.js`, `roulette.html`, `admin.html`,
   `top.html`, `about/support/api/privacy` — весь фронтенд (слоты и колесо считаются
-  в браузере, админка защищена `localStorage`-хешем пароля `219384`).
+  в браузере; админка — серверная, по паролю из `ADMIN_PASSWORD`, см. `docs/ADMIN.md`).
 * `games/*` — 11 самостоятельных игр; общаются с каталогом через `postMessage`
   (`addCoins`, `skyDeliveryReward`, `redlineExchange`, `roverPenalty`, `gameOver`,
   `home`) и получают ник через `parent.getCurrentUser()`.
@@ -85,8 +85,8 @@
 
 ## 6. Админка
 
-* Права — только в БД (`users.is_admin`) + серверная админ-сессия по паролю
-  (`ADMIN_PASSWORD`, по умолчанию прежний `219384`), TTL 2 часа, журнал в `admin_log`.
+* Права — только на сервере (`users.is_admin`) + отдельная админ-сессия по
+  паролю из `ADMIN_PASSWORD` (дефолта нет), TTL 8 часов, журнал в `admin_log`.
 * Пользователи: поиск, профиль, баланс (+/-/установить), бан/разбан, история.
 * Статистика платформы, игры (вкл/выкл), казино (лимиты, вкл/выкл), журнал действий.
 

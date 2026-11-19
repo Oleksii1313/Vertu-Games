@@ -70,7 +70,10 @@ def catalog(user_id: int | None = None) -> dict:
     items = data.shop_items()
     owned = data.owned_ids(user_id) if user_id else set()
     user = data.get_user(user_id) if user_id else None
-    equipped = {'avatar': user['avatar'], 'color': user['color'], 'title': user['title']} if user else {}
+    equipped = ({'avatar': user['avatar'], 'color': user['color'], 'title': user['title']}
+                if user else {})
+    if user:
+        equipped['bg'] = data.settings_map().get('bg:%s' % user['id'], '')
     out = []
     for item in items:
         out.append({
@@ -147,6 +150,11 @@ def equip(user_id: int, item_id: str, kind: str | None = None) -> dict:
         raise store.StoreError('Несовпадение типа предмета')
     if int(item['price']) > 0 and item_id not in data.owned_ids(user_id):
         raise NotOwned('Сначала купите этот предмет')
+    if item['kind'] == 'bg':
+        # Фон хранится отдельной настройкой: колонки под него в users нет, а
+        # трогать существующие поля (avatar/color/title) нельзя.
+        data.set_setting('bg:%s' % int(user_id), item_id)
+        return {'ok': True, 'equipped': {'bg': item_id}}
     field = {'avatar': 'avatar', 'color': 'color', 'title': 'title'}.get(item['kind'])
     if not field:
         raise store.StoreError('Этот предмет нельзя экипировать')

@@ -265,15 +265,34 @@
   var STYLE_KINDS = {
     avatar: function () { return T('Аватар', 'Avatar'); },
     color: function () { return T('Цвет', 'Color'); },
-    title: function () { return T('Титул', 'Title'); }
+    title: function () { return T('Титул', 'Title'); },
+    bg: function () { return T('Фон профиля', 'Profile background'); }
   };
+  /* Фон — только класс из белого списка: значение payload приходит с сервера,
+     но подставлять произвольную строку в classList нельзя. */
+  var COVER_CLASSES = ['vg-cover-aurora', 'vg-cover-grid', 'vg-cover-sunset'];
+
+  function applyCover() {
+    var hero = document.querySelector('.profile-hero');
+    if (!hero) return;
+    COVER_CLASSES.forEach(function (name) { hero.classList.remove(name); });
+    if (!catalog) return;
+    var equipped = (catalog.items || []).filter(function (item) {
+      return item.kind === 'bg' && item.equipped;
+    })[0];
+    if (equipped && COVER_CLASSES.indexOf(equipped.payload) !== -1) {
+      hero.classList.add(equipped.payload);
+    }
+  }
 
   function styleOptionHtml(item, kind) {
     var visual = kind === 'color'
       ? '<span class="swatch" style="background:' + item.payload + '"></span>'
       : kind === 'title'
         ? '<b style="font-size:13px">' + escapeHtml(VG.lang() === 'en' ? (item.name_en || item.name_ru) : (item.name_ru || item.name_en)) + '</b>'
-        : VG.icon(item.icon, 30);
+        : kind === 'bg'
+          ? '<span class="swatch vg-cover-swatch ' + (COVER_CLASSES.indexOf(item.payload) !== -1 ? item.payload : '') + '"></span>'
+          : VG.icon(item.icon, 30);
     return '<button type="button" class="style-option' + (item.equipped ? ' on' : '') + '" data-style="' + item.id + '"' +
       (item.owned ? '' : ' disabled title="' + T('Сначала купите', 'Buy first') + '"') + '>' + visual + '</button>';
   }
@@ -282,7 +301,7 @@
   function paintStylePicker() {
     var box = $('#stylePicker');
     if (!box || !catalog) return;
-    var groups = ['avatar', 'color', 'title'];
+    var groups = ['avatar', 'color', 'title', 'bg'];
     // Оболочка строится один раз, дальше обновляются только сами варианты:
     // обработчик клика висит на #stylePicker и не дублируется.
     if (!box.querySelector('[data-style-group]')) {
@@ -293,6 +312,7 @@
           '<div id="style-' + kind + '" style="display:flex;gap:8px;flex-wrap:wrap"></div></div>';
       }).join('');
     }
+    applyCover();
     groups.forEach(function (kind) {
       var caption = box.querySelector('[data-style-title="' + kind + '"]');
       if (caption) caption.textContent = STYLE_KINDS[kind]();
@@ -315,7 +335,11 @@
         if (!button || button.disabled) return;
         var id = button.getAttribute('data-style');
         VG.equip(id).then(function () {
-          (catalog.items || []).forEach(function (item) { item.equipped = item.id === id; });
+          var target = (catalog.items || []).filter(function (item) { return item.id === id; })[0];
+          (catalog.items || []).forEach(function (item) {
+            if (target && item.kind === target.kind) item.equipped = item.id === id;
+            else if (!target) item.equipped = item.id === id;
+          });
           paintStylePicker();
           VG.toast(T('Оформление обновлено.', 'Appearance updated.'));
         }).catch(function (error) { VG.toast(error.message, 'bad'); });

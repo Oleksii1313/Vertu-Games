@@ -277,6 +277,18 @@ CREATE TABLE IF NOT EXISTS shop_ledger (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS error_reports (
+    id         BIGSERIAL   PRIMARY KEY,
+    kind       TEXT        NOT NULL DEFAULT 'client',
+    message    TEXT        NOT NULL DEFAULT '',
+    page       TEXT        NOT NULL DEFAULT '',
+    detail     TEXT        NOT NULL DEFAULT '',
+    user_id    BIGINT,
+    resolved   BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_error_reports_created ON error_reports(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS platform_settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

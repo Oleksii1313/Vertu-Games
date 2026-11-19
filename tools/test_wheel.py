@@ -167,6 +167,21 @@ class PayoffFormula(unittest.TestCase):
                 self.assertEqual(casino_logic.wheel_payout(stake, multiplier), expected,
                                  f'ставка {stake}, x{multiplier}')
 
+    def test_x3_multiplier_from_the_spec_is_three_times_the_stake(self):
+        """ТЗ «x3 при ставке 20 → 140 V»: 100 - 20 + 60 = 140.
+
+        На текущем колесе сектора x3 нет (в конфиге только x0/x1/x2/x5 и менять
+        шансы запрещено), поэтому формула проверяется напрямую: выплата за x3 —
+        это ровно ``stake * 3``, а баланс из 100 V после такого спина — 140 V.
+        Если множитель когда-нибудь появится на колесе, математика уже верна.
+        """
+        self.assertEqual(casino_logic.wheel_payout(20, 3), 60)
+        for stake in CASINO_STAKES:
+            self.assertEqual(casino_logic.wheel_payout(stake, 3), stake * 3)
+        before = 100
+        payout = casino_logic.wheel_payout(20, 3)
+        self.assertEqual(before - 20 + payout, 140)
+
     def test_payouts_are_integer_coins(self):
         for stake in CASINO_STAKES:
             for multiplier in sorted(set(WHEEL_SEGMENTS)):
@@ -241,6 +256,78 @@ class WheelPayoutMath(unittest.TestCase):
                 self.assertEqual(before, 100)
                 self.assertEqual(result['payout'], 20 * multiplier)
                 self.assertEqual(after, expected, f'x{multiplier}: баланс {after} вместо {expected}')
+
+    def test_scenario_from_100_coins_x1_x2_x3_and_loss(self):
+        """ТЗ, ставка 20 V из 100 V: x1 → 100, x2 → 120, x3 → 140, x0 → 80.
+
+        x1/x2/x0 прогоняются реальным спином (с принудительным сектором),
+        x3 — через ``wheel_payout``: сектора x3 на колесе нет, шансы менять
+        запрещено.
+        """
+        for multiplier, expected in ((1, 100), (2, 120), (0, 80)):
+            with self.subTest(multiplier=multiplier):
+                uid = self._new_player()
+                self.st.set_balance(uid, 100)
+                self.uid = uid
+                result, before, after = self._spin(multiplier, stake=20, fresh=False)
+                self.assertEqual(before, 100)
+                self.assertEqual(after, expected,
+                                 f'x{multiplier}: баланс {after} вместо {expected}')
+                self.assertEqual(result['payout'], 20 * multiplier)
+                # Ставка списана ровно один раз: в журнале ровно одна строка
+                # bet:<ref> и одна win:<ref> (при проигрыше win нет).
+                rows = [r for r in self.st.transactions(limit=10, user_id=uid)
+                        if str(r.get('reference_id') or '').endswith(result['ref'])]
+                bets = [r for r in rows if str(r['reference_id']).startswith('bet:')]
+                wins = [r for r in rows if str(r['reference_id']).startswith('win:')]
+                self.assertEqual(len(bets), 1, 'ставка должна списываться один раз')
+                self.assertEqual(int(bets[0]['amount']), -20)
+                self.assertEqual(len(wins), 1 if multiplier else 0)
+        # x3 — только формула и баланс, без изменения колеса.
+        self.assertEqual(100 - 20 + casino_logic.wheel_payout(20, 3), 140)
+
+    def test_repeated_request_id_is_processed_once(self):
+        """Один и тот же requestId — один спин: ставка не списывается дважды."""
+        uid = self._new_player()
+        self.uid = uid
+        self.st.set_balance(uid, 100)
+        index = WHEEL_SEGMENTS.index(2)
+        import unittest.mock as mock
+        with mock.patch.object(casino_logic, '_rng_choice_weighted', return_value=index):
+            first = casino_logic.spin_wheel(uid, stake=20, request_id='tap-abc')
+            second = casino_logic.spin_wheel(uid, stake=20, request_id='tap-abc')
+        self.assertFalse(first['repeated'])
+        self.assertTrue(second['repeated'], 'повтор должен помечаться repeated')
+        self.assertEqual(second['payout'], first['payout'])
+        self.assertEqual(second['ref'], first['ref'])
+        self.assertEqual(second['balance'], first['balance'])
+        self.assertEqual(self.st.balance(uid), 120, 'x2 из 100 V: 100 - 20 + 40')
+        self.assertEqual(len(self.st.casino_history(uid, limit=10, game='wheel')), 1,
+                         'в истории ровно один спин')
+        # ровно одно списание и одно начисление
+        ledger = self.st.transactions(limit=10, user_id=uid)
+        self.assertEqual(len([r for r in ledger
+                              if str(r['reference_id']).startswith('bet:')]), 1)
+
+    def test_repeat_is_answered_even_after_the_daily_limit(self):
+        """Повтор запроса отдаёт результат, даже если лимит уже исчерпан.
+
+        Клиент мог потерять ответ на последний (пятый) спин; повтор обязан
+        вернуть тот же результат, а не «лимит исчерпан».
+        """
+        uid = self._new_player()
+        self.uid = uid
+        self.st.set_balance(uid, 10_000)
+        index = WHEEL_SEGMENTS.index(1)
+        import unittest.mock as mock
+        with mock.patch.object(casino_logic, '_rng_choice_weighted', return_value=index):
+            for number in range(5):
+                casino_logic.spin_wheel(uid, stake=20, request_id=f'day-{number}')
+            with self.assertRaises(casino_logic.CasinoError):
+                casino_logic.spin_wheel(uid, stake=20, request_id='day-6')
+            repeat = casino_logic.spin_wheel(uid, stake=20, request_id='day-4')
+        self.assertTrue(repeat['repeated'])
+        self.assertEqual(repeat['stake'], 20)
 
     def test_stake_above_balance_is_rejected(self):
         """ТЗ: ставка 100 V при балансе 50 V отклоняется, баланс остаётся 50 V."""

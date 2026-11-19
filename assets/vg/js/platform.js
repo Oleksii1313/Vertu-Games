@@ -244,6 +244,7 @@
     wheel: '<circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l3 3M15 15l3 3M18 6l-3 3M9 15l-3 3"/><circle cx="12" cy="12" r="2"/>',
     dice: '<rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/>',
     spark: '<path d="M12 3v4M12 17v4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M3 12h4M17 12h4M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
+    flag: '<path d="M5 21V4h9l-2 3 2 3H5"/><path d="M5 4H3"/>',
     trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5v2a3 3 0 0 0 3 3M16 6h3v2a3 3 0 0 1-3 3"/><path d="M12 13v4M9 20h6"/>',
     crown: '<path d="M4 17h16l-1.2-6.5-3.8 3-3-4.5-3 4.5-3.8-3L4 17Z"/>',
     star: '<path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.6-.8L12 4Z"/>',
@@ -398,6 +399,78 @@
   }
   VG.api = api;
   VG.ApiError = ApiError;
+
+  /* --------------------------------------------------- сообщения об ошибке */
+  /* Игрок нажимает «Сообщить об ошибке» в плеере: текст уходит на сервер, где
+     его видит админ. Никаких паролей и токенов в отчёте нет — только страница,
+     игра и текст, который игрок сам написал. */
+  var lastGameError = '';
+  window.addEventListener('error', function (event) {
+    if (!event) return;
+    try {
+      lastGameError = String((event.message || '') + ' @ ' +
+        (event.filename || '') + ':' + (event.lineno || 0)).slice(0, 300);
+    } catch (e) { /* не мешаем игре из-за собственного лога */ }
+  });
+
+  function reportError(message, detail) {
+    var text = String(message || '').trim();
+    if (text.length < 4) {
+      return Promise.reject(new ApiError(T('Опишите ошибку подробнее.', 'Please describe the error.'), 'EMPTY', 0));
+    }
+    var payload = {
+      message: text,
+      page: (location.pathname || '/').slice(0, 120),
+      kind: 'player',
+      detail: String(detail || (VG.activeGame ? 'game: ' + VG.activeGame.id : '') ||
+        lastGameError || '').slice(0, 500)
+    };
+    /* CSRF: кука читается только нашим JS, заголовок подставляет api(). */
+    return api('/api/report/error', { body: payload });
+  }
+  VG.reportError = reportError;
+
+  /* Небольшое окно «Сообщить об ошибке»: только текст игрока и контекст игры. */
+  function openReportDialog() {
+    var existing = document.querySelector('.vg-report');
+    if (existing) { existing.remove(); return; }
+    var wrap = el('div', 'vg-report');
+    wrap.innerHTML =
+      '<div class="vg-report-card panel" role="dialog" aria-modal="true" aria-label="' +
+      T('Сообщить об ошибке', 'Report a problem') + '">' +
+      '<h4>' + T('Что пошло не так?', 'What went wrong?') + '</h4>' +
+      '<p class="vg-report-hint">' + T('Опишите шаги: что вы делали и что ожидали увидеть.',
+        'Describe the steps: what you did and what you expected.') + '</p>' +
+      '<textarea class="vg-report-text" maxlength="600" rows="4" placeholder="' +
+      T('Например: поставил дом у реки — блоки появились со сдвигом', 'Example: built a house near the river and the blocks shifted') +
+      '"></textarea><p class="vg-report-error"></p><div class="vg-report-actions">' +
+      '<button type="button" class="btn btn-ghost" data-cancel>' + T('Отмена', 'Cancel') + '</button>' +
+      '<button type="button" class="btn btn-primary" data-send>' + T('Отправить', 'Send') + '</button>' +
+      '</div></div>';
+    document.body.appendChild(wrap);
+    var text = wrap.querySelector('.vg-report-text');
+    var error = wrap.querySelector('.vg-report-error');
+    text.focus();
+    wrap.addEventListener('click', function (event) {
+      if (event.target === wrap) wrap.remove();
+    });
+    wrap.querySelector('[data-cancel]').addEventListener('click', function () { wrap.remove(); });
+    wrap.querySelector('[data-send]').addEventListener('click', function () {
+      var button = wrap.querySelector('[data-send]');
+      button.disabled = true;
+      reportError(text.value, (VG.activeGame ? 'game: ' + VG.activeGame.id : '') +
+        (lastGameError ? ' | ' + lastGameError : '')).then(function () {
+        wrap.remove();
+        toast(T('Спасибо! Сообщение отправлено администратору.',
+          'Thanks! Your report was sent to the administrator.'), 'good');
+      }).catch(function (err) {
+        button.disabled = false;
+        error.textContent = err && err.message ? err.message : T('Не удалось отправить.', 'Could not send.');
+      });
+    });
+  }
+  VG.openReportDialog = openReportDialog;
+  VG.lastGameError = function () { return lastGameError; };
 
   /* ----------------------------------------------------------------- toasts */
   function toast(message, kind) {
@@ -1072,11 +1145,15 @@
         T('Профиль', 'Profile') + '">' +
         (state.user ? avatarHtml(state.user, 28) : '<span class="avatar guest" style="width:28px;height:28px">' + icon('user', 16) + '</span>') +
         '</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-report title="' +
+        T('Сообщить об ошибке', 'Report a problem') + '">' + icon('flag', 15) +
+        '<span>' + T('Ошибка', 'Issue') + '</span></button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-fullscreen aria-pressed="false" title="' + T('На весь экран', 'Fullscreen') + '">' +
         icon('expand', 15) + '<span>' + T('Экран', 'Screen') + '</span></button></div>' +
         '<div class="play-frame-wrap"><iframe id="gameFrame" name="gameFrame" class="play-frame" allow="fullscreen; gamepad; autoplay" title="Game"></iframe></div>';
       overlay.querySelector('[data-close]').addEventListener('click', closeGame);
       overlay.querySelector('[data-fullscreen]').addEventListener('click', toggleFullscreen);
+      overlay.querySelector('[data-report]').addEventListener('click', openReportDialog);
       overlay.querySelector('[data-action="play-account"]').addEventListener('click', function (event) {
         event.stopPropagation();
         openAccountMenu(event.currentTarget);

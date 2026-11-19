@@ -204,6 +204,11 @@
   }
 
   /* ---------------------------------------------------------------- catalog */
+  /* Понятные подписи типов: аватары, цвета, титулы, фоны профиля, услуги. */
+  var ITEM_KINDS = {
+    avatar: 'Аватар', color: 'Цвет профиля', title: 'Титул', bg: 'Фон профиля', service: 'Услуга'
+  };
+
   function loadItems() {
     var box = $('#adminItems');
     if (!box) return;
@@ -211,7 +216,8 @@
       box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Тип</th>' +
         '<th>Название</th><th>Цена, V</th><th>В продаже</th><th></th></tr></thead><tbody>' +
         (data.items || []).map(function (item) {
-          return '<tr><td class="muted">' + esc(item.id) + '</td><td>' + esc(item.kind) + '</td>' +
+          return '<tr><td class="muted">' + esc(item.id) + '</td><td>' +
+            esc(ITEM_KINDS[item.kind] || item.kind) + '</td>' +
             '<td><input type="text" data-item-name="' + esc(item.id) + '" value="' + esc(item.name_ru) + '" style="width:150px"></td>' +
             '<td><input type="number" data-item-price="' + esc(item.id) + '" value="' + Number(item.price) + '" min="0" style="width:86px"></td>' +
             '<td><input type="checkbox" data-item-active="' + esc(item.id) + '"' + (item.is_active ? ' checked' : '') + '></td>' +
@@ -293,13 +299,115 @@
     }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
   }
 
+  /* ------------------------------------------------ история рулетки и слотов */
+  function loadCasinoHistory() {
+    var box = $('#adminCasinoHistory');
+    if (!box) return;
+    api('/api/admin/casino?limit=30').then(function (data) {
+      var items = data.items || [];
+      if (!items.length) { box.innerHTML = '<div class="empty">Пока нет ставок.</div>'; return; }
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Время</th><th>Игрок</th>' +
+        '<th>Игра</th><th>Ставка</th><th>Выплата</th><th>Итог</th><th>Результат</th></tr></thead><tbody>' +
+        items.map(function (row) {
+          var stake = Number(row.stake) || 0, payout = Number(row.payout) || 0;
+          var net = payout - stake;
+          return '<tr><td class="muted">' + esc(VG.timeAgo ? VG.timeAgo(row.created) : row.created) + '</td>' +
+            '<td>' + esc(row.username || '—') + '</td><td>' + esc(row.game || '') + '</td>' +
+            '<td>−' + fmt(stake) + '</td><td>+' + fmt(payout) + '</td>' +
+            '<td style="color:' + (net > 0 ? '#c6ff3d' : net < 0 ? '#ff8e83' : 'var(--muted)') + '">' +
+            (net > 0 ? '+' : '') + fmt(net) + '</td><td>' +
+            esc(row.outcome || row.result || '') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  /* ------------------------------------------------------------- блоки стройки */
+  function loadBlocks() {
+    var box = $('#adminBlocks');
+    if (!box) return;
+    api('/api/admin/blocks').then(function (data) {
+      box.innerHTML = '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px">' +
+        (data.blocks || []).map(function (block) {
+          return '<label class="checkbox"><input type="checkbox" data-block="' + block.id + '"' +
+            (block.enabled ? ' checked' : '') + '><span>' + esc(block.ru) + ' <small class="muted">#' +
+            block.id + '</small></span></label>';
+        }).join('') + '</div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  /* ------------------------------------------------------- сообщения об ошибках */
+  function loadErrors() {
+    var box = $('#adminErrors');
+    if (!box) return;
+    api('/api/admin/errors?limit=60').then(function (data) {
+      var items = data.items || [];
+      if (!items.length) { box.innerHTML = '<div class="empty">Сообщений нет.</div>'; return; }
+      box.innerHTML = '<div class="list">' + items.map(function (row) {
+        return '<div class="list-row"><span class="ico">' + (row.resolved ? '✓' : '!') + '</span>' +
+          '<span class="meta"><b>' + esc(row.message) + '</b><small>' +
+          esc((row.username || 'гость') + ' · ' + (row.page || '—') + ' · ' + row.created) +
+          (row.detail ? ' · ' + esc(row.detail) : '') + '</small></span>' +
+          (row.resolved ? '<span class="muted" style="font-size:11.5px">решено</span>' :
+            '<button class="btn btn-sm btn-ghost" data-resolve="' + row.id + '">Закрыть</button>') +
+          '</div>';
+      }).join('') + '</div>';
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  /* ---------------------------------------------------- подозрительная активность */
+  function loadSuspicious() {
+    var box = $('#adminSuspicious');
+    if (!box) return;
+    api('/api/admin/suspicious?hours=24').then(function (data) {
+      var report = data.report || {};
+      var html = '<div class="stat-grid">' +
+        stat('Неудачные входы админа', report.failedAdminLogins || 0) +
+        stat('Входы админа', report.adminLogins || 0) +
+        stat('Активные лимиты запросов', report.activeRateLimits || 0) +
+        stat('Новые аккаунты', report.newAccounts || 0) + '</div>';
+      html += '<h3 style="font-size:14px;margin:16px 0 8px">Крупные операции (≥ 1000 V)</h3>';
+      html += (report.largeTransactions || []).length
+        ? '<div class="table-wrap"><table><thead><tr><th>Игрок</th><th>Сумма</th><th>Баланс после</th><th>Тип</th><th>Описание</th></tr></thead><tbody>' +
+          report.largeTransactions.map(function (row) {
+            return '<tr><td>' + esc(row.username || row.user_id) + '</td><td>' +
+              (Number(row.amount) > 0 ? '+' : '') + fmt(Number(row.amount)) + '</td><td>' +
+              fmt(Number(row.balance_after) || 0) + '</td><td>' + esc(row.transaction_type || '') +
+              '</td><td class="muted">' + esc(row.description || '') + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">Нет крупных операций.</div>';
+      html += '<h3 style="font-size:14px;margin:16px 0 8px">Самый большой чистый выигрыш в казино (≥ 5 ставок)</h3>';
+      html += (report.topWinners || []).length
+        ? '<div class="table-wrap"><table><thead><tr><th>Игрок</th><th>Ставок</th><th>Поставлено</th><th>Выплачено</th><th>Итог</th></tr></thead><tbody>' +
+          report.topWinners.map(function (row) {
+            var net = Number(row.net) || 0;
+            return '<tr><td>' + esc(row.username || row.user_id) + '</td><td>' + fmt(row.spins || 0) +
+              '</td><td>' + fmt(row.staked || 0) + '</td><td>' + fmt(row.paid || 0) + '</td><td style="color:' +
+              (net > 0 ? '#c6ff3d' : '#ff8e83') + '">' + (net > 0 ? '+' : '') + fmt(net) + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">Нет данных.</div>';
+      html += '<h3 style="font-size:14px;margin:16px 0 8px">IP с неудачными входами в админку</h3>';
+      html += (report.failedByIp || []).length
+        ? '<div class="list">' + report.failedByIp.map(function (row) {
+          return '<div class="list-row"><span class="meta"><b>' + esc(row.ip || '—') + '</b>' +
+            '<small>попыток: ' + row.count + ' · последняя: ' + esc(row.last || '') + '</small></span></div>';
+        }).join('') + '</div>'
+        : '<div class="empty">Неудачных попыток нет.</div>';
+      box.innerHTML = html;
+    }).catch(function (error) { box.innerHTML = '<div class="empty">' + esc(error.message) + '</div>'; });
+  }
+
+  function stat(label, value) {
+    return '<div class="stat"><span>' + esc(label) + '</span><b>' + fmt(value) + '</b></div>';
+  }
+
   /* ------------------------------------------------------------------- view */
   function switchView(name) {
     view = name;
     $$('.admin-side [data-view]').forEach(function (button) {
       button.classList.toggle('on', button.getAttribute('data-view') === name);
     });
-    ['overview', 'users', 'games', 'catalog', 'transactions', 'casino', 'log'].forEach(function (panel) {
+    ['overview', 'users', 'games', 'catalog', 'transactions', 'casino', 'blocks', 'errors',
+      'suspicious', 'log'].forEach(function (panel) {
       var node = $('#view-' + panel);
       if (node) node.classList.toggle('hidden', panel !== name);
     });
@@ -308,7 +416,10 @@
     if (name === 'games') loadGames();
     if (name === 'catalog') { loadItems(); loadAchievements(); loadTasks(); }
     if (name === 'transactions') loadTransactions('');
-    if (name === 'casino') loadCasino();
+    if (name === 'casino') { loadCasino(); loadCasinoHistory(); }
+    if (name === 'blocks') loadBlocks();
+    if (name === 'errors') loadErrors();
+    if (name === 'suspicious') loadSuspicious();
     if (name === 'log') api('/api/admin/log').then(function (data) {
       renderLog($('#adminLog'), data.items || []);
     }).catch(function (error) {
@@ -420,6 +531,28 @@
         var enabled = gameToggle.getAttribute('data-enabled') !== '1';
         api('/api/admin/games', { body: { id: gameToggle.getAttribute('data-game-toggle'), enabled: enabled } })
           .then(loadGames).catch(function (error) { VG.toast(error.message, 'bad'); });
+        return;
+      }
+      var resolveButton = event.target.closest('[data-resolve]');
+      if (resolveButton) {
+        resolveButton.disabled = true;
+        api('/api/admin/errors/resolve', { body: { id: Number(resolveButton.getAttribute('data-resolve')) } })
+          .then(loadErrors)
+          .catch(function (error) { resolveButton.disabled = false; VG.toast(error.message, 'bad'); });
+        return;
+      }
+      if (event.target.closest('#saveBlocks')) {
+        var disabled = [];
+        $$('[data-block]').forEach(function (input) {
+          if (!input.checked) disabled.push(Number(input.getAttribute('data-block')));
+        });
+        var saveButton = event.target.closest('#saveBlocks');
+        saveButton.disabled = true;
+        api('/api/admin/blocks', { body: { disabled: disabled } }).then(function (data) {
+          msg($('#blocksMsg'), 'Сохранено. Отключено блоков: ' + (data.disabled || []).length, 'ok');
+        }).catch(function (error) {
+          msg($('#blocksMsg'), error.message, 'err');
+        }).then(function () { saveButton.disabled = false; });
         return;
       }
       if (event.target.closest('#saveCasino')) {

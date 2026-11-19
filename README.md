@@ -40,15 +40,18 @@ export DATABASE_URL="postgres://..."
 .venv/bin/python server.py
 ```
 
-Открыть <http://localhost:8000>. Админка — <http://localhost:8000/admin.html>,
-пароль берётся из `ADMIN_PASSWORD` (по умолчанию `219384`).
+Открыть <http://localhost:8000>. Админка — <http://localhost:8000/admin.html>:
+пароль берётся **только** из переменной окружения `ADMIN_PASSWORD` (или
+`SECRET_KEY`, если первая не задана). Дефолтного пароля нет — без переменной
+вход отвечает `503 ADMIN_NOT_CONFIGURED`. Как задать пароль на Render —
+`docs/ADMIN.md`.
 
 ## Переменные окружения
 
 | Переменная | Обязательна | Назначение |
 |---|---|---|
 | `DATABASE_URL` | в проде | PostgreSQL, напр. `postgres://user:pass@host:5432/db`. Без неё используется SQLite (`data/vert.sqlite3`, путь можно задать через `VERT_DB`). |
-| `ADMIN_PASSWORD` | да | Пароль администратора. Если не задан — используется прежний `219384`. |
+| `ADMIN_PASSWORD` | да | Пароль администратора (только здесь, не в коде). Если не задан — используется `SECRET_KEY`; если нет и его, вход в админку отключён (`503`). |
 | `ADMIN_USERNAME` | нет | Ник администратора для журнала действий (по умолчанию `admin`). |
 | `TURNSTILE_SITE_KEY` | нет | Публичный ключ Cloudflare Turnstile. |
 | `TURNSTILE_SECRET_KEY` | нет | Секретный ключ Turnstile — проверяется только на сервере. |
