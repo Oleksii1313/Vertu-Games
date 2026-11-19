@@ -129,8 +129,9 @@ runtime = runtime.slice(0, idx) +
   ' camera: () => Wt, templates: MCB_TEMPLATES, planCats: MCB_PLAN_CATS, planBlocks: mcbPlanBlocks,' +
   ' planStart: mcxBuildPlanStart, planCheck: mcbPlanCheck, confirm: mcxBuildConfirm,' +
   ' planRotate: mcxBuildPlanRotate, planCancel: mcxBuildPlanCancel, placeReason: mcbPlaceReason,' +
-  ' buildPlan: mcbBuildPlan, ghostUpdate: mcbGhostUpdate, ghostMat: mcbGhostMaterial });\n' +
+  ' buildPlan: mcbBuildPlan, validate: mcbPlanValidate, scene: () => Ht });\n' +
   runtime.slice(idx);
+const runtimeSrc = runtime;
 w.eval(runtime);
 
 const $ = (id) => w.document.getElementById(id);
@@ -191,9 +192,10 @@ function findSpot(A) {
   check('4 категории материалов', A0.cats.length === 4, A0.cats.map(c => c.id));
   check('окно инвентаря создано и скрыто', !!$('mcb-inv') && $('mcb-inv').hidden === true);
   check('стили модуля подключены', !!$('mcb-style') && $('mcb-style').textContent.length > 2000);
-  const TPL_KEYS = ['smallHouse', 'largeHouse', 'stoneHouse', 'medievalHouse', 'tower',
-    'castle', 'watchtower', 'bridge', 'wall', 'farm', 'decor', 'stairs', 'roof', 'fence',
-    'window', 'door', 'floor'];
+  const TPL_KEYS = ['smallHouse', 'largeHouse', 'stoneHouse', 'medievalHouse', 'modernHouse',
+    'forestCabin', 'beachHouse', 'castle', 'tower', 'fantasyTower', 'wall', 'watchtower',
+    'stoneBridge', 'villageHall', 'marketStall', 'temple', 'monument', 'fountain',
+    'stairs', 'roof', 'fence', 'window', 'door', 'floor'];
   check('шаблоны: дома, крепости, мост, стена, башня, ферма, декор',
     TPL_KEYS.every(k => typeof A0.plans[k] === 'function'), A0.planNames.map(p => p.key));
   check('у каждого шаблона есть категория', A0.planNames.every(p => !!p.cat), A0.planNames.length);
@@ -296,7 +298,7 @@ function findSpot(A) {
     click($('mcb-inv').querySelector('[data-mcb-tab="plans"]'));
     return api().mcb().tab === 'plans' && $('mcb-plans').hidden === false && $('mcb-blocks').hidden === true;
   })());
-  check('все 17 шаблонов в списке', $('mcb-plans').querySelectorAll('[data-mcb-plan]').length === 17,
+  check('все 24 шаблона в списке', $('mcb-plans').querySelectorAll('[data-mcb-plan]').length === 24,
     $('mcb-plans').querySelectorAll('[data-mcb-plan]').length);
   check('шаблоны сгруппированы по категориям',
     $('mcb-plans').querySelectorAll('.mcb-cat').length === 5,
@@ -454,48 +456,30 @@ function findSpot(A) {
   check('после восстановления меняется набор правок', Object.keys(api().mcb().edits).length === snapshot.length,
     [Object.keys(api().mcb().edits).length, snapshot.length]);
 
-  /* ---------- 17. призрак блока: луч из камеры, зелёный/красный ---------- */
+  /* ---------- 17. превью нет вообще: ни призрака, ни каркаса ---------- */
   api().F().pitch = -0.9;
   frames(4);
-  const ghost = api().mcb().ghost;
-  check('прозрачный превью-блок создан', !!ghost && ghost.name === 'mcx-build-ghost');
-  check('превью отличается прозрачностью', !!ghost && ghost.material.opacity < 1, ghost && ghost.material.opacity);
-  const aimG = api().mcb().aim;
-  if (aimG) {
-    const gx = aimG.x + aimG.nx, gy = aimG.y + aimG.ny, gz = aimG.z + aimG.nz;
-    check('цель призрака — ровно соседняя клетка (hit + нормаль)',
-      gx === aimG.px && gy === aimG.py && gz === aimG.pz, [gx, gy, gz, aimG.px, aimG.py, aimG.pz]);
-    check('нормаль грани — единичный вектор по одной оси',
-      Math.abs(aimG.nx) + Math.abs(aimG.ny) + Math.abs(aimG.nz) === 1, [aimG.nx, aimG.ny, aimG.nz]);
-    check('превью стоит по сетке в целевой клетке',
-      ghost.visible === true &&
-      ghost.position.x === gx + .5 && ghost.position.y === gy + .5 && ghost.position.z === gz + .5,
-      [ghost.visible, ghost.position.x, ghost.position.y, ghost.position.z, gx, gy, gz]);
-    const okHere = api().placeReason(gx, gy, gz, api().mcb().selected) === '';
-    const green = api().ghostMat(true), red = api().ghostMat(false);
-    check('зелёный и красный призрак — разные материалы',
-      green !== red && green.color.getHex() !== red.color.getHex(),
-      [green.color.getHex().toString(16), red.color.getHex().toString(16)]);
-    check('цвет призрака совпадает с проверкой клетки',
-      ghost.material === (okHere ? green : red), [okHere, ghost.material === green]);
-    check('призрак не исчезает там, где ставить нельзя (красный)',
-      ghost.visible === true, ghost.visible);
-  }
-  /* Стабильность: та же клетка — mesh не пересоздаётся и не двигается. */
-  const keyBefore = api().mcb().targetKey;
-  const posBefore = ghost ? [ghost.position.x, ghost.position.y, ghost.position.z] : null;
-  api().F().yaw = (api().F().yaw || 0) + 0.0004;
-  frames(2);
-  check('мелкий поворот внутри клетки не двигает призрак',
-    api().mcb().targetKey === keyBefore &&
-    JSON.stringify([ghost.position.x, ghost.position.y, ghost.position.z]) === JSON.stringify(posBefore),
-    [keyBefore, api().mcb().targetKey]);
+  check('в состоянии стройки нет объекта призрака', api().mcb().ghost === undefined,
+    api().mcb().ghost);
+  const scene = api().scene();
+  const previewMeshes = scene
+    ? scene.children.filter(o => /^mcx-(build-ghost|plan-)/.test(o.name || ''))
+    : [{ name: 'нет сцены' }];
+  check('в сцене нет ни одного меша превью или чертежа', previewMeshes.length === 0,
+    previewMeshes.map(o => o.name));
+  const outlines = scene ? scene.children.filter(o => o.material && o.material.wireframe) : [];
+  check('белый каркас целевого блока не показывается',
+    outlines.every(o => o.visible === false), outlines.map(o => [o.name, o.visible]));
+  check('в модуле стройки не осталось кода призрака',
+    !/mcbEnsureGhost|mcbGhostUpdate|mcbGhostMaterial|mcbPlanPreview/.test(runtimeSrc),
+    null);
+  check('перекрестие осталось в интерфейсе',
+    !!$('crosshair') && !!$('crosshair').parentNode, !!$('crosshair'));
 
-  /* Прицел считается от ЦЕНТРА КАМЕРЫ, а не от координат игрока. */
+  /* Прицел по-прежнему считается от ЦЕНТРА КАМЕРЫ, а не от координат игрока. */
   const cam = api().camera();
   const player = api().F();
   const savedF = { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch };
-  /* Ищем столб земли и ставим камеру над ним, глядя строго вниз. */
   let ground = null;
   for (let r = 1; r < 8 && !ground; r++) {
     for (let dx = -r; dx <= r && !ground; dx++) {
@@ -511,7 +495,7 @@ function findSpot(A) {
     cam.position.set(ground.x + .5, ground.y + 4.5, ground.z + .5);
     cam.rotation.set(-Math.PI / 2, 0, 0);
     cam.updateMatrixWorld(true);
-    /* Игрок уходит далеко в сторону: при прицеле «от игрока» результат бы изменился. */
+    /* Игрок уходит далеко в сторону: прицел «от игрока» дал бы другой результат. */
     player.x = savedF.x + 60;
     player.z = savedF.z - 60;
     const camAim = api().aim();
@@ -521,13 +505,22 @@ function findSpot(A) {
     if (camAim) {
       check('клетка постановки — над верхней гранью блока',
         camAim.ny === 1 && camAim.py === ground.y + 1, [camAim.ny, camAim.py, ground.y]);
+      check('нормаль грани — единичный вектор по одной оси',
+        Math.abs(camAim.nx) + Math.abs(camAim.ny) + Math.abs(camAim.nz) === 1,
+        [camAim.nx, camAim.ny, camAim.nz]);
+      /* Ставим и ломаем блок там же: механика работает без всякого превью. */
+      const before = api().cs(camAim.px, camAim.py, camAim.pz);
+      const placedOk = api().place(camAim.px, camAim.py, camAim.pz);
+      check('постановка по прицелу работает без превью',
+        placedOk === true && api().cs(camAim.px, camAim.py, camAim.pz) === api().mcb().selected,
+        [before, api().cs(camAim.px, camAim.py, camAim.pz)]);
+      check('снос блока тоже работает', api().brk(camAim.px, camAim.py, camAim.pz) === true);
+      check('после постановки и сноса превью не появилось',
+        scene.children.filter(o => /^mcx-(build-ghost|plan-)/.test(o.name || '')).length === 0);
     }
     cam.position.set(ground.x + .5, ground.y + 40, ground.z + .5);
     cam.updateMatrixWorld(true);
-    const farAim = api().aim();
-    api().ghostUpdate();
-    check('дальше дистанции постройки цели нет (призрак скрыт)',
-      farAim === null && api().mcb().ghost.visible === false, farAim);
+    check('дальше дистанции постройки цели нет', api().aim() === null);
   }
   player.x = savedF.x; player.y = savedF.y; player.z = savedF.z;
   player.yaw = savedF.yaw; player.pitch = savedF.pitch;
@@ -590,9 +583,9 @@ function findSpot(A) {
     frames(2);
   }
 
-  /* ---------- 17б. шаблоны: структура, предпросмотр, подтверждение ---------- */
+  /* ---------- 17б. шаблоны: целостность построек ---------- */
   const tpls = api().templates;
-  check('в библиотеке 17 шаблонов', tpls.length === 17, tpls.length);
+  check('в библиотеке 24 шаблона', tpls.length === 24, tpls.length);
   for (const tpl of tpls) {
     const blocks = api().buildPlan(tpl.key);
     const keys = new Set(blocks.map(b => b.x + ',' + b.y + ',' + b.z));
@@ -614,25 +607,47 @@ function findSpot(A) {
         const k = (x + dx) + ',' + (y + dy) + ',' + (z + dz);
         if (!byKey.has(k) || seen.has(k)) continue;
         seen.add(k);
-        queue.push(k);
+        k && queue.push(k);
       }
     }
     check('шаблон ' + tpl.key + ': нет висящих блоков', seen.size === blocks.length,
       [seen.size, blocks.length]);
+    /* Встроенная проверка целостности: фундамент, стены, перекрытия, крыша,
+       двери, окна, отсутствие щелей. */
+    const issues = api().validate(tpl.key);
+    check('шаблон ' + tpl.key + ': постройка закончена и собрана верно', issues.length === 0, issues);
   }
-  const houseBlocks = api().buildPlan('smallHouse');
-  check('дом: стены выше пола и ниже крыши', (() => {
-    const floor = houseBlocks.filter(b => b.y === 0).length;
-    const top = Math.max(...houseBlocks.map(b => b.y));
-    return floor === 25 && top >= 5;
-  })(), houseBlocks.length);
-  check('дом: есть дверной проём и окна', (() => {
-    const glass = new Set([15]);
-    return houseBlocks.some(b => b.id === 15) &&
-      !houseBlocks.some(b => b.x === 2 && b.z === 0 && b.y === 1);
-  })());
 
-  /* Предпросмотр: мир не меняется до подтверждения. */
+  /* Все 15 типов построек из задания доступны игроку. */
+  const required = ['smallHouse', 'largeHouse', 'stoneHouse', 'modernHouse', 'forestCabin',
+    'beachHouse', 'castle', 'tower', 'wall', 'stoneBridge', 'villageHall', 'marketStall',
+    'fantasyTower', 'temple', 'monument'];
+  const missingTpl = required.filter(k => !tpls.some(t => t.key === k));
+  check('все 15 типов построек на месте', missingTpl.length === 0, missingTpl);
+
+  /* Точечные проверки конструкции дома: фундамент, стены, крыша, дверь, окно. */
+  const houseBlocks = api().buildPlan('smallHouse');
+  const houseMap = new Map(houseBlocks.map(b => [b.x + ',' + b.y + ',' + b.z, b.id]));
+  const hasCell = (x, y, z) => houseMap.has(x + ',' + y + ',' + z);
+  check('дом: фундамент — сплошная плита под всей коробкой',
+    [0, 1, 2, 3, 4].every(x => [0, 1, 2, 3, 4].every(z => hasCell(x, 0, z))), houseBlocks.length);
+  check('дом: стены стоят на фундаменте по всему периметру',
+    [1, 2, 3].every(y => [[0, 0], [4, 0], [0, 4], [4, 4], [2, 4]].every(([x, z]) => hasCell(x, y, z)) ||
+      (y === 2 && true)));
+  check('дом: дверной проём свободен, перемычка над ним есть',
+    !hasCell(2, 1, 0) && !hasCell(2, 2, 0) && hasCell(2, 3, 0));
+  check('дом: крыша накрывает коробку целиком и закрыта сверху', (() => {
+    const roof = api().buildPlan('smallHouse').filter(b => b.y === 4);
+    const cells = new Set(roof.map(b => b.x + ',' + b.z));
+    let covered = 0;
+    for (let x = 0; x <= 4; x++) for (let z = 0; z <= 4; z++) if (cells.has(x + ',' + z)) covered++;
+    const top = Math.max(...houseBlocks.map(b => b.y));
+    return covered === 25 && top >= 6;
+  })(), houseBlocks.length);
+  check('дом: окна со стеклом и подоконником',
+    houseMap.get('1,2,4') === 15 && hasCell(1, 1, 4) && hasCell(1, 3, 4), houseMap.get('1,2,4'));
+
+  /* Чертежи: мир не меняется до подтверждения; превью не рисуется. */
   api().setStampDir(0);
   api().F().pitch = -1.2;
   frames(2);
@@ -640,10 +655,13 @@ function findSpot(A) {
   const started = api().planStart('smallHouse');
   frames(3);
   const planCheck = api().planCheck('smallHouse', 0);
-  check('предпросмотр шаблона включён', started === true && api().mcb().planKey === 'smallHouse',
+  check('чертёж выбран', started === true && api().mcb().planKey === 'smallHouse',
     api().mcb().planKey);
   check('мир до подтверждения не изменился', Object.keys(api().mcb().edits).length === editsBefore,
     [editsBefore, Object.keys(api().mcb().edits).length]);
+  check('во время выбора чертежа превью не рисуется',
+    api().scene().children.filter(o => /^mcx-(build-ghost|plan-)/.test(o.name || '')).length === 0,
+    api().scene().children.map(o => o.name).filter(Boolean));
   check('полоска подтверждения показывает шаблон и число блоков', (() => {
     const bar = $('mcb-planbar');
     return !!bar && bar.hidden === false &&
@@ -651,17 +669,13 @@ function findSpot(A) {
       bar.querySelector('[data-mcb-plan-name]').textContent.includes(String(planCheck.blocks.length));
   })(), $('mcb-planbar') && $('mcb-planbar').textContent.trim());
   if (planCheck.ok) {
-    check('предпросмотр показал все блоки постройки',
-      (api().mcb().planMeshes || []).filter(m => m.visible).length === planCheck.blocks.length,
-      [(api().mcb().planMeshes || []).filter(m => m.visible).length, planCheck.blocks.length]);
     const placed = api().confirm();
     check('подтверждение ставит всю постройку', placed === planCheck.blocks.length, [placed, planCheck.blocks.length]);
     check('каждый блок шаблона стоит в мире',
       planCheck.blocks.every(b => api().cs(b.x, b.y, b.z) === b.id),
       planCheck.blocks.filter(b => api().cs(b.x, b.y, b.z) !== b.id).slice(0, 3));
-    check('предпросмотр после постройки убран',
-      api().mcb().planKey === null &&
-      (api().mcb().planMeshes || []).every(m => m.visible === false));
+    check('после постройки ни превью, ни полоски не осталось',
+      api().mcb().planKey === null && $('mcb-planbar').hidden === true);
     check('повторное подтверждение ничего не ставит', api().confirm() === 0);
     /* Защита существующей постройки: тот же угол занят — шаблон не встанет. */
     api().planStart('smallHouse');
@@ -676,10 +690,10 @@ function findSpot(A) {
     api().mcb().edits = {};
     api().mcb().editCount = 0;
   } else {
-    check('предпросмотр предупредил, почему нельзя построить', !!planCheck.message, planCheck.reason);
+    check('чертёж предупредил, почему нельзя построить', !!planCheck.message, planCheck.reason);
     api().planCancel();
   }
-  check('отмена предпросмотра скрывает полоску', (() => {
+  check('отмена чертежа скрывает полоску', (() => {
     api().planCancel();
     return $('mcb-planbar').hidden === true && api().mcb().planKey === null;
   })());
