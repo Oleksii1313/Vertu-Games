@@ -848,10 +848,10 @@ function bootRedline() {
     engine = new B.Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
-      adaptToDeviceRatio: false,
+      adaptToDeviceRatio: true,
     });
   engine.setHardwareScalingLevel(
-    touch ? Math.max(1, devicePixelRatio / 1.35) : 1,
+    touch ? Math.max(1, (devicePixelRatio || 1) / 2) : 1,
   );
   const scene = new B.Scene(engine);
   scene.clearColor = new B.Color4(0.7, 0.7, 0.62, 1);
