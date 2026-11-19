@@ -171,6 +171,16 @@
         }
         VG.openGame(game);
       };
+      /* Наведение/тап по карточке = намерение играть: греем файл игры,
+         чтобы после входа она открылась без ожидания сети. */
+      var warm = function () {
+        var id = card.getAttribute('data-game');
+        var g = (window.VG_DATA.games || []).filter(function (x) { return x.id === id; })[0];
+        if (g && VG.prefetchGame) VG.prefetchGame(g.file);
+      };
+      ['pointerenter', 'pointerdown', 'focus', 'touchstart'].forEach(function (name) {
+        card.addEventListener(name, warm, { passive: true });
+      });
       card.addEventListener('click', open);
       card.addEventListener('keydown', function (event) {
         if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }

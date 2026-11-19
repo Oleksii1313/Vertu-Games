@@ -159,10 +159,21 @@ RUNTIME = r'''<script id="game-i18n-runtime">
 '''
 
 
-def _strings_script() -> str:
-    """JSON-словарь строк, которые игры подставляют из JS."""
+def _strings_script(body: str = '') -> str:
+    """JSON-словарь строк, которые игры подставляют из JS.
+
+    В словарь попадают только те строки, которые реально встречаются в этой
+    игре. Раньше каждая игра (включая Flappy Bird) таскала полный словарь на
+    725 фраз всех двенадцати игр — это лишние ~50 КБ HTML на каждую загрузку,
+    то есть самая тяжёлая часть старта. Отбор по вхождению строки в текст игры
+    безопасен: лишние ключи не нужны никому, а нужные всегда присутствуют.
+    """
     import json
-    payload = json.dumps(GAMES_EN, ensure_ascii=False, separators=(',', ':'))
+    import re as _re
+    text = _re.sub(r'<script id="(?:game-i18n-strings|game-i18n-runtime)">.*?</script>',
+                   '', body, flags=_re.S)
+    table = {ru: en for ru, en in GAMES_EN.items() if ru in text} if text else GAMES_EN
+    payload = json.dumps(table, ensure_ascii=False, separators=(',', ':'))
     return (f'<script id="{STRINGS_ID}">/* Сгенерировано tools/i18n/games.py */'
             f'window.VG_GAME_STRINGS={payload};</script>\n')
 
@@ -374,7 +385,7 @@ def localize_file(path: Path, check_only: bool = False) -> list[str]:
     # Рантайм и словарь всегда пересобираются: они обновляются вместе с переводом.
     result = re.sub(r'<script id="(?:game-i18n-strings|game-i18n-runtime)">.*?</script>\n?',
                     '', result, flags=re.S)
-    blocks = _strings_script() + RUNTIME
+    blocks = _strings_script(result) + RUNTIME
     head = result.lower().find('<head>')
     if head != -1:
         at = head + len('<head>')
