@@ -399,9 +399,14 @@ const c=document.getElementById('c'),ctx=c.getContext('2d');
 /* Логические размеры поля в CSS-пикселях; буфер рисуется с devicePixelRatio, */
 /* поэтому картинка резкая на retina, а координаты остаются простыми. */
 let VW=800, VH=600;
-const MAXFALL=13,GRAV=.5;
+const MAXFALL=13,GRAV=.52;
+/* Камера и прыжок. Высота прыжка считается формулой h=v²/2g, поэтому её можно
+   проверить: 11.4² / (2·0.52) ≈ 125 логических пикселей — это меньше трети
+   кадра (VH ≈ 470), так что персонаж не улетает за верхний край. */
+const CAM_LEAD=.58,CAM_SMOOTH=.16,CAM_LEAD_X=.42,CAM_SMOOTH_X=.2,CAM_MARGIN=18,CAM_DOWN=.5;
+const COYOTE=7,JUMP_CUT=.6,DOUBLE_JUMP=.86;
 const scoreEl=document.getElementById('scoreVal'),coinsEl=document.getElementById('coinsVal'),livesEl=document.getElementById('livesVal'),distEl=document.getElementById('distVal');
-let score=0,coins=0,lives=3,running=true,invulnerable=0,cameraX=0,worldWidth=0;
+let score=0,coins=0,lives=3,running=true,invulnerable=0,cameraX=0,cameraY=0,worldWidth=0;
 let lastSafe={x:60,y:0},frame=0,shake=0,flash=0,bestDist=0,lastMark=0,standingPlatform=null;
 /* Награда: клиент считает только «единицы» (Math.floor(dist()/500)), сумму V считает сервер. */
 const COIN_RATE=5;
@@ -420,7 +425,8 @@ window.VGReward&&VGReward.on&&VGReward.on(function(st){
   if(el&&overShown)el.textContent='+'+(st.awarded)+' V'+(st.capped?' · '+((window.VGT&&VGT('дневной лимит','daily cap'))||'daily cap'):'');
 });
 
-const player={x:60,y:100,w:30,h:34,vx:0,vy:0,speed:5.6,jumpForce:11.8,grounded:false,doubleJump:false,facing:1};
+const player={x:60,y:100,w:30,h:34,vx:0,vy:0,speed:5.6,jumpForce:11.4,grounded:false,doubleJump:false,facing:1,
+  squash:0,coyote:0,landVy:0};
 let platforms=[],gameCoins=[],hazards=[],stars=[],clouds=[],mountains=[],keys={},particles=[],floaters=[];
 /* Масштаб картинки: мир рисуется в логических пикселях, которых на экране
    меньше, чем физических. 1.28 — персонаж и предметы заметно крупнее (играть
@@ -499,8 +505,8 @@ function generateMore(){
   if(worldWidth>cameraX+VW*4){platforms=platforms.filter(p=>p.x+p.w>cameraX-200);hazards=hazards.filter(h=>h.x>cameraX-200);}
 }
 function addParticles(x,y,color,n,spd,up){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*spd,vy:(Math.random()-.5)*spd-(up||0),l:1,c:color})}
-function reset(){player.x=lastSafe.x;player.y=lastSafe.y-player.h-2;player.vx=0;player.vy=0;player.doubleJump=false;standingPlatform=null;cameraX=Math.max(0,player.x-VW/2);}
-function takeDamage(){if(invulnerable>0)return;lives--;updateLives();shake=10;flash=1;beep(140,.4,'sawtooth',.2,70);if(lives<=0){gameOver();return}reset();invulnerable=100;}
+function reset(){player.x=lastSafe.x;player.y=lastSafe.y-player.h-2;player.vx=0;player.vy=0;player.doubleJump=false;standingPlatform=null;player.squash=0;player.coyote=0;cameraX=Math.max(0,player.x-VW*.42);cameraY=Math.min(0,lastSafe.y-VH*CAM_LEAD);}
+function takeDamage(force){if(invulnerable>0&&!force)return;lives--;updateLives();shake=10;flash=1;beep(140,.4,'sawtooth',.2,70);if(lives<=0){gameOver();return}reset();invulnerable=100;}
 function gameOver(){running=false;const dst=dist();if(dst>bestDist)bestDist=dst;
   document.getElementById('fScore').textContent=score;document.getElementById('fCoins').textContent=fmt(coins);document.getElementById('fDist').textContent=dst+' m';
   document.getElementById('sub').textContent=dst>400?((window.VGT&&window.VGT('Невероятный забег!','An incredible run!'))||'Невероятный забег!'):dst>150?((window.VGT&&window.VGT('Отличный результат!','Great result!'))||'Отличный результат!'):((window.VGT&&window.VGT('Ты только разогревался','You were just warming up'))||'Ты только разогревался');
@@ -513,8 +519,8 @@ function restart(){document.getElementById('overlay').classList.remove('show');s
 function goHome(){try{parent.postMessage({type:'home'},'*')}catch(e){};var inFrame=false;try{inFrame=!!window.frameElement}catch(e){inFrame=true}if(!inFrame)try{window.location.href='../index.html'}catch(e){}}
 function start(){
   resize();platforms=[makePlatform(-60,VH-80,900,null)];gameCoins=[];hazards=[];particles=[];floaters=[];
-  score=0;coins=0;lives=3;running=true;invulnerable=0;cameraX=0;frame=0;shake=0;flash=0;standingPlatform=null;lastMark=0;
-  player.x=80;player.y=VH-80-player.h;player.vx=0;player.vy=0;player.doubleJump=false;player.facing=1;
+  score=0;coins=0;lives=3;running=true;invulnerable=0;cameraX=0;cameraY=0;frame=0;shake=0;flash=0;standingPlatform=null;lastMark=0;
+  player.x=80;player.y=VH-80-player.h;player.vx=0;player.vy=0;player.doubleJump=false;player.facing=1;player.squash=0;player.coyote=0;
   lastSafe={x:150,y:VH-80};
   stars=Array.from({length:80},()=>({x:Math.random()*VW,y:Math.random()*VH,s:Math.random()*2+.4,tw:Math.random()*Math.PI*2}));
   clouds=Array.from({length:12},()=>({x:Math.random()*VW*2,y:Math.random()*VH*.4+10,s:.5+Math.random(),sp:.2+Math.random()*.4}));
@@ -531,22 +537,72 @@ function update(){
   // run speed gently rises with distance to raise the challenge
   const spd=player.speed+Math.min(2.4,cameraX/2200);
   if(keys.Left){player.vx=-spd;player.facing=-1}else if(keys.Right){player.vx=spd;player.facing=1}else player.vx*=.82;
+  /* ---------------- прыжок: высота предсказуема и не выносит за кадр ------
+     «Coyote time» даёт мгновение после схода с края, когда прыжок ещё
+     считается прыжком с земли (иначе на краях платформ персонаж «проваливался»
+     вместо прыжка), а отпускание кнопки обрезает прыжок — тап = низкий,
+     удержание = полный. Сама кнопка и управление не менялись. */
+  if(player.coyote>0)player.coyote--;
+  if(keys.Jump&&!keys.jumpLock){
+    if(player.grounded||player.coyote>0){
+      player.vy=-player.jumpForce;player.doubleJump=false;player.coyote=0;keys.jumpLock=true;
+      player.squash=Math.max(player.squash,.35);
+      addParticles(player.x+player.w/2,player.y+player.h,'#2b99a0',8,4);beep(300,.09,'sine',.12)
+    }else if(!player.doubleJump){
+      player.vy=-player.jumpForce*DOUBLE_JUMP;player.doubleJump=true;keys.jumpLock=true;
+      addParticles(player.x+player.w/2,player.y+player.h,'#4037b0',10,5);beep(420,.1,'sine',.12)
+    }
+  }
+  if(!keys.Jump){keys.jumpLock=false;if(player.vy<-4)player.vy*=JUMP_CUT}
   player.vy+=GRAV;if(player.vy>MAXFALL)player.vy=MAXFALL;
   const prevBottom=player.y+player.h;player.x+=player.vx;player.y+=player.vy;
   if(invulnerable>0)invulnerable--;
   player.grounded=false;let newStand=null;
-  platforms.forEach(p=>{if(player.x+player.w>p.x&&player.x<p.x+p.w){const bottom=player.y+player.h;
-    if(player.vy>=0&&prevBottom<=p.y+6&&bottom>=p.y){player.y=p.y-player.h;player.vy=0;player.grounded=true;player.doubleJump=false;newStand=p;lastSafe={x:p.x+10,y:p.y};}}});
+  /* ---------------- столкновение с платформами ----------------------------
+     Платформы «односторонние»: приземляемся только когда двигались вниз и
+     прошли линию платформы. Сравниваем положение ДО шага (prevBottom), поэтому
+     при быстром падении и на движущихся платформах персонаж не проскакивает
+     сквозь них и не проваливается. */
+  platforms.forEach(p=>{
+    if(player.x+player.w<=p.x||player.x>=p.x+p.w)return;
+    const bottom=player.y+player.h;
+    if(player.vy>=0&&prevBottom<=p.y+2&&bottom>=p.y){
+      player.y=p.y-player.h;
+      if(player.vy>3){
+        player.squash=Math.min(1,player.vy/11);
+        player.landVy=player.vy;
+        addParticles(player.x+player.w/2,p.y,'#7fe8ef',Math.round(4+player.vy),3.6);
+        beep(200,.06,'sine',.08);
+      }
+      player.vy=0;player.grounded=true;player.doubleJump=false;newStand=p;lastSafe={x:p.x+10,y:p.y};
+    }
+  });
+  if(player.grounded)player.coyote=COYOTE;
   standingPlatform=newStand;
-  if(keys.Jump&&!keys.jumpLock){
-    if(player.grounded){player.vy=-player.jumpForce;player.doubleJump=false;keys.jumpLock=true;addParticles(player.x+player.w/2,player.y+player.h,'#2b99a0',8,4);beep(300,.09,'sine',.12)}
-    else if(!player.doubleJump){player.vy=-player.jumpForce;player.doubleJump=true;keys.jumpLock=true;addParticles(player.x+player.w/2,player.y+player.h,'#4037b0',10,5);beep(420,.1,'sine',.12)}
-  }
-  if(!keys.Jump)keys.jumpLock=false;
+  /* squash-and-stretch: приземление и взлёт видно, персонаж не «пластиковый» */
+  player.squash=Math.max(0,player.squash-.055);
   if(invulnerable<=0)hazards.forEach(h=>{if(player.x<h.x+h.w&&player.x+player.w>h.x&&player.y<h.y+h.h&&player.y+player.h>h.y)takeDamage()});
-  if(player.y>VH+120)takeDamage();
-  if(player.x<cameraX-100)player.x=cameraX;
-  if(player.x>cameraX+VW/2)cameraX=player.x-VW/2;
+
+  /* ------------------------------ камера ---------------------------------
+     Горизонталь — плавно ведём персонажа к 42 % ширины кадра. Вертикаль —
+     плавно тянемся к 58 % высоты и жёстко ограничиваем так, чтобы персонаж
+     всегда оставался в кадре: даже в самом высоком прыжке и при падении вниз
+     он не уходит за край экрана. Земля (cameraY = 0) — нижняя граница камеры. */
+  const targetX=Math.max(0,player.x-VW*CAM_LEAD_X);
+  cameraX+=(targetX-cameraX)*CAM_SMOOTH_X;
+  if(Math.abs(targetX-cameraX)>VW*.55)cameraX=targetX;
+  if(cameraX<0)cameraX=0;
+  if(player.x<cameraX+6)player.x=cameraX+6;
+  const targetY=Math.min(0,player.y-VH*CAM_LEAD);
+  cameraY+=(targetY-cameraY)*CAM_SMOOTH;
+  if(player.y<cameraY+CAM_MARGIN)cameraY=player.y-CAM_MARGIN;
+  if(player.y+player.h>cameraY+VH-CAM_MARGIN)cameraY=player.y+player.h-VH+CAM_MARGIN;
+  /* Камера может опуститься немного ниже линии земли — тогда видно падение в
+     пропасть. Дальше не пускаем: иначе падение было бы бесконечным. */
+  if(cameraY>VH*CAM_DOWN)cameraY=VH*CAM_DOWN;
+  /* Смертельное падение считается по миру, а не по камере, иначе камера
+     «убегала» бы за падающим персонажем и он никогда не погибал. */
+  if(player.y>VH+120)takeDamage(true);   // падение в бездну не лечится неуязвимостью
   if(cameraX+VW>worldWidth-500)generateMore();
   distEl.textContent=dist()+' m';
   const curMark=Math.floor(dist()/50);
@@ -566,9 +622,19 @@ function draw(){
   ctx.fillStyle='rgba(41,85,142,.5)';ctx.beginPath();ctx.arc(VW*.78,120,48,0,7);ctx.fill();
   ctx.fillStyle='#131b28';ctx.beginPath();ctx.arc(VW*.78-18,108,44,0,7);ctx.fill();
   ctx.fillStyle='#fff';stars.forEach(s=>{const tw=.4+.6*Math.abs(Math.sin(s.tw+frame*.02));ctx.globalAlpha=tw;ctx.fillRect(s.x,s.y,s.s,s.s)});ctx.globalAlpha=1;
-  ctx.fillStyle='rgba(255,255,255,.03)';clouds.forEach(cl=>{const sx=cl.x-cameraX*cl.s*.4;const wrap=((sx%(VW+300))+VW+300)%(VW+300)-150;ctx.beginPath();ctx.ellipse(wrap,cl.y,cl.s*90,cl.s*26,0,0,7);ctx.fill()});
-  mountains.forEach(m=>{const sx=m.x-cameraX*(m.lay===1?.15:.3);const wrap=((sx%(VW+m.w))+VW+m.w)%(VW+m.w)-m.w;const base=VH+10;ctx.fillStyle=m.lay===1?'rgba(47,41,142,.12)':'rgba(41,136,142,.12)';
+  ctx.fillStyle='rgba(255,255,255,.03)';clouds.forEach(cl=>{const sx=cl.x-cameraX*cl.s*.4;const wrap=((sx%(VW+300))+VW+300)%(VW+300)-150;ctx.beginPath();ctx.ellipse(wrap,cl.y-cameraY*.25,cl.s*90,cl.s*26,0,0,7);ctx.fill()});
+  mountains.forEach(m=>{const sx=m.x-cameraX*(m.lay===1?.15:.3);const wrap=((sx%(VW+m.w))+VW+m.w)%(VW+m.w)-m.w;const base=VH+10-cameraY*.18;ctx.fillStyle=m.lay===1?'rgba(47,41,142,.12)':'rgba(41,136,142,.12)';
     ctx.beginPath();ctx.moveTo(wrap,base);ctx.lineTo(wrap+m.w/2,base-m.h*(m.lay===1?.7:1));ctx.lineTo(wrap+m.w,base);ctx.closePath();ctx.fill()});
+  /* Мир рисуем со сдвигом камеры: всё, что ниже, живёт в мировых координатах,
+     поэтому вертикальная камера двигает платформы, персонажа, монеты и частицы
+     вместе и никто не «уезжает» из кадра отдельно от остальных. */
+  ctx.save();ctx.translate(0,-cameraY);
+  /* бездна под нижней платформой: при подъёме камеры снизу открывается тёмный
+     склон, а не пустая полоса неба */
+  const abyssY=VH-52;
+  if(cameraY<0){const ag=ctx.createLinearGradient(0,abyssY,0,abyssY+Math.min(600,VH*1.4));
+    ag.addColorStop(0,'#101a26');ag.addColorStop(1,'#070b12');ctx.fillStyle=ag;
+    ctx.fillRect(cameraX-20,abyssY,VW+40,Math.abs(cameraY)+VH);}
   platforms.forEach(p=>{if(p.x-cameraX+p.w>0&&p.x-cameraX<VW){const px=p.x-cameraX;
     const g=ctx.createLinearGradient(px,0,px+p.w,0);g.addColorStop(0,'#3fd2da');g.addColorStop(1,'#6b55f2');
     // body (brighter, thicker): soft neon glow underneath
@@ -583,14 +649,31 @@ function draw(){
     ctx.save();ctx.shadowBlur=12;ctx.shadowColor='#ff3b4e';
     ctx.fillStyle='#e02340';ctx.beginPath();ctx.moveTo(px,h.y+h.h);ctx.lineTo(px+h.w/2,h.y);ctx.lineTo(px+h.w,h.y+h.h);ctx.closePath();ctx.fill();ctx.restore();
     ctx.fillStyle='#ff6b78';ctx.fillRect(px+h.w*.35,h.y+h.h*.3,h.w*.2,h.w*.35)});
-  if(invulnerable%10<5){const px=player.x-cameraX,f=player.facing||1;const g2=ctx.createLinearGradient(px,player.y,px+player.w,player.y+player.h);g2.addColorStop(0,'#2b99a0');g2.addColorStop(1,'#2f63a8');
-    ctx.fillStyle=g2;roundRect(px,player.y,player.w,player.h,8);ctx.fill();
-    ctx.fillStyle='rgba(41,136,142,.5)';const visorX=f>0?px+player.w-4:px+1;roundRect(visorX,player.y+4,3,24,2);ctx.fill();
-    const eyeX=f>0?px+player.w-11:px+11,eyeY=player.y+12;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(eyeX,eyeY,5,0,7);ctx.fill();
+  if(invulnerable%10<5){
+    const px=player.x-cameraX,f=player.facing||1;
+    /* squash-and-stretch: при приземлении персонаж «садится», в прыжке слегка
+       вытягивается. Масштаб применяем вокруг нижней точки, поэтому ноги
+       остаются на платформе, а не уезжают в неё. */
+    const sq=player.squash, stretch=!player.grounded&&player.vy<-1?Math.min(.14,-player.vy*.012):0;
+    const sx2=1+.32*sq, sy2=1-.30*sq+stretch;
+    ctx.save();
+    ctx.translate(px+player.w/2,player.y+player.h);
+    ctx.scale(sx2,sy2);
+    ctx.translate(-player.w/2,-player.h);
+    const g2=ctx.createLinearGradient(0,0,player.w,player.h);g2.addColorStop(0,'#2b99a0');g2.addColorStop(1,'#2f63a8');
+    ctx.fillStyle=g2;roundRect(0,0,player.w,player.h,8);ctx.fill();
+    ctx.fillStyle='rgba(41,136,142,.5)';const visorX=f>0?player.w-4:1;roundRect(visorX,4,3,24,2);ctx.fill();
+    const eyeX=f>0?player.w-11:11,eyeY=12;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(eyeX,eyeY,5,0,7);ctx.fill();
     ctx.fillStyle='#10161f';ctx.beginPath();ctx.arc(eyeX+f*1.6,eyeY,2.4,0,7);ctx.fill();
-    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(eyeX+f*1.6-1.5,eyeY-1.5,1,0,7);ctx.fill()}
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(eyeX+f*1.6-1.5,eyeY-1.5,1,0,7);ctx.fill();
+    /* пыль от приземления остаётся на платформе */
+    if(player.squash>.55){ctx.globalAlpha=(player.squash-.55)*.9;ctx.fillStyle='#9fe9ef';
+      for(let d=0;d<4;d++){const dir=d<2?-1:1,off=4+d*5;ctx.fillRect(dir*(6+off*sx2),player.h-2,3,2)}ctx.globalAlpha=1}
+    ctx.restore();
+  }
   particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.l);ctx.fillStyle=p.c;ctx.fillRect(p.x-cameraX,p.y,3,3)});ctx.globalAlpha=1;
   floaters.forEach(f=>{ctx.globalAlpha=Math.max(0,f.l);ctx.fillStyle=f.color;ctx.font='800 14px -apple-system,Arial';ctx.textAlign='center';ctx.fillText(f.txt,f.x-cameraX,f.y)});ctx.globalAlpha=1;
+  ctx.restore();
   if(flash>0){ctx.fillStyle='rgba(59,47,158,'+flash*.3+')';ctx.fillRect(0,0,VW,VH)}
   ctx.restore();
 }

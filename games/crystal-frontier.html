@@ -395,7 +395,7 @@ const R=mulberry(1337), rr=(a,b)=>a+R()*(b-a);
 function hash(ix,iz){let h=Math.imul(ix,374761393)+Math.imul(iz,668265263)|0;h=Math.imul(h^h>>>13,1274126177);return((h^h>>>16)>>>0)/4294967295}
 function vn(x,z){const ix=Math.floor(x),iz=Math.floor(z),fx=x-ix,fz=z-iz,u=fx*fx*(3-2*fx),v=fz*fz*(3-2*fz);return lerp(lerp(hash(ix,iz),hash(ix+1,iz),u),lerp(hash(ix,iz+1),hash(ix+1,iz+1),u),v)}
 function fbm(x,z,o){let a=.5,s=0,n=0;for(let i=0;i<o;i++){s+=vn(x,z)*a;n+=a;a*=.5;x=x*2.03+17;z=z*2.03+9}return s/n}
-const QS={low:{pr:1,shadow:false,grass:34,gr:30,tree:.4,far:.0042,lights:2},med:{pr:1.25,shadow:true,grass:48,gr:42,tree:.7,far:.003,lights:3},high:{pr:Math.min(devicePixelRatio||1,2),shadow:true,grass:70,gr:56,tree:1,far:.0024,lights:4}};
+const QS={low:{pr:1,shadow:false,grass:34,gr:30,tree:.4,far:.0042,lights:2,fur:1},med:{pr:1.25,shadow:true,grass:48,gr:42,tree:.7,far:.003,lights:3,fur:3},high:{pr:Math.min(devicePixelRatio||1,2),shadow:true,grass:70,gr:56,tree:1,far:.0024,lights:4,fur:5}};
 let QK=MOBILE?'low':'med', Q=QS[QK];
 const WORLD=520, HALF=WORLD/2;
 const V3=THREE.Vector3;
@@ -594,6 +594,78 @@ function buildHouse(x,z,ry,w,d,h,stone,y){const wins=[],it=houseParts(w,d,h,ston
   g.add(Object.assign(new THREE.Mesh(mg(it),VMAT),{castShadow:true,receiveShadow:true}),new THREE.Mesh(mg(wins),winMat));g.position.set(x,y??heightAt(x,z),z);g.rotation.y=ry;scene.add(g);boxObs(x,z,w,d,ry);return g}
 const barrel=()=>[CYL,M(0,.4,0,0,0,0,.38,.8,.38),0x6e4a2a],crate=(x,y,z,r=0)=>[BOX,M(x,y,z,0,r,0,.7,.7,.7),0x8a6238];
 function lamp(x,z,y){y=y??heightAt(x,z);const g=mg([[CYL6,M(0,1.4,0,0,0,0,.07,2.8,.07),0x2b2b2e],[BOX,M(0,2.95,0,0,0,0,.4,.1,.4),0x2b2b2e]]);addMesh(g,VMAT,x,y,z);addMesh(new THREE.BoxGeometry(.28,.34,.28),lampMat,x,y+2.72,z,0,false);lightSrcs.push({x,y:y+2.7,z,col:0xffb55a,I:1.6,D:16,night:true})}
+/* Дворовые детали деревни: изгороди, поленницы, стога, колодец, лавки,
+   кадки с цветами, бельевые верёвки, указатели и дым из труб. Всё слито в
+   несколько мешей и добавлено один раз — на кадр это почти не влияет. */
+function villageProps(VC){
+  const y0=heightAt(VC.x,VC.z),it=[],props=[];
+  const put=(x,z,g,m)=>{const y=heightAt(x,z);props.push(addMesh(g,m||VMAT,x,y,z))};
+  /* изгороди вдоль дворов */
+  [[-19,-11,-19,-3],[-19,-3,-13,-3],[9,-14,15,-14],[15,-14,15,-8]].forEach(([ax,az,bx,bz])=>{
+    const dx=bx-ax,dz=bz-az,len=Math.hypot(dx,dz),n=Math.max(2,Math.round(len/1.1)),ry=Math.atan2(dx,dz);
+    const f=[[CYL6,M(0,.45,0,0,0,0,.06,.9,.06),0x6b4c33],[BOX,M(0,.78,0,0,0,0,.05,.1,len),0x7a583c],[BOX,M(0,.42,0,0,0,0,.05,.08,len),0x7a583c]];
+    for(let i=0;i<n;i++){const t=i/(n-1);
+      f.push([CYL6,M(0,.42,0,0,0,0,.055,.85,.055),0x6b4c33])}
+    const g=mg(f);const ox=VC.x+(ax+bx)/2,oz=VC.z+(az+bz)/2;
+    put(ox,oz,g);props[props.length-1].rotation.y=ry;
+    addObs(ox,oz,.5);
+  });
+  /* поленницы у домов */
+  [[-16,4],[13,-3],[4,15]].forEach(([ox,oz])=>{
+    const w=addMesh(mg([[CYL,M(0,.5,0,0,0,0,.14,1,.14),0x6d4b2c],[CYL,M(.3,.5,0,0,0,0,.14,1,.14),0x5f4126],
+      [CYL,M(-.3,.5,0,0,0,0,.14,1,.14),0x7a5636],[BOX,M(0,1.02,0,0,0,0,1.1,.08,.35),0x4a3421]]),VMAT,VC.x+ox,heightAt(VC.x+ox,VC.z+oz),VC.z+oz);
+    addObs(VC.x+ox,VC.z+oz,.55);
+  });
+  /* стога сена */
+  [[-11,-9],[8,13]].forEach(([ox,oz],i)=>{
+    addMesh(mg([[CYL,M(0,.5,0,0,0,0,.9,1,.9),0xc9a94e],[CONE(1.05,1.1,10),M(0,1.5,0),0xb89a44],
+      [CYL,M(0,1.05,0,0,0,0,.95,.06,.95),0x8a6f2f]]),VMAT,VC.x+ox,heightAt(VC.x+ox,VC.z+oz),VC.z+oz,0.4*i);
+    addObs(VC.x+ox,VC.z+oz,.9);
+  });
+  /* колодец на площади */
+  const wx=VC.x-6,wz=VC.z-7,wy=heightAt(wx,wz);
+  addMesh(mg([[CYL,M(0,.45,0,0,0,0,1.2,.9,1.2),0x8b877e],[CYL,M(0,.9,0,0,0,0,1.28,.12,1.28),0xa39f96],
+    [CYL6,M(-.9,1.6,0,0,0,0,.09,1.6,.09),0x5d3f27],[CYL6,M(.9,1.6,0,0,0,0,.09,1.6,.09),0x5d3f27],
+    [BOX,M(0,2.5,0,0,0,0,2.2,.12,1.4),0x7a5232],[BOX,M(0,2.38,0,0,0,0,2.4,.1,.14),0x5d3f27],
+    [CYL,M(0,2.1,0,0,0,0,.1,.1,.1),0x3b3b3b],[BOX,M(0,1.9,0,0,0,0,.32,.3,.32),0x6b4c33]]),VMAT,wx,wy,wz);
+  addObs(wx,wz,1.3);
+  /* лавки и кадки с цветами у площади */
+  [[-3.4,1.6,0.5],[2.6,-4.2,-1.1],[-9.5,-.5,1.4]].forEach(([ox,oz,ry])=>{
+    const bx=VC.x+ox,bz=VC.z+oz;
+    addMesh(mg([[BOX,M(0,.42,0,0,0,0,1.6,.1,.45),0x8a6238],[BOX,M(-.65,.2,0,0,0,0,.1,.4,.4),0x6b4c33],
+      [BOX,M(.65,.2,0,0,0,0,.1,.4,.4),0x6b4c33]]),VMAT,bx,heightAt(bx,bz),bz,ry);
+  });
+  [[-4.6,3.2],[4.2,-6.1],[7.5,2.4]].forEach(([ox,oz])=>{
+    const bx=VC.x+ox,bz=VC.z+oz,pot=[];
+    pot.push([CYL,M(0,.22,0,0,0,0,.26,.44,.26),0x8a5a3a],[CYL,M(0,.45,0,0,0,0,.3,.06,.3),0x6d452c]);
+    for(let i=0;i<7;i++){const a=i/7*6.283;
+      pot.push([blob(.1,1,.2),M(Math.cos(a)*.16,.58+(i%3)*.07,Math.sin(a)*.16),[0xd23b2e,0xe9b32f,0xcf5ea3,0x6aa84f][i%4],.25])}
+    addMesh(mg(pot),VMAT,bx,heightAt(bx,bz),bz);
+  });
+  /* бельевая верёвка между столбами */
+  (function laundry(){
+    const ax=VC.x+9.5,az=VC.z-1,bx=VC.x+9.5,bz=VC.z+5,ay=heightAt(ax,az),by=heightAt(bx,bz);
+    addMesh(mg([[CYL6,M(0,1.3,0,0,0,0,.07,2.6,.07),0x6b4c33]]),VMAT,ax,ay,az);
+    addMesh(mg([[CYL6,M(0,1.3,0,0,0,0,.07,2.6,.07),0x6b4c33]]),VMAT,bx,by,bz);
+    addMesh(mg([[BOX,M(0,0,0,0,0,0,.03,.03,6),0xbdb6a4]]),VMAT,ax,ay+2.5,az+3);
+    const cols=[0xf0e2c8,0x5b86c4,0xd08a6a,0xe8dcc0];
+    for(let i=0;i<4;i++)addMesh(mg([[BOX,M(0,-.28,0,0,0,0,.7,.6,.04),cols[i]]]),VMAT,ax,ay+2.5,az+1+i*1.2,0);
+  })();
+  /* указатели */
+  [[-2.5,7.6,0.6],[11,-9.4,-.8]].forEach(([ox,oz,ry])=>{
+    const bx=VC.x+ox,bz=VC.z+oz;
+    addMesh(mg([[CYL6,M(0,1.1,0,0,0,0,.08,2.2,.08),0x6b4c33],
+      [BOX,M(0,1.95,0,0,0,0,1.1,.24,.08),0x8a6238],[BOX,M(0,1.55,0,0,0,0,.9,.2,.08),0x8a6238]]),VMAT,bx,heightAt(bx,bz),bz,ry);
+  });
+  /* дым из труб: два очага, пар частицами (не дорого) */
+  [[-14,6],[12,2]].forEach(([ox,oz])=>{
+    const cx=VC.x+ox,cz=VC.z+oz,cy=heightAt(cx,cz)+4.6;
+    animators.push((dt,t)=>{
+      if(zone!=='surface')return;
+      if(Math.random()<.35)fxDust.emit(cx+rr(-.25,.25),cy,cz+rr(-.25,.25),rr(-.2,.2),.55+rr(0,.35),rr(-.2,.2),1.6,.55,.5,.5);
+    });
+  });
+}
 function market(x,z,ry,colA,colB){const it=[],y=heightAt(x,z);for(const sx of[-1,1])it.push([CYL6,M(sx*1.7,1.2,-.9,0,0,0,.08,2.4,.08),DARK],[CYL6,M(sx*1.7,.95,.9,0,0,0,.08,1.9,.08),DARK]);
   it.push([BOX,M(0,.5,.7,0,0,0,3.4,1,.9),0x7a5532]);for(let i=0;i<8;i++)it.push([BOX,M(-1.55+i*.44,2.25-.0,0,.42,0,0,.45,.05,2.1),i%2?colA:colB].map((v,k)=>k==1?M(-1.55+i*.44,2.2,0,.4,0,0,.44,.06,2.2):v));
   for(let i=0;i<5;i++)it.push([blob(.16,1,.2),M(-1.2+i*.6,1.12,.7),[0xd23b2e,0xe9b32f,0x6aa84f,0xcf5ea3,0xe9b32f][i]]);
@@ -608,6 +680,7 @@ const sockets=[],VC=VILLAGE;
   [[200,16,6,5,3.4,0],[245,17,7,6,3.6,1],[290,17,6,6,3.5,0],[335,17,7,5,3.6,1],[15,18,6,6,3.4,0],[55,19,7,5,3.6,0],[100,20,6,6,3.5,1]].forEach(([a,r,w,d,h,st],i)=>{const rad=a*Math.PI/180,x=VC.x+Math.cos(rad)*r,z=VC.z+Math.sin(rad)*r;buildHouse(x,z,Math.atan2(VC.x-x,VC.z-z),w,d,h,!!st)});
   window.ELDER={x:VC.x+Math.cos(3.1)*10.5,z:VC.z+Math.sin(3.1)*10.5};
   market(VC.x-8,VC.z+9,-2.2,0xc23a2e,0xf0e2c8);market(VC.x-12,VC.z+4.5,-1.7,0x2e6fc2,0xf0e2c8);market(VC.x+5,VC.z+11,3.14,0x3a9a4a,0xf0e2c8);
+  villageProps(VC);
   // smithy
   const sx=VC.x+14,sz=VC.z+13,sy=heightAt(sx,sz),it=[[BOX,M(0,.15,0,0,0,0,7.4,.3,6.2),0x77746d],[BOX,M(0,1.9,-2.8,0,0,0,7,3.6,.4),0x8f8d86],[BOX,M(-3.4,1.9,0,0,0,0,.4,3.6,5.8),0x8f8d86],[BOX,M(3.4,1.9,0,0,0,0,.4,3.6,5.8),0x8f8d86],[BOX,M(0,3.9,-.2,.18,0,0,8,.2,6.8),0x4a3b30],[BOX,M(-2,1.1,-2.1,0,0,0,2.2,1.6,1.2),0x5f5d58],[BOX,M(-2,3,-2.6,0,0,0,.9,5,.9),0x77746d],[BOX,M(1.4,.6,.5,0,0,0,.8,.6,.5),0x2b2b30],[BOX,M(1.4,.95,.5,0,0,0,1.4,.2,.5),0x3a3a42],[CYL,M(2.6,.4,1.8,0,0,0,.4,.8,.4),0x2f4a6a],[BOX,M(-.5,.4,-2,0,0,0,.6,.6,.6),0x3a3a42],crate(2.8,.35,-2.2)];
   addMesh(mg(it),VMAT,sx,sy,sz,3.14+.3);boxObs(sx,sz,7,6,3.44,1.6);const fm=new THREE.Mesh(new THREE.BoxGeometry(1.9,.1,.9),new THREE.MeshBasicMaterial({color:0xff6a1f}));fm.position.set(sx+Math.cos(.3)*-(-2)*0+0,sy+1.95,sz);
@@ -966,15 +1039,164 @@ const ET={
  bat:{hp:18,dmg:6,speed:5.8,detect:20,range:1.5,cd:1.0,h:.6,r:.5,wr:10,atk:.3,fly:1},
  crawler:{hp:45,dmg:11,speed:4.6,detect:16,range:1.8,cd:1.1,h:.8,r:.8,wr:6,atk:.4},
  boss:{hp:900,dmg:34,speed:2.5,detect:36,range:5,cd:2.4,h:7,r:2.6,wr:3,atk:.95}};
-function mkEnemy(type){const g=new THREE.Group(),a={legs:[],arms:[],wings:[]};
-  if(type==='moss'){const m=EM(0x59683c),d=EM(0x3e4a2a),eye=new THREE.MeshBasicMaterial({color:0xffe45a});g.add(ball(.5,m,0,.7,0,1,.85,1.5),ball(.36,m,0,.85,.85),ball(.12,eye,-.15,.95,1.12),ball(.12,eye,.15,.95,1.12),ball(.3,EM(0x6f8a45),0,1,-.2,1.4,.5,1.8),ball(.15,d,0,.7,-.95,.7,.7,1.5));for(const[x,z]of[[-.3,.5],[.3,.5],[-.3,-.5],[.3,-.5]]){const l=limb(d,.16,.55,.16,x,.55,z);g.add(l);a.legs.push(l)}}
-  if(type==='guardian'||type==='boss'){const B=type==='boss',m=EM(B?0x4b4658:0x7b786f,{roughness:1}),c=EM(B?0xb070ff:0x58b8ff,{emissive:B?0xb070ff:0x58b8ff,emissiveIntensity:1.1,roughness:.2});const k=B?2.2:1;
-    g.add(ball(.8*k,m,0,2*k,0,1,1.1,.75),ball(.4*k,m,0,3.1*k,.1*k),ball(.1*k,new THREE.MeshBasicMaterial({color:B?0xff80ff:0x7fe9ff}),-.15*k,3.15*k,.42*k),ball(.1*k,new THREE.MeshBasicMaterial({color:B?0xff80ff:0x7fe9ff}),.15*k,3.15*k,.42*k),ball(.3*k,c,0,2.1*k,.55*k),ball(.45*k,m,-1*k,2.7*k,0),ball(.45*k,m,1*k,2.7*k,0));
-    for(const s of[-1,1]){const ar=limb(m,.4*k,1.6*k,.4*k,s*1*k,2.7*k,0);ar.add(ball(.42*k,m,0,-1.6*k,0));g.add(ar);a.arms.push(ar);const l=limb(m,.5*k,1.3*k,.5*k,s*.45*k,1.3*k,0);g.add(l);a.legs.push(l)}
-    if(B)for(let i=0;i<9;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.22,1.3+Math.random(),5),c);const an=i*.7;sp.position.set(Math.cos(an)*.5*k,3.3*k,-Math.sin(an)*.5*k-.3);sp.rotation.set(-.5+Math.random()*.4,0,Math.cos(an)*.6);g.add(sp)}}
-  if(type==='shard'){const core=EM(0x2b2d3f),c=EM(0x58b8ff,{emissive:0x58b8ff,emissiveIntensity:1,roughness:.2});g.add(ball(.5,core,0,.6,0,1,.8,1.2));for(let i=0;i<9;i++){const an=i*2.4,sp=new THREE.Mesh(new THREE.ConeGeometry(.12,.7+Math.random()*.4,5),i%3?c:EM(0xb070ff,{emissive:0xb070ff,emissiveIntensity:1}));sp.position.set(Math.cos(an)*.35,.7+Math.sin(i)*.2,Math.sin(an)*.45);sp.rotation.set(Math.sin(an)*1.1,0,-Math.cos(an)*1.1);g.add(sp)}for(const[x,z]of[[-.3,.4],[.3,.4],[-.3,-.4],[.3,-.4]]){const l=limb(core,.12,.4,.12,x,.4,z);g.add(l);a.legs.push(l)}g.add(ball(.09,new THREE.MeshBasicMaterial({color:0xffffff}),-.15,.75,.5),ball(.09,new THREE.MeshBasicMaterial({color:0xffffff}),.15,.75,.5))}
-  if(type==='bat'){const m=EM(0x2a2430),w=EM(0x3a3042,{side:THREE.DoubleSide});g.add(ball(.22,m,0,0,0,1,.9,1.3),ball(.08,new THREE.MeshBasicMaterial({color:0xff4040}),-.08,.05,.26),ball(.08,new THREE.MeshBasicMaterial({color:0xff4040}),.08,.05,.26));for(const s of[-1,1]){const p=new THREE.Group(),wg=new THREE.Mesh(new THREE.PlaneGeometry(.8,.4),w);wg.rotation.x=-Math.PI/2;wg.position.x=s*.4;p.add(wg);g.add(p);a.wings.push(p);p.userData.s=s}}
-  if(type==='crawler'){const m=EM(0x2f2a35),c=EM(0xb070ff,{emissive:0xb070ff,emissiveIntensity:1});g.add(ball(.45,m,0,.5,0,1,.7,1.3),ball(.3,m,0,.55,.6),ball(.1,c,0,.75,-.2),ball(.1,c,-.2,.7,-.45),ball(.1,c,.2,.7,-.45),ball(.08,new THREE.MeshBasicMaterial({color:0xff60ff}),-.1,.62,.85),ball(.08,new THREE.MeshBasicMaterial({color:0xff60ff}),.1,.62,.85));for(let i=0;i<8;i++){const s=i<4?-1:1,z=(i%4-1.5)*.35,l=limb(m,.07,.9,.07,s*.4,.5,z);l.rotation.z=s*.9;l.children[0].rotation.z=0;g.add(l);a.legs.push(l)}}
+/* ===== МЕХ: процедурная текстура прядей и слои-оболочки =====================
+   Мех рисуется «оболочками»: несколько копий силуэта выносятся по нормалям,
+   каждая обрезается текстурой прядей (alphaTest) — получается объёмный ворс с
+   тенями между прядями. Слоёв тем больше, чем выше качество (Q.fur), а вдали
+   оболочки отключаются (см. updateEnemy) — так мех не бьёт по мобильным.
+   Всё, что можно, сливается в общие меши: у зверя ~12 вызовов отрисовки. */
+const furTex=tex(cv(128,128,(x,w,h)=>{
+  x.clearRect(0,0,w,h);
+  for(let i=0;i<1500;i++){const bx=R()*w,bw=.7+R()*2.4,top=R()*h*.58;
+    x.fillStyle='rgba(255,255,255,'+(.4+R()*.6).toFixed(2)+')';x.fillRect(bx,top,bw,h-top)}
+  for(let i=0;i<260;i++){const bx=R()*w,bw=1+R()*3.6,top=R()*h*.52;x.clearRect(bx,top,bw,h-top)}
+}),2.6);
+function furShells(geo,o){
+  o=Object.assign({shells:Q.fur||3,len:.07,sway:.02,tint:1},o||{});
+  const grp=new THREE.Group(),shells=[];
+  const base=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.97,metalness:0}));
+  base.castShadow=base.receiveShadow=true;grp.add(base);
+  for(let i=1;i<=o.shells;i++){
+    const t=i/(o.shells+1);
+    const m=new THREE.MeshStandardMaterial({vertexColors:true,map:furTex,alphaTest:.42,roughness:1,metalness:0,side:THREE.DoubleSide});
+    m.color.setScalar((.68+t*.58)*o.tint);
+    m.onBeforeCompile=sh=>{
+      sh.uniforms.uT=windU;
+      sh.uniforms.uH={value:t};sh.uniforms.uLen={value:o.len};sh.uniforms.uSw={value:o.sway};
+      sh.vertexShader='uniform float uT;uniform float uH;uniform float uLen;uniform float uSw;\n'+
+        sh.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+        float fA=sin(position.x*11.0+position.z*7.3)*0.5+0.5;
+        float fB=sin(position.y*15.0+position.x*4.1)*0.5+0.5;
+        transformed+=normal*(uH*uLen*(0.5+fA*1.15)*(0.6+fB*0.85));
+        transformed.x+=sin(uT*1.6+position.y*3.6+position.z*2.7)*uSw*uH*2.6;
+        transformed.z+=cos(uT*1.2+position.y*3.1+position.x*2.2)*uSw*uH*2.6;`);
+    };
+    const mesh=new THREE.Mesh(geo,m);mesh.castShadow=false;mesh.receiveShadow=false;grp.add(mesh);shells.push(mesh);
+  }
+  grp.userData.shells=shells;return grp
+}
+const SPH=(r,a=10,b=8)=>new THREE.SphereGeometry(r,a,b);
+const CONE=(r,h,n=5)=>new THREE.ConeGeometry(r,h,n);
+/* глаза одним мешем: белок/радужка (светится), зрачок и блик — в цветах вершин */
+function eyesMesh(defs,pupilC,hiC){
+  const it=[];
+  for(const d of defs){
+    it.push([SPH(d.r),M(d.x,d.y,d.z,0,0,0,1,1,d.sz||.72),d.col,.02]);
+    it.push([SPH(d.r*.46,8,6),M(d.x,d.y,d.z+d.r*.6,0,0,0,1,1,.55),pupilC==null?0x0b0a09:pupilC,.02]);
+    it.push([SPH(d.r*.2,6,5),M(d.x+d.r*.3,d.y+d.r*.28,d.z+d.r*.7),hiC==null?0xffffff:hiC,.02]);
+  }
+  const m=new THREE.Mesh(mg(it),new THREE.MeshBasicMaterial({vertexColors:true}));m.renderOrder=2;return m
+}
+/* когтистая лапа: бедро, ступня и когти слиты в один меш, но лапа — группа,
+   чтобы анимация походки работала как раньше */
+function paw(furC,x,y,z,len,rad,clawC){
+  const p=new THREE.Group(),it=[];
+  it.push([new THREE.CylinderGeometry(rad*.72,rad*1.12,len,7),M(0,-len/2,0),furC,.08]);
+  it.push([SPH(rad*1.3,8,6),M(0,-len,rad*.45,0,0,0,1.1,.7,1.5),furC,.08]);
+  for(let i=-1;i<=1;i++)it.push([CONE(rad*.3,rad*1.05,5),M(i*rad*.55,-len-.02,rad*1.15,1.35,0,0),clawC,.06]);
+  const mesh=new THREE.Mesh(mg(it),VMAT);mesh.castShadow=true;p.add(mesh);p.position.set(x,y,z);return p
+}
+function mossGeo(shag){
+  const it=[
+    [blob(.5,2,.13,.98),M(0,.66,0,0,0,0,1,.92,1.5),0x56663c,.24],
+    [blob(.33,2,.14,1),M(0,.94,.66),0x60713f,.24],
+    [blob(.19,2,.12,.85),M(0,.86,.98),0x3f4a2b,.2],
+    [blob(.27,1,.17,.62),M(0,1.04,-.24,0,0,0,1.7,.9,1.9),0x4b5832,.24],
+    [blob(.12,1,.14,.75),M(0,.7,-.94,0,0,0,.9,.9,2.2),0x47532e,.2],
+    [blob(.11,1,.16,1.2),M(-.21,1.2,.48,-.5,0,-.4),0x3b4628,.16],
+    [blob(.11,1,.16,1.2),M(.21,1.2,.48,-.5,0,.4),0x3b4628,.16]];
+  if(shag>.35)for(let i=0;i<20;i++){const a=i/20*6.283,y=.34+((i*7)%9)/9*.78;
+    it.push([CONE(.055,.44+((i*13)%7)/7*.36,4),
+      M(Math.cos(a)*.44*(1-y*.35),y,Math.sin(a)*.52*(1-y*.35),Math.cos(a)*.9,0,-Math.sin(a)*.9),0x515f36,.34])}
+  return mg(it)
+}
+function crawlerGeo(){
+  return mg([
+    [blob(.44,2,.16,.72),M(0,.5,0,0,0,0,1,.75,1.25),0x322c3a,.2],
+    [blob(.29,2,.18,1),M(0,.56,.62),0x3b3446,.2],
+    [blob(.14,2,.14,.9),M(0,.46,.9),0x241f2b,.18],
+    [blob(.16,1,.2,.7),M(0,.62,-.7),0x2b2634,.2]])
+}
+function batGeo(){
+  return mg([
+    [blob(.22,2,.18,1),M(0,0,0,0,0,0,1,.9,1.3),0x2f2734,.2],
+    [blob(.13,2,.2,1),M(0,.08,.24),0x3a3040,.2],
+    [blob(.07,1,.3,1.6),M(-.09,.24,.16,-.3,0,-.35),0x241d29,.2],
+    [blob(.07,1,.3,1.6),M(.09,.24,.16,-.3,0,.35),0x241d29,.2]])
+}
+function golemGeo(k,B){
+  const bodyC=B?0x4b4658:0x7b786f,plate=B?0x3f3a4b:0x6f6c64;
+  const it=[
+    [blob(.8*k,2,.16,1.1),M(0,2*k,0),bodyC,.18],
+    [blob(.42*k,2,.14,1),M(0,3.05*k,.06*k),bodyC,.18],
+    [blob(.29*k,2,.16,.7),M(0,2.92*k,.4*k),plate,.18],
+    [blob(.5*k,1,.18,.7),M(0,2.35*k,.32*k,0,0,0,1.5,.85,1),plate,.18],
+    [blob(.3*k,1,.2,.8),M(0,3.15*k,-.16*k,0,0,0,1.3,.6,1.2),bodyC,.18]];
+  for(const s of[-1,1])it.push([blob(.45*k,1,.2,.9),M(s*k,2.62*k,0),bodyC,.18]);
+  return mg(it)
+}
+function mkEnemy(type){const g=new THREE.Group(),a={legs:[],arms:[],wings:[],fur:[]};
+  const bone=0xe8e2cf,clawC=0x241f1a;
+  if(type==='moss'){
+    const shag=R(),body=furShells(mossGeo(shag),{len:.075+shag*.14,sway:.022});
+    g.add(body);a.fur.push(body);
+    g.add(eyesMesh([{x:-.15,y:.98,z:1.04,r:.1,col:0xffe45a,sz:.8},{x:.15,y:.98,z:1.04,r:.1,col:0xffe45a,sz:.8}]));
+    const det=[[SPH(.05),M(0,.9,1.14),0x17140f],[BOX,M(-.15,1.1,1.02,0,0,-.3,.2,.05,.12),0x2a241c],[BOX,M(.15,1.1,1.02,0,0,.3,.2,.05,.12),0x2a241c]];
+    for(let i=0;i<4;i++)det.push([CONE(.02,.09,4),M((i-1.5)*.055,.8,1.06,Math.PI,0,0),bone]);
+    const dm=new THREE.Mesh(mg(det),VMAT);g.add(dm);
+    for(const[x,z]of[[-.3,.42],[.3,.42],[-.3,-.5],[.3,-.5]]){const l=paw(0x3e4a2a,x,.62,z,.5,.13,clawC);g.add(l);a.legs.push(l)}
+  }
+  if(type==='guardian'||type==='boss'){
+    const B=type==='boss',k=B?2.2:1,bodyC=B?0x4b4658:0x7b786f;
+    const body=furShells(golemGeo(k,B),{len:.055,sway:.015,tint:B?1:.95});
+    g.add(body);a.fur.push(body);
+    const cry=[[SPH(.3*k,10,8),M(0,2.2*k,.62*k,0,0,0,1,.8,.5),0xd0b0ff]];
+    const nSp=B?13:7;
+    for(let i=0;i<nSp;i++){const an=i/nSp*6.283+((i*5)%7)*.21;
+      cry.push([CONE(.2*k,(1.1+((i*11)%6)/6*.9)*k,5),
+        M(Math.cos(an)*.46*k,3.28*k,Math.sin(an)*.46*k-.28*k,-.45+((i*3)%5)/5*.3,0,Math.cos(an)*.6),B?0xb070ff:0x58b8ff])}
+    const cm=new THREE.Mesh(mg(cry),new THREE.MeshBasicMaterial({vertexColors:true}));g.add(cm);
+    g.add(eyesMesh([{x:-.15*k,y:3.05*k,z:.42*k,r:.1*k,col:B?0xff80ff:0x7fe9ff,sz:.78},{x:.15*k,y:3.05*k,z:.42*k,r:.1*k,col:B?0xff80ff:0x7fe9ff,sz:.78}],0x120a1a));
+    const det=[[BOX,M(-.15*k,3.2*k,.4*k,0,0,-.32,.24*k,.06*k,.16*k),0x241f1a],[BOX,M(.15*k,3.2*k,.4*k,0,0,.32,.24*k,.06*k,.16*k),0x241f1a]];
+    for(let i=0;i<4;i++)det.push([CONE(.03*k,.12*k,4),M((i-1.5)*.09*k,2.84*k,.5*k,Math.PI,0,0),bone]);
+    g.add(new THREE.Mesh(mg(det),VMAT));
+    for(const s of[-1,1]){
+      const ar=new THREE.Group(),ai=[];
+      ai.push([new THREE.CylinderGeometry(.19*k,.23*k,1.6*k,8),M(0,-.8*k,0),bodyC,.06]);
+      ai.push([SPH(.42*k,9,7),M(0,-1.65*k,0),bodyC,.06]);
+      for(let i=-1;i<=1;i++)ai.push([CONE(.12*k,.45*k,5),M(i*.2*k,-2*k,.16*k,Math.PI-.45,0,0),clawC]);
+      const am=new THREE.Mesh(mg(ai),VMAT);am.castShadow=true;ar.add(am);
+      ar.position.set(s*1*k,2.7*k,0);g.add(ar);a.arms.push(ar);
+      const l=paw(B?0x454052:0x716e66,s*.45*k,1.3*k,0,1.3*k,.34*k,clawC);g.add(l);a.legs.push(l)}
+    if(B){const hd=new THREE.Group();hd.position.set(0,2.9*k,.3*k);g.add(hd);a.head=hd}
+  }
+  if(type==='crawler'){
+    const body=furShells(crawlerGeo(),{len:.055,sway:.016,shells:Math.max(1,(Q.fur||3)-1)});
+    g.add(body);a.fur.push(body);
+    const eyes=[];for(const s of[-1,1])for(let i=0;i<3;i++)eyes.push({x:s*(.06+i*.09),y:.62+i*.02,z:.86-i*.06,r:.045,col:0xff60ff});
+    g.add(eyesMesh(eyes,0x2a0020));
+    const det=[];for(let i=-1;i<=1;i++)det.push([CONE(.026,.14,4),M(i*.07,.34,1.02,Math.PI,0,0),bone]);
+    g.add(new THREE.Mesh(mg(det),VMAT));
+    for(let i=0;i<8;i++){const s=i<4?-1:1,z=(i%4-1.5)*.35,l=limb(EM(0x241f26,{roughness:.95}),.07,.9,.07,s*.4,.5,z);l.rotation.z=s*.9;l.children[0].rotation.z=0;g.add(l);a.legs.push(l)}
+  }
+  if(type==='bat'){
+    const body=furShells(batGeo(),{len:.05,sway:.03,tint:.9});
+    g.add(body);a.fur.push(body);
+    g.add(eyesMesh([{x:-.08,y:.06,z:.24,r:.055,col:0xff5555},{x:.08,y:.06,z:.24,r:.055,col:0xff5555}],0x1a0505));
+    const det=[];for(const s of[-1,1])det.push([CONE(.018,.07,4),M(s*.05,-.02,.28,Math.PI,0,0),bone]);
+    g.add(new THREE.Mesh(mg(det),VMAT));
+    for(const s of[-1,1]){const p=new THREE.Group(),wg=new THREE.Mesh(new THREE.PlaneGeometry(.8,.4),EM(0x3a3042,{side:THREE.DoubleSide}));wg.rotation.x=-Math.PI/2;wg.position.x=s*.4;p.add(wg);g.add(p);a.wings.push(p);p.userData.s=s}
+  }
+  if(type==='shard'){
+    const it=[[blob(.5,2,.14,.8),M(0,.6,0,0,0,0,1,.8,1.2),0x2b2d3f,.2]];
+    for(let i=0;i<11;i++){const an=i*2.4;
+      it.push([CONE(.12,.7+((i*7)%5)/5*.5,5),M(Math.cos(an)*.35,.7+Math.sin(i)*.2,Math.sin(an)*.45,Math.sin(an)*1.1,0,-Math.cos(an)*1.1),i%3?0x58b8ff:0xb070ff])}
+    const cm=new THREE.Mesh(mg(it),new THREE.MeshBasicMaterial({vertexColors:true}));g.add(cm);
+    for(const[x,z]of[[-.3,.4],[.3,.4],[-.3,-.4],[.3,-.4]]){const l=limb(EM(0x2b2d3f,{roughness:.9}),.12,.4,.12,x,.4,z);g.add(l);a.legs.push(l)}
+    g.add(eyesMesh([{x:-.13,y:.78,z:.5,r:.085,col:0x9fe8ff},{x:.13,y:.78,z:.5,r:.085,col:0x9fe8ff}],0x0a1622));
+    const det=[];for(let i=0;i<3;i++)det.push([CONE(.026,.1,4),M((i-1)*.06,.6,.56,Math.PI,0,0),0xe8f4ff]);
+    g.add(new THREE.Mesh(mg(det),VMAT));
+  }
   const bg=new THREE.Sprite(hpBg),fl=new THREE.Sprite(hpMat);bg.scale.set(1.3,.13,1);fl.scale.set(1.26,.09,1);bg.center.set(.5,.5);fl.center.set(0,.5);bg.visible=fl.visible=false;bg.renderOrder=10;fl.renderOrder=11;g.add(bg,fl);return{g,a,bg,fl}}
 function spawnEnemy(type,x,z,o={}){const d=ET[type],m=mkEnemy(type),sc=type==='boss'?1:1;scene.add(m.g);const e=Object.assign({type,x,z,y:groundAt(x,z),hp:d.hp,max:d.hp,yaw:R()*6.28,state:'idle',cd:1,wind:0,knx:0,knz:0,hx:x,hz:z,wt:0,wx:x,wz:z,moving:false,g:m.g,a:m.a,bg:m.bg,fl:m.fl,ph:R()*6,dead:false,deathT:0,hitT:0,zone:o.zone||zone,sc,flyY:3},d,o);e.max=e.hp;e.hpOff=e.h+.5;m.g.position.set(x,e.y,z);enemies.push(e);return e}
 function hurtEnemy(e,dmg,dx,dz,crit){if(e.dead)return;e.hp-=dmg;e.hitT=.18;e.state='chase';const kb=e.type==='boss'?1.2:e.type==='guardian'?2.2:5;e.knx=dx*kb;e.knz=dz*kb;dmgText(e.x,e.y+e.h+.3,e.z,Math.round(dmg),crit);e.bg.visible=e.fl.visible=true;
@@ -988,7 +1210,7 @@ function killEnemy(e){const cn=1+Math.floor(Math.random()*3);for(let i=0;i<cn;i+
   questTick()}
 function updateEnemy(e,dt,t){
   if(e.dead){e.deathT+=dt;e.g.scale.setScalar(Math.max(.01,1-e.deathT/.9));e.g.position.y-=dt*.5;if(e.deathT>.9){scene.remove(e.g);e.gone=true}return}
-  if(e.zone!==zone){e.g.visible=false;return}e.g.visible=true;const dx=P.x-e.x,dz=P.z-e.z,d=Math.hypot(dx,dz);if(d>110&&e.state==='idle'){return}
+  if(e.zone!==zone){e.g.visible=false;return}e.g.visible=true;const dx=P.x-e.x,dz=P.z-e.z,d=Math.hypot(dx,dz);/* LOD: вблизи все слои меха, на средней дистанции — меньше, издалека монстр не рисуется вовсе (экономия вызовов отрисовки на мобильных). */const lodNear=d<32,lodFar=d<92||e.state==='chase';e.g.visible=lodFar;if(!lodFar)return;if(e.a.fur&&e.a.fur.length){e.lodT=(e.lodT||0)-dt;if(e.lodT<=0){e.lodT=.4;const q=Q.fur||3,near=d<34,few=d<58?q:Math.max(1,q-2);for(const f of e.a.fur){const sh=f.userData.shells;for(let i=0;i<sh.length;i++)sh[i].visible=near&&i<few}}}
   e.cd-=dt;e.hitT-=dt;let tx=null,tz=null,sp=0;
   if(e.state==='idle'){e.wt-=dt;if(e.wt<0){e.wt=rr(2,5);e.wx=e.hx+rr(-e.wr,e.wr);e.wz=e.hz+rr(-e.wr,e.wr);e.moving=Math.random()<.7}if(e.moving&&Math.hypot(e.wx-e.x,e.wz-e.z)>1){tx=e.wx;tz=e.wz;sp=e.speed*.35}if(d<e.detect&&!P.dead){e.state='chase';if(e.type==='boss'){$('boss').style.display='block'}}}
   else{if(d>e.detect*2.4){e.state='idle';if(e.type==='boss'){e.hp=e.max;$('boss').style.display='none'}}else{tx=P.x;tz=P.z;sp=e.speed*(e.type==='boss'&&e.hp<e.max*.5?1.35:1);if(e.wind>0){sp=0;e.wind-=dt;e.pose=1;if(e.wind<=0){e.pose=0;const rg=e.range*(e.type==='boss'?1.5:1.35);if(d<rg&&Math.abs(P.y-e.y)<(e.fly?3:3.2))hurtPlayer(e.dmg,e.x,e.z);if(e.type==='boss'){for(let i=0;i<30;i++){const an=i/30*6.28;fxDust.emit(e.x+Math.cos(an)*3,e.y+.3,e.z+Math.sin(an)*3,Math.cos(an)*5,rr(.5,2),Math.sin(an)*5,.7,.7,.4,1)}sfx.boom()}e.cd=e.atkCd||e.cd0}}else if(d<e.range&&e.cd<=0){e.cd0=ET[e.type].cd;e.atkCd=e.cd0;e.wind=e.atk}}
@@ -1263,10 +1485,89 @@ function faceMesh(hair,face){
 
   const m=new THREE.Mesh(new THREE.PlaneGeometry(.36,.36),new THREE.MeshStandardMaterial({map:faceCache[k],transparent:true,alphaTest:.08,roughness:.72,metalness:0}));
   m.position.set(0,1.6,.205);return m}
-function mkHuman(tun,hair,hat,face){const g=new THREE.Group(),sk=EM(0xd7a176),tm=EM(tun),pm=EM(0x3a2f27),hm=EM(hair),a={};const torso=new THREE.Mesh(new THREE.BoxGeometry(.5,.65,.3),tm);torso.position.y=1.05;torso.castShadow=true;g.add(torso);
-  g.add(ball(.2,sk,0,1.6,0),(()=>{const h=ball(.22,hm,0,1.66,-.04,1,.8,1);return h})());g.add(faceMesh(hair,face));if(hat){const c=new THREE.Mesh(new THREE.ConeGeometry(.3,.35,8),EM(hat));c.position.set(0,1.9,0);g.add(c)}
-  a.lL=limb(pm,.18,.7,.2,-.13,.72,0);a.lR=limb(pm,.18,.7,.2,.13,.72,0);a.aL=limb(tm,.14,.6,.16,-.34,1.35,0);a.aR=limb(tm,.14,.6,.16,.34,1.35,0);g.add(a.lL,a.lR,a.aL,a.aR);
-  const sp=document.createElement('canvas');sp.width=sp.height=64;const c=sp.getContext('2d');c.fillStyle='#f2c14e';c.font='bold 54px Georgia,serif';c.textAlign='center';c.fillText('!',32,52);const mk=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sp),depthTest:false}));mk.scale.set(.5,.5,1);mk.position.y=2.35;mk.renderOrder=12;g.add(mk);a.mark=mk;return{g,a}}
+/* Человек: объёмное тело с естественными пропорциями (плечи шире бёдер,
+   талия, предплечья тоньше плеч), одежда со складками, поясом, воротником и
+   обувью; голова — череп, скулы, подбородок, нос, уши, брови, объёмные волосы,
+   а лицо (детальный рисунок из faceMesh) натянуто на изогнутую «маску», а не
+   висит плоской наклейкой. Всё, что не анимируется, слито в один меш. */
+function mkHuman(tun,hair,hat,face){
+  const g=new THREE.Group(),a={};
+  const seed=Math.abs((typeof face==='number'?face:1)|0)%7;
+  const skinC=[0xd7a176,0xe0b08a,0xc99268,0xb9825a,0xe6bd9a,0xcf9a70,0xbf8a61][seed];
+  const skin=EM(skinC,{roughness:.78}),tunic=EM(tun,{roughness:.92}),
+        pants=EM(0x3a2f27,{roughness:.96}),leather=EM(0x4a3625,{roughness:.78}),
+        hairM=EM(hair,{roughness:.95}),boot=EM(0x2e241c,{roughness:.82});
+  const bodyIt=[
+    [SPH(.27,12,10),M(0,1.22,0,0,0,0,1.02,1.16,.68),tun,.05],          /* грудь */
+    [SPH(.22,12,10),M(0,1.0,0,0,0,0,1.0,.92,.74),tun,.05],             /* живот */
+    [SPH(.21,12,10),M(0,.87,0,0,0,0,1.06,.82,.78),tun,.05],            /* бёдра */
+    [SPH(.115,9,7),M(-.235,1.4,0,0,0,0,1.1,.8,1),tun,.05],             /* плечи */
+    [SPH(.115,9,7),M(.235,1.4,0,0,0,0,1.1,.8,1),tun,.05],
+    [new THREE.CylinderGeometry(.085,.075,.14,10),M(0,1.49,0),skinC,.03],   /* шея */
+    [new THREE.CylinderGeometry(.1,.12,.07,12),M(0,1.44,0,0,0,0,1,.7,1),0x2b2620,.03], /* воротник */
+    [new THREE.CylinderGeometry(.215,.225,.075,14),M(0,.945,0,0,0,0,1,1,.76),0x4a3625,.03], /* пояс */
+    [BOX,M(0,.945,.165,0,0,0,.09,.08,.03),0xc9a24a,.02],               /* пряжка */
+    [new THREE.CylinderGeometry(.245,.3,.3,12),M(0,.78,0,0,0,0,1,1,.8),tun,.05]]; /* подол */
+  for(let i=0;i<7;i++){const an=i/7*6.283;                                  /* складки подола */
+    bodyIt.push([BOX,M(Math.cos(an)*.27,.78,Math.sin(an)*.215,0,-an,0,.035,.3,.05),0x000000])}
+  const body=new THREE.Mesh(mg(bodyIt),VMAT);body.castShadow=true;body.receiveShadow=true;g.add(body);
+
+  /* голова */
+  const headAt=1.6,hIt=[
+    [SPH(.2,14,12),M(0,0,0,0,0,0,.95,1.06,.98),skinC,.03],            /* череп */
+    [SPH(.135,10,8),M(0,-.1,.055,0,0,0,1.05,.9,.95),skinC,.03],       /* подбородок/челюсть */
+    [SPH(.07,8,6),M(-.185,-.02,0,0,0,0,.8,1,.8),skinC,.03],           /* уши */
+    [SPH(.07,8,6),M(.185,-.02,0,0,0,0,.8,1,.8),skinC,.03],
+    [SPH(.045,8,6),M(0,-.02,.185,0,0,0,1.0,1.5,1.25),skinC,.03],      /* нос */
+    [BOX,M(0,.115,.16,0,0,0,.24,.045,.09),skinC,.02],                 /* надбровье */
+    [new THREE.CylinderGeometry(.055,.06,.09,8),M(0,-.2,.02),skinC,.03]];
+  const head=new THREE.Group();head.position.y=headAt;
+  const hm=new THREE.Mesh(mg(hIt),VMAT);hm.castShadow=true;head.add(hm);
+  /* лицо — изогнутая маска вместо плоской наклейки */
+  const fm=faceMesh(hair,face);
+  const pg=new THREE.PlaneGeometry(.36,.36,8,8),pp=pg.attributes.position;
+  for(let i=0;i<pp.count;i++){const px=pp.getX(i)/.18,py=pp.getY(i)/.18;
+    pp.setZ(i,-(.1*(px*px*.55+py*py*.32)))}
+  pg.computeVertexNormals();
+  const faceM=new THREE.Mesh(pg,fm.material);faceM.position.set(fm.position.x,fm.position.y-headAt,fm.position.z);faceM.renderOrder=1;
+  head.add(faceM);
+  /* волосы: шапка, пряди и (иногда) хвост */
+  const hairIt=[[SPH(.205,12,10),M(0,.045,-.02,0,0,0,1,.95,1.02),hair,.12]];
+  for(let i=0;i<16;i++){const an=i/16*6.283,r=.19;
+    hairIt.push([CONE(.028,.11+((i*5)%4)*.03,4),
+      M(Math.cos(an)*r,.02+((i*3)%5)*.02,Math.sin(an)*r-.01,Math.cos(an)*.7,0,-Math.sin(an)*.7),hair,.2])}
+  if(seed%3===0)hairIt.push([new THREE.CylinderGeometry(.06,.03,.3,8),M(0,-.12,-.2,.3,0,0),hair,.1]);
+  const hw=new THREE.Mesh(mg(hairIt),VMAT);hw.castShadow=true;head.add(hw);
+  if(hat){const hi=[];
+    if(seed%2){hi.push([new THREE.CylinderGeometry(.16,.19,.1,12),M(0,.15,0,0,0,0,1,.9,1),hat,.04]);
+      hi.push([new THREE.CylinderGeometry(.2,.2,.028,16),M(0,.1,0),hat,.04])}
+    else{hi.push([CONE(.19,.26,10),M(0,.19,0),hat,.04]);
+      hi.push([new THREE.CylinderGeometry(.24,.24,.025,14),M(0,.07,0),hat,.04])}
+    const hatM=new THREE.Mesh(mg(hi),VMAT);hatM.castShadow=true;head.add(hatM)}
+  g.add(head);a.head=head;
+
+  /* конечности: бедро-голень-ботинок и плечо-предплечье-кисть */
+  function legM(sx){
+    const it=[[new THREE.CylinderGeometry(.1,.082,.44,9),M(0,-.22,0),0x3a2f27,.05],
+      [new THREE.CylinderGeometry(.082,.07,.42,9),M(0,-.64,0),0x3a2f27,.05],
+      [BOX,M(0,-.87,.045,0,0,0,.15,.1,.28),0x2e241c,.04],
+      [BOX,M(0,-.81,.11,0,0,0,.15,.06,.14),0x241c16,.04]];
+    const leg=new THREE.Group(),m=new THREE.Mesh(mg(it),VMAT);m.castShadow=true;leg.add(m);
+    leg.position.set(sx*.12,.86,0);return leg}
+  function armM(sx){
+    const it=[[new THREE.CylinderGeometry(.075,.062,.36,9),M(0,-.18,0),tun,.05],
+      [new THREE.CylinderGeometry(.062,.05,.34,9),M(0,-.52,0),tun,.05],
+      [new THREE.CylinderGeometry(.058,.052,.05,9),M(0,-.7,0),0x2b2620,.03],
+      [SPH(.058,8,6),M(0,-.76,.01,0,0,0,1,1.15,.85),skinC,.04]];
+    const arm=new THREE.Group(),m=new THREE.Mesh(mg(it),VMAT);m.castShadow=true;arm.add(m);
+    arm.position.set(sx*.25,1.4,0);return arm}
+  a.lL=legM(-1);a.lR=legM(1);a.aL=armM(-1);a.aR=armM(1);g.add(a.lL,a.lR,a.aL,a.aR);
+
+  /* метка задания */
+  const sp=document.createElement('canvas');sp.width=sp.height=64;const c=sp.getContext('2d');
+  if(c){c.fillStyle='#f2c14e';c.font='bold 54px Georgia,serif';c.textAlign='center';c.fillText('!',32,52)}
+  const mk=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(sp),depthTest:false}));
+  mk.scale.set(.5,.5,1);mk.position.y=2.35;mk.renderOrder=12;g.add(mk);a.mark=mk;return{g,a}}
 function addNPC(id,name,x,z,tun,hair,hat,role,face){const m=mkHuman(tun,hair,hat,face);scene.add(m.g);const n={id,name,role,x,z,y:groundAt(x,z),yaw:0,hx:x,hz:z,wx:x,wz:z,wt:rr(1,4),g:m.g,a:m.a,ph:R()*6,panic:0,talking:false,still:false,home:null};n.g.position.set(x,n.y,z);npcs.push(n);
   interactables.push({getPos:()=>[n.x,n.y+1.2,n.z],r:3.2,label:()=>`Поговорить с ${n.name} [E]`,act:()=>talk(n)});return n}
 function initNPCs(){const V=VILLAGE;
@@ -1284,10 +1585,10 @@ function updateNPCs(dt,t){const day=dayF;for(const n of npcs){if(zone!=='surface
   else if(n.panic>0&&near){const ax=n.x-near.x,az=n.z-near.z,l=Math.hypot(ax,az)||1;tx=n.x+ax/l*5;tz=n.z+az/l*5;sp=4.8}
   else if(n.wander){n.wt-=dt;if(day<.12){const a=n.homeA;tx=VILLAGE.x+Math.cos(a)*12;tz=VILLAGE.z+Math.sin(a)*12;if(Math.hypot(tx-n.x,tz-n.z)>2.5)sp=2}else{if(n.wt<0){n.wt=rr(3,8);n.wx=n.hx+rr(-n.wander,n.wander);n.wz=n.hz+rr(-n.wander,n.wander)}if(Math.hypot(n.wx-n.x,n.wz-n.z)>1.2){tx=n.wx;tz=n.wz;sp=1.6}}}
   if(tx!==null&&sp>0){const ax=tx-n.x,az=tz-n.z,l=Math.hypot(ax,az)||1;n.yaw=Math.atan2(ax,az);const p={x:n.x+ax/l*sp*dt,z:n.z+az/l*sp*dt};collide(p,.4);n.x=p.x;n.z=p.z}
-  n.y=groundAt(n.x,n.z);n.ph+=dt*sp*2.4;const w=sp>0?Math.sin(n.ph):0;n.a.lL.rotation.x=w*.6;n.a.lR.rotation.x=-w*.6;n.a.aL.rotation.x=-w*.5;n.a.aR.rotation.x=w*.5;
+  n.y=groundAt(n.x,n.z);n.ph+=dt*sp*2.4;const w=sp>0?Math.sin(n.ph):0;/* походка: шаг, покачивание корпуса и наклон вперёд на бегу */n.a.lL.rotation.x=w*.62;n.a.lR.rotation.x=-w*.62;n.a.aL.rotation.x=-w*.5;n.a.aR.rotation.x=w*.5;n.a.lL.rotation.z=w*.03;n.a.lR.rotation.z=-w*.03;n.bob=Math.abs(Math.sin(n.ph))*.035*Math.min(1,sp/2);if(n.a.head){const look=n.talking?clamp(Math.atan2(P.x-n.x,P.z-n.z)-n.yaw,-.9,.9):Math.sin(t*.7+n.ph)*.16;n.a.head.rotation.y=n.a.head.rotation.y+(look-n.a.head.rotation.y)*Math.min(1,dt*6);n.a.head.rotation.x=n.a.head.rotation.x+((n.talking?-.06:0)-n.a.head.rotation.x)*Math.min(1,dt*4)}n.yawS=n.yawS===undefined?n.yaw:n.yawS+(((n.yaw-n.yawS+Math.PI*3)%(Math.PI*2))-Math.PI)*Math.min(1,dt*7);
   if(n.work==='smith'&&!n.talking&&n.panic<=0){n.a.aR.rotation.x=-1.2+Math.sin(t*7)*.7;n.a.aL.rotation.x=-.5;n.hamT=(n.hamT||0)-dt;if(n.hamT<0){n.hamT=1.1;if(Math.hypot(P.x-n.x,P.z-n.z)<28)sfx.mine('iron');for(let i=0;i<3;i++)fxGlow.emit(n.x+Math.sin(n.yaw)*.8,n.y+1,n.z+Math.cos(n.yaw)*.8,rr(-1,1),rr(.5,2),rr(-1,1),.4,1,.6,.2)}}
   else if(n.still&&sp===0){n.a.aR.rotation.x=Math.sin(t*1.2+n.ph)*.08;n.a.aL.rotation.x=-Math.sin(t*1.2+n.ph)*.08;if(n.id==='tomas')n.a.aR.rotation.z=-.5+Math.sin(t*2)*.2}
-  n.g.position.set(n.x,n.y,n.z);n.g.rotation.y=n.yaw;n.a.mark.visible=hasQuestMark(n)}}
+  n.g.position.set(n.x,n.y+(n.bob||0),n.z);n.g.rotation.y=n.yawS===undefined?n.yaw:n.yawS;n.g.rotation.z=(n.a.lL.rotation.x-n.a.lR.rotation.x)*.012;n.a.mark.visible=hasQuestMark(n)}}
 function hasQuestMark(n){return n.id==='mira'?(mainStep===0||(mainStep>=1&&QD.build.s===0)):n.id==='brann'?(QD.wood.s===0||(QD.wood.s===1&&questGoal('wood')[0]>=8)):n.id==='lena'?(QD.pest.s===0||(QD.pest.s===1&&questGoal('pest')[0]>=5)):n.id==='tomas'?(QD.gems.s===0||(QD.gems.s===1&&questGoal('gems')[0]>=3)):false}
 /* ---- dialogue ---- */
 /* Диалоги уже на русском: английский вариант подставляет общий
