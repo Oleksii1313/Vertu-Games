@@ -98,13 +98,16 @@ function makeEnv(session, opts) {
   check('оверлей не даёт странице «резинить»', /overscroll-behavior:\s*none/.test(overlayCss), overlayCss.slice(0, 90));
   check('оверлей не даёт зумиться двойным тапом', /touch-action:\s*manipulation/.test(overlayCss), null);
   /* Игра идёт от края до края: у оверлея больше нет safe-area-отступов, иначе
-     в ландшафте «челка» вырезала по 44 px слева и справа (чёрные полосы на
-     скриншотах с телефона). Безопасные зоны соблюдает только интерфейс
-     плеера — панель и кнопка «Выйти». */
-  const overlayCssPlain = overlayCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
-  check('оверлей отдаёт игре весь экран (без отступов)', /(^|;)\s*padding:\s*0\s*(;|$)/.test(overlayCssPlain),
-    overlayCss.match(/padding:[^;}]*/) ? overlayCss.match(/padding:[^;}]*/)[0] : 'нет padding');
+     в ландшафте «челка» вырезала по 44 px слева и справа (чёрные полосы).
+     Безопасные зоны соблюдают только панель, кнопка «Выйти» и кнопки игры —
+     им платформа отправляет размеры выреза сообщением vg:safe. */
+  const overlayPlain = overlayCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+  check('оверлей отдаёт игре весь экран (без отступов)', /(^|;)\s*padding:\s*0\s*(;|$)/.test(overlayPlain),
+    overlayPlain.match(/padding:[^;}]*/) ? overlayPlain.match(/padding:[^;}]*/)[0] : 'нет padding');
   check('оверлей не режет кадр под «челку»', !/safe-area-inset-(left|right)/.test(overlayCss), null);
+  check('высота кадра считается по видимой области', /function syncPlayerSize\(/.test(PLATFORM) && /visualViewport/.test(PLATFORM), null);
+  check('панель браузера сворачивается при старте игры', /function collapseBrowserChrome\(/.test(PLATFORM), null);
+  check('вырез экрана уходит в игру сообщением vg:safe', /type = 'vg:safe'/.test(PLATFORM), null);
   const wrapCss = rule('.play-frame-wrap');
   check('рамка кадра держит прокрутку внутри себя', /overscroll-behavior:\s*contain/.test(wrapCss), wrapCss.slice(0, 90));
   const playingCss = rule('body.vg-playing');
@@ -157,8 +160,13 @@ function makeEnv(session, opts) {
      оставаться ни шапки сайта, ни адресной строки в кадре. */
   check('страница зафиксирована под игрой (не уезжает и не прокручивается)',
     doc.body.style.position === 'fixed', doc.body.style.position);
+  /* Высота теперь задаётся в пикселях по visualViewport (иначе на телефоне
+     низ игры уезжает под панель браузера), но прибит оверлей по-прежнему
+     инлайном — на случай, если CSS не применился. */
   check('оверлей прибит к экрану инлайном, а не только классом',
-    overlay.style.position === 'fixed' && overlay.style.width === '100%' && overlay.style.height === '100%',
+    overlay.style.position === 'fixed' && overlay.style.width === '100%'
+      && (/^100%$/.test(overlay.style.height) || /^\d+px$/.test(overlay.style.height))
+      && Number(parseFloat(overlay.style.height)) > 0,
     overlay.getAttribute('style'));
   check('в истории появилась запись игры (кнопка «Назад» вернёт на платформу)',
     typeof signed.w.history.length === 'number' && signed.w.history.length >= 2, signed.w.history.length);

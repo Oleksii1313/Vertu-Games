@@ -222,18 +222,16 @@ def main():
 
         # Flappy Bird: портретное поле живёт в движке, а не в CSS-локе.
         flappy = (ROOT / 'games/flappy.html').read_text(encoding='utf-8')
-        # Поле Flappy больше не заперто в фиксированное соотношение сторон: мир
-        # строится по пропорциям кадра, поэтому полос по бокам не остаётся ни в
-        # портрете, ни в ландшафте.
-        check('Flappy: у сцены нет фиксированного соотношения сторон',
-              'aspect-ratio:3/5' not in flappy and 'class="stage"' in flappy)
-        # Высота мира выбирается из кадра, а ширина добирается до пропорций
-        # кадра: масштаб одинаков по обеим осям, вертикальные константы
-        # (гравитация, взмах, зазор) масштабируются вместе с высотой.
-        check('Flappy: мир строится по пропорциям кадра (без чёрных полос)',
-              'let W=384' in flappy and 'const BASE_H=640' in flappy
+        # Портретное поле стало шире (3:5 вместо 9:16), но осталось вертикальным:
+        # мир по-прежнему вписывается по min() и не зависит от поворота экрана.
+        check('Flappy: вертикальная сцена 3:5', 'aspect-ratio:3/5' in flappy and 'class="stage"' in flappy)
+        # Мир Flappy подстраивает высоту под экран: пропорции мира совпадают с
+        # пропорциями доступной области, масштаб всё равно считается по min(),
+        # а вертикальные константы масштабируются вместе с высотой.
+        check('Flappy: мир подстраивается под экран и вписывается по min()',
+              'const W=384' in flappy and 'const BASE_H=640' in flappy
               and 'Math.min(availW/W, availH/H)' in flappy
-              and 'Math.round(nextH*(availW/availH))' in flappy
+              and 'Math.round(W*(availH/availW))' in flappy
               and 'applyMetrics()' in flappy)
         check('Flappy: сцена и управление занимают весь экран без боковых полей',
               'id="flappy-immersive"' in flappy
@@ -344,8 +342,9 @@ def main():
         check('все страницы объявляют viewport с viewport-fit=cover',
               not pages_no_viewport, str(pages_no_viewport))
         css = (ROOT / 'assets/vg/css/platform.css').read_text(encoding='utf-8')
-        # Игра идёт от края до края (у оверлея нет отступов), а безопасные зоны
-        # соблюдают органы управления плеера: панель и кнопка «Выйти».
+        # Кадр игры отдаётся целиком (без отступов), а безопасные зоны
+        # соблюдают панель, кнопка «Выйти» и кнопки самой игры: платформа
+        # измеряет вырез и отправляет его в кадр сообщением vg:safe.
         check('органы управления плеера учитывают безопасные зоны (safe-area-inset)',
               'safe-area-inset-top' in css and 'safe-area-inset-left' in css)
         check('кадр игры отдаётся целиком, без боковых отступов',

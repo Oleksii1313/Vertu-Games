@@ -225,12 +225,12 @@ SCREENS.forEach((screen) => {
   w.close();
 });
 
-/* ============================== «плавающий» мир: flappy и doodle ==========
-   У этих игр логическая ширина мира была зашита (384 и 420), поэтому на
-   широком экране поле вписывалось по высоте и по бокам оставались чёрные
-   полосы. Теперь мир строится по соотношению сторон кадра: проверяем, что
-   холст занимает кадр целиком, а пропорции мира совпадают с пропорциями
-   доступной площади — значит масштаб одинаков по обеим осям и полос нет. */
+/* ==================== портретные игры: flappy и doodle ====================
+   Поле этих игр по замыслу вертикальное (как в оригинале): в широком кадре
+   оно вписывается по высоте и стоит по центру, а не растягивается и не
+   искажается. Проверяем, что поле не выходит за кадр, заполняет высоту,
+   остаётся вертикальным и масштаб по обеим осям одинаковый. */
+const MOCK_CHROME_SUM = CHROME.info + CHROME.controls + CHROME.help;
 [['flappy.html', 'flappy'], ['doodle.html', 'doodle']].forEach(([file, name]) => {
   SCREENS.forEach((screen) => {
     const env = boot(file, screen);
@@ -238,28 +238,30 @@ SCREENS.forEach((screen) => {
     const doc = w.document;
     const c = doc.querySelector('canvas');
     if (!c) { check(name + ': холст найден', false); w.close(); return; }
-    const chrome = chromeOf(doc);
-    const availH = screen.h - Math.min(chrome, Math.round(screen.h * 0.45));
     const rectBox = c.getBoundingClientRect();
     const cssW = parseFloat(c.style.width) || Math.round(rectBox.width);
     const cssH = parseFloat(c.style.height) || Math.round(rectBox.height);
     const label = name + ' ' + screen.w + '×' + screen.h;
-    check(label + ': холст занимает всю ширину кадра', Math.abs(cssW - screen.w) <= 2, { cssW, frame: screen.w });
-    /* Панели самой игры (счёт, кнопки) — её собственный интерфейс, а не полосы:
-       холст должен забрать всё, что осталось под ними. В модели это кадр минус
-       панели (см. CHROME в моке), у flappy холст меряется по .stage напрямую. */
-    const MOCK_CHROME_SUM = CHROME.info + CHROME.controls + CHROME.help;
-    check(label + ': холст занимает всю высоту, оставшуюся от панелей',
-      cssH >= screen.h - MOCK_CHROME_SUM - 2 && cssH <= screen.h + 1,
-      { cssH, frame: screen.h, panels: MOCK_CHROME_SUM });
+    check(label + ': поле не выходит за кадр', cssW <= screen.w + 1 && cssH <= screen.h + 1, { cssW, cssH });
+    check(label + ': поле занимает всю доступную высоту',
+      cssH >= screen.h - MOCK_CHROME_SUM - 3, { cssH, frame: screen.h, panels: MOCK_CHROME_SUM });
     const world = env.fills.length ? env.fills[env.fills.length - 1] : [0, 0];
-    /* Полосы внутри поля исчезают тогда и только тогда, когда пропорции мира
-       совпадают с пропорциями холста: масштаб по X и по Y один и тот же. */
-    const boxAspect = cssW / cssH;
     const worldAspect = world[0] / (world[1] || 1);
-    check(label + ': пропорции мира совпадают с холстом (нет полос)',
-      Math.abs(worldAspect - boxAspect) / boxAspect < 0.02,
-      { world, worldAspect: +worldAspect.toFixed(3), boxAspect: +boxAspect.toFixed(3) });
+    if (screen.w > screen.h) {
+      /* В широком кадре поле остаётся вертикальным и встаёт по центру — так
+         игра выглядит как в оригинале, без растягивания на всю ширину. */
+      check(label + ': в ландшафте поле остаётся вертикальным', worldAspect < 1.05,
+        { world, worldAspect: +worldAspect.toFixed(3) });
+    }
+    if (name === 'flappy') {
+      /* У Flappy холст — это и есть мир: пропорции обязаны совпадать, иначе
+         картинка растянется. Doodle рисует мир по центру холста через свой
+         масштаб (ox/oy), поэтому там проверяется только vertical-ность выше. */
+      const boxAspect = cssW / cssH;
+      check(label + ': пропорции мира совпадают с холстом (без искажений)',
+        Math.abs(worldAspect - boxAspect) / boxAspect < 0.03,
+        { world, worldAspect: +worldAspect.toFixed(3), boxAspect: +boxAspect.toFixed(3) });
+    }
     check(label + ': ошибок JavaScript нет', env.errors.length === 0, env.errors.slice(0, 2));
     w.close();
   });
