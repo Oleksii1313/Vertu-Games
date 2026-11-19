@@ -1138,8 +1138,11 @@ function furShells(geo,o){
   }
   grp.userData.shells=shells;return grp
 }
-const SPH=(r,a=10,b=8)=>new THREE.SphereGeometry(r,a,b);
-const CONE=(r,h,n=5)=>new THREE.ConeGeometry(r,h,n);
+/* Хелперы объявлены функциями, а не const-стрелками: деревня строит
+   реквизит ещё до этой строки, и в браузере const давал
+   «Cannot access 'CONE' before initialization» — игра не запускалась. */
+function SPH(r,a=10,b=8){return new THREE.SphereGeometry(r,a,b)}
+function CONE(r,h,n=5){return new THREE.ConeGeometry(r,h,n)}
 /* глаза одним мешем: белок/радужка (светится), зрачок и блик — в цветах вершин */
 function eyesMesh(defs,pupilC,hiC){
   const it=[];
