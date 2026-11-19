@@ -1251,6 +1251,8 @@
     overlay.style.width = '100%';
     overlay.style.height = '100%';
     overlay.style.zIndex = '2147483000';
+    collapseBrowserChrome();
+    syncPlayerSize();
     lockPageForPlay();
     pushPlayHistory();
     /* Полный экран просим на всех устройствах, не только на телефоне:
@@ -2042,9 +2044,58 @@
     window.addEventListener('orientationchange', function () { setTimeout(postSafeInsets, 320); }, { passive: true });
   }
 
+  /* --------------------------------------------------- высота кадра плеера */
+  /*
+   * Адресная строка и панели мобильного браузера уменьшают видимую область.
+   * 100vh при этом больше экрана (низ игры уезжает под панель браузера), а
+   * 100dvh поддерживают не все встроенные браузеры (Telegram, старые WebView).
+   * Поэтому высоту оверлея считаем по visualViewport — это ровно то, что видно
+   * на телефоне сейчас. Игра занимает всю видимую область, ничего не обрезано
+   * и не «начинается ниже».
+   */
+  function syncPlayerSize() {
+    var overlay = $('#playOverlay');
+    if (!overlay || !overlay.classList.contains('open')) return;
+    var vv = window.visualViewport;
+    var h = Math.round((vv && vv.height) || window.innerHeight || 0);
+    if (h <= 0) return;
+    var top = Math.round((vv && vv.offsetTop) || 0);
+    if (overlay.style.height !== h + 'px') overlay.style.height = h + 'px';
+    overlay.style.top = top + 'px';
+    overlay.style.bottom = 'auto';
+  }
+
+  /* Свернуть адресную строку там, где браузер это разрешает: короткий
+     «прокрут» вниз-вверх убирает панель Chrome на Android и даёт игре больше
+     места. На iOS Safari это не сработает — там остаётся visualViewport. */
+  function collapseBrowserChrome() {
+    try {
+      if ((window.scrollY || 0) <= 1) window.scrollTo(0, 1);
+    } catch (e) {}
+    setTimeout(function () {
+      try { window.scrollTo(0, 0); } catch (e) {}
+      syncPlayerSize();
+    }, 140);
+  }
+
+  if (!syncPlayerSize.bound) {
+    syncPlayerSize.bound = true;
+    window.addEventListener('resize', function () { setTimeout(syncPlayerSize, 60); }, { passive: true });
+    window.addEventListener('orientationchange', function () { setTimeout(syncPlayerSize, 260); }, { passive: true });
+    /* Выезд/уход панели браузера не всегда присылает resize окна, зато всегда
+       меняет visualViewport. */
+    if (window.visualViewport) {
+      try {
+        window.visualViewport.addEventListener('resize', function () { setTimeout(syncPlayerSize, 60); }, { passive: true });
+        window.visualViewport.addEventListener('scroll', function () { syncPlayerSize(); }, { passive: true });
+      } catch (e) {}
+    }
+  }
+
   function ensureFrameFills() {
     var overlay = $('#playOverlay');
     if (!overlay || !overlay.classList.contains('open')) return;
+    syncPlayerSize();
     var viewW = window.innerWidth || 0;
     var viewH = window.innerHeight || 0;
     var box = overlay.getBoundingClientRect ? overlay.getBoundingClientRect() : null;
@@ -2052,7 +2103,9 @@
       overlay.style.position = 'fixed';
       overlay.style.inset = '0';
       overlay.style.width = '100%';
-      overlay.style.height = '100%';
+      /* Высоту не навязываем: её точнее всех знает visualViewport — им и
+         занимается syncPlayerSize() ниже (вызов в начале функции). */
+      syncPlayerSize();
     }
     var wrap = overlay.querySelector('.play-frame-wrap');
     var frame = overlay.querySelector('.play-frame');
@@ -2180,6 +2233,8 @@
     if (!overlay) return;
     overlay.classList.remove('open');
     overlay.classList.remove('immersive', 'bar-hidden', 'pseudo-full');
+    overlay.style.height = '';
+    overlay.style.top = '';
     overlay.removeAttribute('data-fs-retry');
     updateFsFloat();
     if (playerBarTimer) { clearTimeout(playerBarTimer); playerBarTimer = 0; }
