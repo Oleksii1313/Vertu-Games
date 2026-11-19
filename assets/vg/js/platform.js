@@ -1241,7 +1241,13 @@
     VG.activeGame = game;
     // Автофокус: как только игра загрузилась — сразу отдаём ей клавиатуру.
     frame.onload = function () { ensureGameFocus(frame); };
-    frame.src = game.file + '?lang=' + langParam + (LOW_END ? '&perf=low' : '');
+    /* К файлу игры добавляем версию сборки: после деплоя браузер обязан
+       взять свежий файл, а не страницу из кеша. */
+    var buildMeta = document.querySelector('meta[name="vert-build"]');
+    var buildTag = buildMeta && buildMeta.getAttribute('content');
+    frame.src = game.file + '?lang=' + langParam +
+      (LOW_END ? '&perf=low' : '') +
+      (buildTag ? '&v=' + encodeURIComponent(buildTag) : '');
     if (focusTimer) clearTimeout(focusTimer);
     focusTimer = setTimeout(function () { ensureGameFocus(frame); }, 260);
     bindGameKeyBridge();
