@@ -478,9 +478,13 @@ body.vg-pseudo-full .site-header,body.vg-pseudo-full .site-footer{display:none!i
 .play-overlay:fullscreen .play-bar:hover,.play-overlay:fullscreen .play-bar:focus-within,
 .play-overlay.pseudo-full .play-bar:hover,.play-overlay.pseudo-full .play-bar:focus-within{opacity:1}
 /* Телефон: панель плеера компактная, чтобы у игры оставалась высота экрана. */
+/* Телефон в портрете: панель плеера — тонкая полупрозрачная полоса, чтобы у
+   игры оставался почти весь экран. Кнопки под пальцем и не спорят с HUD игры. */
 @media (max-width:560px){
-  .play-bar{padding:6px 10px;gap:8px;padding-top:calc(6px + env(safe-area-inset-top,0px))}
-  .play-bar h3{font-size:12px}
+  .play-bar{padding:3px 8px;gap:6px;padding-top:calc(3px + env(safe-area-inset-top,0px));
+    background:rgba(5,8,12,.72);border-bottom:1px solid rgba(255,255,255,.06)}
+  .play-bar h3{font-size:11px}
+  .play-bar .balance-pill{font-size:11px;padding:3px 7px}
   .play-bar .reward-chip{display:none}
   .play-bar .btn{padding:6px 10px;font-size:11px}
   .play-bar .balance-pill{font-size:11px;padding:4px 8px}

@@ -10,7 +10,7 @@
 
    Что даёт игроку:
      • инвентарь из 14 материалов с количеством, категориями и быстрым хотбаром;
-     • прозрачный призрак блока там, куда смотрит игрок, и сетка прицела;
+     • прицел по лучу из камеры (без рисованных превью и подсветки);
      • точную постановку/снос с проверкой занятости, запаса и «в себе»;
      • чертежи (дом, башня, мост, стена, лестница, крыша, забор, окно, дверь);
      • отмену последнего действия, сохранение мира в localStorage по нику;
@@ -58,17 +58,10 @@ var mcbState = {
   layout: null,
   loaded: false,
   appliedWorld: null,
-  ghost: null,
-  ghostMats: null,
-  ghostFor: 0,
   aim: null,
-  targetKey: '',
   planKey: null,
   planDir: 0,
-  planSig: '',
-  planMats: null,
-  planMeshes: [],
-  planGeom: null,
+  planBarKey: '',
   disabled: null,
   page: 0,
   saveTimer: 0,
@@ -353,8 +346,6 @@ function mcxBuildPick() {
    призрак «уезжал» бы от перекрестия. Дальше — воксельный DDA (zl) и клетка
    постановки = попадание + нормаль грани. Ничего не берём от позиции игрока. */
 var MCB_REACH = 7;
-var MCB_GHOST_GREEN = 0x86ff9c;
-var MCB_GHOST_RED = 0xff5f5f;
 
 /* Мировая позиция камеры. Берём её прямо из matrixWorld: так расчёт не зависит
    ни от координат игрока, ни от того, есть ли под рукой класс Vector3. */
@@ -450,6 +441,8 @@ function mcbReasonText(reason, detail) {
     'That cell is occupied: a build never overwrites existing blocks.');
   if (reason === 'stock') return detail || mcbT('Не хватает материала.',
     'Not enough material.');
+  if (reason === 'ground') return mcbT('Стройте с земли: наведитесь на поверхность, а не на стену.',
+    'Build from the ground: aim at a surface, not at a wall.');
   if (reason === 'locked') return mcbT('Этот блок отключён администратором.',
     'This block is disabled by the administrator.');
   if (reason === 'notarget') return mcbT('Наведитесь на поверхность: нужна клетка под постройку.',
@@ -461,72 +454,29 @@ function mcbCanPlace(x, y, z) {
   return mcbPlaceReason(x, y, z) === '';
 }
 
-function mcbEnsureGhost() {
-  if (mcbState.ghost) return mcbState.ghost;
-  if (!Ht || typeof wt !== 'function' || typeof cn !== 'function' || typeof ti !== 'function') return null;
-  var mesh = new wt(new cn(1, 1, 1), mcbGhostMaterial(true));
-  mesh.visible = false;
-  mesh.renderOrder = 3;
-  mesh.name = 'mcx-build-ghost';
-  Ht.add(mesh);
-  mcbState.ghost = mesh;
-  return mesh;
-}
-
-function mcbGhostMaterial(ok) {
-  if (!mcbState.ghostMats) mcbState.ghostMats = {};
-  var key = ok ? 'ok' : 'no';
-  if (!mcbState.ghostMats[key]) {
-    mcbState.ghostMats[key] = new ti({
-      color: ok ? MCB_GHOST_GREEN : MCB_GHOST_RED,
-      transparent: true, opacity: ok ? .42 : .5, depthWrite: false
-    });
-  }
-  return mcbState.ghostMats[key];
-}
-
-/* Призрак одиночного блока. Обновляем сетку/материал только когда изменилась
-   цель: движение камеры внутри той же клетки не трогает mesh — поэтому нет
-   дрожания и мерцания, а зелёный/красный цвет говорит, можно ли ставить. */
-function mcbGhostUpdate() {
-  var ghost = mcbEnsureGhost();
-  if (!ghost) return;
-  if (mcbState.planKey) {
-    /* Во время предпросмотра чертежа одиночный призрак не нужен. */
-    ghost.visible = false;
-    return;
-  }
-  var hit = mcbState.aim;
-  if (!hit) {
-    ghost.visible = false;
-    mcbState.targetKey = '';
-    return;
-  }
-  var x = hit.px, y = hit.py, z = hit.pz;
-  var reason = mcbPlaceReason(x, y, z, mcbState.selected);
-  var ok = reason === '';
-  var key = x + ',' + y + ',' + z + '|' + (ok ? 1 : 0) + '|' + (ok ? mcbState.selected : 0);
-  if (key === mcbState.targetKey && ghost.visible) return;
-  mcbState.targetKey = key;
-  ghost.material = mcbGhostMaterial(ok);
-  ghost.position.set(x + .5, y + .5, z + .5);
-  ghost.visible = true;
-}
-
-/* Покадровая часть: призрак блока и предпросмотр чертежа. */
+/* Покадровая часть: восстановление постройки и луч прицела. Ничего не
+   рисуем: у игрока нет ни призрака блока, ни подсветки — только перекрестие,
+   а расчёт клетки постановки идёт тем же лучом, что и раньше. */
 function mcbTick() {
   if (Mt !== 'playing' || !F) {
-    if (mcbState.ghost) mcbState.ghost.visible = false;
-    mcbState.targetKey = '';
-    mcbPlanPreviewHide();
     if (mcbState.open && !mcbState.layoutMode) mcbClose();
     return;
   }
   if (!mcbState.loaded) mcbLoad();
   mcbRestore();
   mcbAim();
-  mcbGhostUpdate();
-  if (mcbState.planKey) mcbPlanPreviewUpdate();
+  if (mcbState.planKey) mcbPlanBarRefresh();
+}
+
+/* Полоска чертежа пересчитывается только при смене клетки или поворота:
+   каждый кадр пересчитывать проверку всей постройки незачем. */
+function mcbPlanBarRefresh() {
+  var base = mcbPlanBase();
+  var sig = mcbState.planKey + '|' + mcbState.planDir + '|' +
+    (base ? (base.x + ',' + base.y + ',' + base.z) : '-');
+  if (sig === mcbState.planBarKey) return;
+  mcbState.planBarKey = sig;
+  mcbPlanBar(mcbPlanCheck(mcbState.planKey, mcbState.planDir));
 }
 
 /* -------------------------------------------------------------- шаблоны */
@@ -595,242 +545,704 @@ function mcbTplFrame(b, x0, z0, x1, z1, y0, y1, cornerId) {
   }
 }
 
+/* ======================= строительные помощники =======================
+   Каждый шаблон собирается из одних и тех же деталей: фундамент, стены с
+   угловыми стойками, полы, двери с рамой и крыльцом, окна с подоконником и
+   перемычкой, крыша без щелей. Поэтому «недоделанных» построек нет: всё, что
+   игрок выбирает в чертежах, проверено тестами на целостность.
+   ==================================================================== */
+
+/* Фундамент: сплошная плита на клетку шире стен. Она же цоколь и основание
+   пола — постройка никогда не повисает на одной клетке. */
+function mcbTplPlinth(b, x0, z0, x1, z1, id) {
+  b.fill(x0 - 1, 0, z0 - 1, x1 + 1, 0, z1 + 1, id);
+}
+
+/* Пол: сплошная плита внутри стен (перекрывает цоколь). */
+function mcbTplPlate(b, x0, z0, x1, z1, y, id) {
+  b.fill(x0, y, z0, x1, y, z1, id);
+}
+
+/* Стены по периметру + угловые стойки другим материалом. */
+function mcbTplWalls(b, x0, z0, x1, z1, y0, y1, id, cornerId) {
+  b.shell(x0, y0, z0, x1, y1, z1, id);
+  if (cornerId != null) mcbTplFrame(b, x0, z0, x1, z1, y0, y1, cornerId);
+}
+
+/* Фахверк: стойки через каждые две клетки по всему периметру. */
+function mcbTplTimber(b, x0, z0, x1, z1, y0, y1, id, step) {
+  var s = step || 2, x, z, y;
+  for (y = y0; y <= y1; y++) {
+    for (x = x0; x <= x1; x += s) { b.put(x, y, z0, id); b.put(x, y, z1, id); }
+    for (z = z0; z <= z1; z += s) { b.put(x0, y, z, id); b.put(x1, y, z, id); }
+  }
+}
+
+/* Окно: стекло в клетке стены, подоконник и перемычка из отделки. Стена
+   остаётся сплошной — это окно, а не дыра. */
+function mcbTplWindow(b, x, z, y, frameId, noLintel) {
+  b.put(x, y, z, GL);
+  b.put(x, y - 1, z, frameId);
+  if (!noLintel) b.put(x, y + 1, z, frameId);
+}
+
+/* Ряд окон по стене: axis 'x' — стена идёт вдоль X (z фиксирован). */
+function mcbTplWindowRow(b, axis, fixed, from, to, step, y, frameId, noLintel) {
+  for (var i = from; i <= to; i += (step || 2)) {
+    if (axis === 'x') mcbTplWindow(b, i, fixed, y, frameId, noLintel);
+    else mcbTplWindow(b, fixed, i, y, frameId, noLintel);
+  }
+}
+
+/* Дверь: проём в две клетки, рама по бокам, перемычка сверху и ступень снаружи.
+   out — наружное направление: {dx,dz}. */
+function mcbTplDoor(b, x, z, y0, out, frameId, stepId) {
+  b.erase(x, y0, z);
+  b.erase(x, y0 + 1, z);
+  b.put(x, y0 + 2, z, frameId);
+  if (out.dx !== 0) {
+    b.put(x, y0, z - 1, frameId); b.put(x, y0 + 1, z - 1, frameId);
+    b.put(x, y0, z + 1, frameId); b.put(x, y0 + 1, z + 1, frameId);
+  } else {
+    b.put(x - 1, y0, z, frameId); b.put(x - 1, y0 + 1, z, frameId);
+    b.put(x + 1, y0, z, frameId); b.put(x + 1, y0 + 1, z, frameId);
+  }
+  b.put(x + out.dx, 0, z + out.dz, stepId);
+}
+
+/* Ворота: проём шириной 3 и высотой 2 с перемычкой и пятой. */
+function mcbTplGate(b, xa, xb, z, y0, frameId) {
+  for (var x = xa; x <= xb; x++) {
+    b.erase(x, y0, z);
+    b.erase(x, y0 + 1, z);
+    b.put(x, y0 + 2, z, frameId);
+  }
+  b.put(xa - 1, y0, z, frameId); b.put(xa - 1, y0 + 1, z, frameId);
+  b.put(xb + 1, y0, z, frameId); b.put(xb + 1, y0 + 1, z, frameId);
+}
+
+/* Двускатная крыша. Первый ярус накрывает всю коробку, каждый следующий уже
+   на клетку с двух сторон, сверху — конёк. Щелей в такой крыше не бывает. */
+function mcbTplGable(b, x0, z0, x1, z1, y, id, ridgeId) {
+  var level = 0, top = 0;
+  while (z0 + level <= z1 - level) {
+    top = level;
+    for (var z = z0 + level; z <= z1 - level; z++)
+      for (var x = x0; x <= x1; x++) b.put(x, y + level, z, id);
+    level++;
+    if (level > 20) break;
+  }
+  if (ridgeId != null) {
+    for (var x2 = x0; x2 <= x1; x2++)
+      for (var z2 = z0 + top; z2 <= z1 - top; z2++) b.put(x2, y + top, z2, ridgeId);
+  }
+  return y + level;
+}
+
+/* Шатровая крыша: ярус уменьшается и по X, и по Z. */
+function mcbTplHip(b, x0, z0, x1, z1, y, id, ridgeId) {
+  var level = 0, top = 0;
+  while (x0 + level <= x1 - level && z0 + level <= z1 - level) {
+    top = level;
+    for (var x = x0 + level; x <= x1 - level; x++)
+      for (var z = z0 + level; z <= z1 - level; z++) b.put(x, y + level, z, id);
+    level++;
+    if (level > 24) break;
+  }
+  if (ridgeId != null) b.put(x0 + top, y + top, z0 + top, ridgeId);
+  return y + level;
+}
+
+/* Зубцы по периметру: каждый второй блок сверху. */
+function mcbTplCrenels(b, x0, z0, x1, z1, y, id) {
+  /* Обход периметра: зубцы стоят через клетку по всему кругу. Шахматка по
+     (x + z) на узкой стене (2 клетки в ширину) давала рваный верх. */
+  var i = 0, x, z;
+  for (x = x0; x <= x1; x++) if ((i++ & 1) === 0) b.put(x, y, z0, id);
+  for (z = z0 + 1; z <= z1; z++) if ((i++ & 1) === 0) b.put(x1, y, z, id);
+  for (x = x1 - 1; x >= x0; x--) if ((i++ & 1) === 0) b.put(x, y, z1, id);
+  for (z = z1 - 1; z > z0; z--) if ((i++ & 1) === 0) b.put(x0, y, z, id);
+}
+
+/* Лестница внутри дома: у каждой ступени сплошная опора до пола, поэтому
+   висящих клеток нет, а подъём идёт по одной клетке за шаг. */
+function mcbTplStairs(b, x, zStart, y0, steps, id) {
+  for (var i = 0; i < steps; i++)
+    for (var y = y0; y <= y0 + i; y++) b.put(x, y, zStart + i, id);
+  return y0 + steps;
+}
+
+/* Труба: сплошной столб от основания до крыши и выше. */
+function mcbTplChimney(b, x, z, y0, y1, id, capId) {
+  for (var y = y0; y <= y1; y++) b.put(x, y, z, id);
+  if (capId != null) b.put(x, y1 + 1, z, capId);
+}
+
+/* Колонна: база, ствол и капитель. */
+function mcbTplColumn(b, x, z, y0, y1, shaftId, capId) {
+  for (var y = y0; y <= y1; y++) b.put(x, y, z, shaftId);
+  b.put(x, y1 + 1, z, capId);
+}
+
 /* --- сами шаблоны ------------------------------------------------------- */
 var MCB_TEMPLATES = [
   {
     key: 'smallHouse', cat: 'home', ru: 'Маленький деревянный дом', en: 'Small wooden house',
     build: function (b) {
       var W = 5, D = 5;
-      b.fill(0, 0, 0, W - 1, 0, D - 1, PL);            /* пол */
-      b.shell(0, 1, 0, W - 1, 3, D - 1, PL);           /* стены */
-      mcbTplFrame(b, 0, 0, W - 1, D - 1, 1, 3, Xh);    /* угловые стойки */
-      b.erase(2, 1, 0); b.erase(2, 2, 0);              /* дверь */
-      b.put(1, 2, 0, GL); b.put(3, 2, 0, GL);
-      b.put(1, 2, D - 1, GL); b.put(3, 2, D - 1, GL);
-      b.put(0, 2, 2, GL); b.put(W - 1, 2, 2, GL);
-      mcbTplRoof(b, 0, 0, W - 1, D - 1, 4, RF);
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, CB);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, PL);          // деревянный пол
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, PL, Xh);   // стены + угловые стойки
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      b.put(2, 3, 0, GL);                                  // фрамуга над дверью
+      mcbTplWindowRow(b, 'x', D - 1, 1, 3, 2, 2, DW);      // окна на задней стене
+      mcbTplWindow(b, 0, 2, 2, DW);                        // окна по бокам
+      mcbTplWindow(b, W - 1, 2, 2, DW);
+      mcbTplChimney(b, 1, 1, 1, 6, CB, SL);                // печь и труба
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 4, RF, SL);       // крыша с коньком
+      b.fill(1, 4, -1, 3, 4, -1, RF);                      // козырёк над крыльцом
+      b.put(1, 1, 1, Hh); b.put(2, 1, 1, Hh);              // топка у стены
+      b.put(4, 1, 4, DW); b.put(4, 2, 4, DW);              // полка в углу
+    },
+    meta: {
+      foot: [0, 0, 4, 4], wallTop: 3, roof: { rect: [0, 0, 4, 4], y: 4, open: [[1, 1]] },
+      walls: [{ rect: [0, 0, 4, 4], y0: 1, y1: 3, open: [[2, 1, 0], [2, 2, 0]] }],
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[2, 3, 0, 1], [1, 2, 4], [3, 2, 4], [0, 2, 2], [4, 2, 2]]
     }
   },
   {
     key: 'largeHouse', cat: 'home', ru: 'Большой деревянный дом', en: 'Large wooden house',
     build: function (b) {
       var W = 7, D = 7;
-      b.fill(0, 0, 0, W - 1, 0, D - 1, PL);
-      b.shell(0, 1, 0, W - 1, 5, D - 1, PL);
-      mcbTplFrame(b, 0, 0, W - 1, D - 1, 1, 5, Xh);
-      b.fill(1, 3, 1, W - 2, 3, D - 2, DW);            /* межэтажный настил */
-      b.erase(3, 1, 0); b.erase(3, 2, 0);              /* дверь */
-      var wy = [2, 4], k, x, z;
-      for (k = 0; k < wy.length; k++) {
-        var y = wy[k];
-        b.put(1, y, 0, GL); b.put(5, y, 0, GL);
-        b.put(1, y, D - 1, GL); b.put(5, y, D - 1, GL);
-        b.put(0, y, 1, GL); b.put(0, y, 5, GL);
-        b.put(W - 1, y, 1, GL); b.put(W - 1, y, 5, GL);
-      }
-      mcbTplRoof(b, 0, 0, W - 1, D - 1, 6, RF);
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, CB);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, PL);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, PL, Xh);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 4, DW);           // межэтажный настил
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 5, 6, PL, Xh);
+      mcbTplDoor(b, 3, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplWindowRow(b, 'x', 0, 1, 5, 4, 2, DW);          // первый этаж
+      mcbTplWindowRow(b, 'x', D - 1, 1, 5, 4, 2, DW);
+      mcbTplWindow(b, 0, 2, 2, DW); mcbTplWindow(b, 0, 4, 2, DW);
+      mcbTplWindow(b, W - 1, 2, 2, DW); mcbTplWindow(b, W - 1, 4, 2, DW);
+      mcbTplWindowRow(b, 'x', 0, 1, 5, 4, 6, DW, true);     // второй этаж
+      mcbTplWindowRow(b, 'x', D - 1, 1, 5, 4, 6, DW, true);
+      mcbTplWindow(b, 0, 2, 6, DW, true); mcbTplWindow(b, W - 1, 4, 6, DW, true);
+      mcbTplStairs(b, 1, 1, 1, 3, PL);                     // лестница на второй этаж
+      b.erase(1, 4, 1); b.erase(1, 4, 2); b.erase(1, 4, 3); // проём над лестницей
+      mcbTplChimney(b, 3, 5, 4, 9, CB, SL);
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 7, RF, SL);
+      b.fill(2, 7, -1, 4, 7, -1, RF);
+    },
+    meta: {
+      foot: [0, 0, 6, 6], wallTop: 6, roof: { rect: [0, 0, 6, 6], y: 7 },
+      walls: [
+        { rect: [0, 0, 6, 6], y0: 1, y1: 3, open: [[3, 1, 0], [3, 2, 0]] },
+        { rect: [0, 0, 6, 6], y0: 5, y1: 6, open: [] }
+      ],
+      floors: [{ y: 4, rect: [0, 0, 6, 6], holes: [[1, 1, 1, 3]] }],
+      door: { x: 3, z: 0, y0: 1, h: 2 },
+      glass: [[1, 2, 0], [5, 2, 0], [1, 2, 6], [5, 2, 6], [0, 2, 2], [0, 2, 4], [6, 2, 2], [6, 2, 4]]
     }
   },
   {
     key: 'stoneHouse', cat: 'home', ru: 'Каменный дом', en: 'Stone house',
     build: function (b) {
       var W = 7, D = 5;
-      b.fill(0, 0, 0, W - 1, 0, D - 1, SB);
-      b.shell(0, 1, 0, W - 1, 3, D - 1, CB);
-      mcbTplFrame(b, 0, 0, W - 1, D - 1, 1, 3, SB);
-      b.erase(3, 1, 0); b.erase(3, 2, 0);
-      b.put(1, 2, 0, GL); b.put(5, 2, 0, GL);
-      b.put(1, 2, D - 1, GL); b.put(5, 2, D - 1, GL);
-      b.put(0, 2, 2, GL); b.put(W - 1, 2, 2, GL);
-      mcbTplRoof(b, 0, 0, W - 1, D - 1, 4, SL);
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, SB);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, SL);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, CB, SB);
+      mcbTplDoor(b, 3, 0, 1, { dx: 0, dz: -1 }, DW, SB);
+      b.put(3, 3, 0, GL);                                  // фрамуга
+      mcbTplWindow(b, 1, 0, 2, SB); mcbTplWindow(b, 5, 0, 2, SB);
+      mcbTplWindowRow(b, 'x', D - 1, 1, 5, 2, 2, SB);
+      mcbTplWindow(b, 0, 2, 2, SB);
+      mcbTplWindow(b, W - 1, 2, 2, SB);
+      b.put(3, 3, 0, GL);                                  // фрамуга над дверью
+      mcbTplChimney(b, 1, 1, 1, 6, SB, SL);
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 4, SL, SB);
+      b.fill(1, 4, -1, 5, 4, -1, SL);                      // навес у входа
+      b.put(1, 1, 3, DW); b.put(2, 1, 3, DW);              // стол внутри
+    },
+    meta: {
+      foot: [0, 0, 6, 4], wallTop: 3, roof: { rect: [0, 0, 6, 4], y: 4 },
+      walls: [{ rect: [0, 0, 6, 4], y0: 1, y1: 3, open: [[3, 1, 0], [3, 2, 0]] }],
+      door: { x: 3, z: 0, y0: 1, h: 2 },
+      glass: [[3, 3, 0, 1], [1, 2, 0], [5, 2, 0], [1, 2, 4], [5, 2, 4], [0, 2, 2], [6, 2, 2]]
     }
   },
   {
     key: 'medievalHouse', cat: 'home', ru: 'Средневековый дом', en: 'Medieval house',
     build: function (b) {
-      var W = 7, D = 7, x, z, y;
-      b.fill(0, 0, 0, W - 1, 0, D - 1, PL);
-      b.shell(0, 1, 0, W - 1, 3, D - 1, PS);           /* штукатурка */
-      /* Фахверк: стойки через каждые две клетки и обвязка по этажам. */
-      for (y = 1; y <= 3; y++) {
-        for (x = 0; x < W; x += 2) { b.put(x, y, 0, DW); b.put(x, y, D - 1, DW); }
-        for (z = 0; z < D; z += 2) { b.put(0, y, z, DW); b.put(W - 1, y, z, DW); }
-      }
-      /* Второй этаж с напуском на клетку: сначала сплошной настил, поэтому
-         свес опирается на него, а не висит в воздухе. */
-      b.fill(-1, 4, -1, W, 4, D, PL);
-      b.shell(-1, 5, -1, W, 6, D, PS);
-      for (y = 5; y <= 6; y++) {
-        for (x = -1; x <= W; x += 2) { b.put(x, y, -1, DW); b.put(x, y, D, DW); }
-        for (z = -1; z <= D; z += 2) { b.put(-1, y, z, DW); b.put(W, y, z, DW); }
-      }
-      b.erase(3, 1, 0); b.erase(3, 2, 0);
-      b.put(1, 2, 0, GL); b.put(5, 2, 0, GL);
-      b.put(1, 2, D - 1, GL); b.put(5, 2, D - 1, GL);
-      b.put(0, 2, 2, GL); b.put(W - 1, 2, 4, GL);
-      b.put(2, 6, -1, GL); b.put(4, 6, -1, GL);
-      b.put(2, 6, D, GL); b.put(4, 6, D, GL);
-      mcbTplRoof(b, -1, -1, W, D, 7, RF);
+      var W = 7, D = 7;
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, CB);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, PL);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, PS, DW);    // штукатурка + фахверк
+      mcbTplTimber(b, 0, 0, W - 1, D - 1, 1, 3, DW, 2);
+      mcbTplPlate(b, -1, -1, W, D, 4, PL);                 // настил второго этажа со свесом
+      mcbTplWalls(b, -1, -1, W, D, 5, 6, PS, DW);
+      mcbTplTimber(b, -1, -1, W, D, 5, 6, DW, 2);
+      mcbTplDoor(b, 3, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplWindow(b, 1, 0, 2, DW); mcbTplWindow(b, 5, 0, 2, DW);
+      mcbTplWindowRow(b, 'x', D - 1, 1, 5, 2, 2, DW);
+      mcbTplWindow(b, 0, 2, 2, DW); mcbTplWindow(b, W - 1, 4, 2, DW);
+      mcbTplWindowRow(b, 'x', -1, 1, 5, 4, 6, DW, true);   // окна второго этажа
+      mcbTplWindowRow(b, 'x', D, 1, 5, 4, 6, DW, true);
+      mcbTplWindow(b, -1, 3, 6, DW, true); mcbTplWindow(b, W, 3, 6, DW, true);
+      mcbTplStairs(b, 1, 1, 1, 3, PL);
+      b.erase(1, 4, 1); b.erase(1, 4, 2); b.erase(1, 4, 3);
+      mcbTplChimney(b, 5, 1, 1, 10, SB, SL);
+      mcbTplGable(b, -1, -1, W, D, 7, RF, SL);
+    },
+    meta: {
+      foot: [0, 0, 6, 6], wallTop: 6, roof: { rect: [-1, -1, 7, 7], y: 7 },
+      walls: [
+        { rect: [0, 0, 6, 6], y0: 1, y1: 3, open: [[3, 1, 0], [3, 2, 0]] },
+        { rect: [-1, -1, 7, 7], y0: 5, y1: 6, open: [] }
+      ],
+      floors: [{ y: 4, rect: [0, 0, 6, 6], holes: [[1, 1, 1, 3]] }],
+      door: { x: 3, z: 0, y0: 1, h: 2 },
+      glass: [[1, 2, 0], [5, 2, 0], [1, 2, 6], [5, 2, 6], [0, 2, 2], [6, 2, 4],
+        [1, 6, -1], [5, 6, -1]]
     }
   },
   {
-    key: 'tower', cat: 'fort', ru: 'Башня', en: 'Tower',
+    key: 'modernHouse', cat: 'home', ru: 'Современный дом', en: 'Modern house',
     build: function (b) {
-      var S = 7, H = 10, x, z, y;
-      b.shell(0, 0, 0, S - 1, H - 1, S - 1, CB);
-      mcbTplFrame(b, 0, 0, S - 1, S - 1, 0, H - 1, SB);
-      b.fill(1, 0, 1, S - 2, 0, S - 2, SB);
-      b.fill(1, 4, 1, S - 2, 4, S - 2, SB);
-      b.fill(1, 8, 1, S - 2, 8, S - 2, SB);
-      /* Бойницы: узкие окна на каждом ярусе. */
-      b.put(3, 2, 0, GL); b.put(3, 2, S - 1, GL);
-      b.put(3, 6, 0, GL); b.put(3, 6, S - 1, GL);
-      b.put(0, 2, 3, GL); b.put(S - 1, 6, 3, GL);
-      /* Зубцы по периметру. */
-      for (x = 0; x < S; x++) {
-        for (z = 0; z < S; z++) {
-          if (x !== 0 && x !== S - 1 && z !== 0 && z !== S - 1) continue;
-          if ((x + z) % 2 === 0) b.put(x, H, z, SB);
-        }
-      }
-      /* Вход на уровне земли. */
-      b.erase(3, 0, 0); b.erase(3, 1, 0); b.erase(3, 2, 0);
+      var W = 7, D = 5;
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, SL);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, PS);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, PS, SL);
+      mcbTplDoor(b, 3, 0, 1, { dx: 0, dz: -1 }, DW, SL);
+      /* Панорамное остекление вместо мелких окон. */
+      b.put(1, 2, 0, GL); b.put(2, 2, 0, GL);
+      b.put(4, 2, 0, GL); b.put(5, 2, 0, GL);
+      b.put(0, 2, 1, GL); b.put(0, 2, 3, GL);
+      b.put(2, 2, D - 1, GL); b.put(4, 2, D - 1, GL);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 4, SL);           // плоская крыша
+      mcbTplFrame(b, 0, 0, W - 1, D - 1, 5, 5, SL);        // парапет
+      b.put(3, 4, 2, GL);                                  // зенитное окно
+      b.fill(1, 0, -2, 5, 0, -1, PL);                      // терраса перед домом
+      b.put(1, 1, -2, Xh); b.put(5, 1, -2, Xh);            // стойки навеса
+      b.fill(1, 2, -2, 5, 2, -2, DW);                      // навес
+      mcbTplChimney(b, 6, 4, 1, 6, SB, SL);
+    },
+    meta: {
+      foot: [0, 0, 6, 4], wallTop: 3,
+      roof: { rect: [0, 0, 6, 4], y: 4, flat: true, open: [[3, 2], [6, 4]] },
+      walls: [{ rect: [0, 0, 6, 4], y0: 1, y1: 3, open: [[3, 1, 0], [3, 2, 0]] }],
+      door: { x: 3, z: 0, y0: 1, h: 2 },
+      glass: [[1, 2, 0], [2, 2, 0], [4, 2, 0], [5, 2, 0], [0, 2, 1], [0, 2, 3], [2, 2, 4], [4, 2, 4], [3, 4, 2, 1]]
+    }
+  },
+  {
+    key: 'forestCabin', cat: 'home', ru: 'Лесной сруб', en: 'Forest cabin',
+    build: function (b) {
+      var W = 5, D = 5;
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, CB);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, DW);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, Xh, DW);    // сплошной сруб
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplWindow(b, 0, 2, 2, DW);
+      mcbTplWindow(b, W - 1, 2, 2, DW);
+      mcbTplWindow(b, 2, D - 1, 2, DW);
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 4, RF, SL);
+      /* Крыльцо: две стойки и навес над входом. */
+      b.put(1, 1, -1, Xh); b.put(1, 2, -1, Xh); b.put(1, 3, -1, Xh);
+      b.put(3, 1, -1, Xh); b.put(3, 2, -1, Xh); b.put(3, 3, -1, Xh);
+      b.fill(1, 4, -2, 3, 4, -1, RF);
+      b.fill(1, 0, -1, 3, 0, -1, PL);                      // настил крыльца
+      b.put(4, 1, -1, Xh); b.put(4, 2, -1, Xh);            // поленница
+      mcbTplChimney(b, 1, 1, 1, 6, Hh, SL);
+    },
+    meta: {
+      foot: [0, 0, 4, 4], wallTop: 3, roof: { rect: [0, 0, 4, 4], y: 4, open: [[1, 1]] },
+      walls: [{ rect: [0, 0, 4, 4], y0: 1, y1: 3, open: [[2, 1, 0], [2, 2, 0]] }],
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[0, 2, 2], [4, 2, 2], [2, 2, 4]]
+    }
+  },
+  {
+    key: 'beachHouse', cat: 'home', ru: 'Дом на пляже', en: 'Beach house',
+    build: function (b) {
+      var W = 6, D = 5;
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, Wh);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, PL);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 2, PS, Xh);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 3, 3, DW, Xh);    // верхняя обвязка
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, Wh);
+      b.put(1, 1, 0, GL); b.put(1, 2, 0, GL);
+      b.put(4, 1, 0, GL); b.put(4, 2, 0, GL);
+      b.put(0, 2, 2, GL); b.put(W - 1, 2, 2, GL);
+      b.put(2, 2, D - 1, GL); b.put(3, 2, D - 1, GL);
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 4, RF, SL);
+      /* Открытая терраса на песке: настил, перила и стойки навеса. */
+      b.fill(0, 0, -4, W - 1, 0, -1, PL);
+      b.put(0, 1, -4, DW); b.put(3, 1, -4, DW); b.put(W - 1, 1, -4, DW);
+      b.put(0, 2, -4, DW); b.put(3, 2, -4, DW); b.put(W - 1, 2, -4, DW);
+      b.put(0, 1, -2, Xh); b.put(W - 1, 1, -2, Xh); b.put(0, 2, -2, Xh); b.put(W - 1, 2, -2, Xh);
+      mcbTplChimney(b, 5, 4, 1, 6, SB, SL);
+    },
+    meta: {
+      foot: [0, 0, 5, 4], wallTop: 3, roof: { rect: [0, 0, 5, 4], y: 4, open: [[5, 4]] },
+      walls: [{ rect: [0, 0, 5, 4], y0: 1, y1: 2, open: [[2, 1, 0], [2, 2, 0]] }],
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[1, 1, 0], [1, 2, 0], [4, 1, 0], [4, 2, 0], [0, 2, 2], [5, 2, 2], [2, 2, 4], [3, 2, 4]]
     }
   },
   {
     key: 'castle', cat: 'fort', ru: 'Замок', en: 'Castle',
     build: function (b) {
-      var S = 13, x, z, y;
-      b.shell(0, 0, 0, S - 1, 3, S - 1, CB);            /* стены */
-      for (x = 0; x < S; x++) {
-        for (z = 0; z < S; z++) {
-          if (x !== 0 && x !== S - 1 && z !== 0 && z !== S - 1) continue;
-          if ((x + z) % 2 === 0) b.put(x, 4, z, CB);    /* зубцы */
-        }
-      }
-      /* Ворота: проём 3 × 2 с перекладиной. */
-      for (x = 5; x <= 7; x++) { b.erase(x, 0, 0); b.erase(x, 1, 0); b.erase(x, 2, 0); }
-      /* Четыре угловые башни. */
-      var corners = [[0, 0], [S - 4, 0], [0, S - 4], [S - 4, S - 4]];
-      for (var c = 0; c < corners.length; c++) {
-        var cx = corners[c][0], cz = corners[c][1];
-        b.shell(cx, 0, cz, cx + 2, 6, cz + 2, SB);
+      var S = 13, x, z;
+      b.fill(-1, 0, -1, S, 0, S, CB);                      // цоколь и двор
+      b.fill(0, 0, 0, S - 1, 0, S - 1, Hh);                // дворовая площадь
+      mcbTplWalls(b, 0, 0, S - 1, S - 1, 1, 4, CB, SB);    // куртины
+      mcbTplCrenels(b, 0, 0, S - 1, S - 1, 5, SB);         // зубцы
+      mcbTplGate(b, 5, 7, 0, 1, SB);                       // ворота
+      /* Четыре угловые башни: свои зубцы и бойницы. */
+      var corners = [[0, 0], [S - 3, 0], [0, S - 3], [S - 3, S - 3]], c, cx, cz, y;
+      for (c = 0; c < corners.length; c++) {
+        cx = corners[c][0];
+        cz = corners[c][1];
         b.fill(cx, 0, cz, cx + 2, 0, cz + 2, SB);
-        for (x = cx; x <= cx + 2; x++) {
-          for (z = cz; z <= cz + 2; z++) {
-            if (x !== cx && x !== cx + 2 && z !== cz && z !== cz + 2) continue;
-            if ((x + z) % 2 === 0) b.put(x, 7, z, SB);
-          }
-        }
+        mcbTplWalls(b, cx, cz, cx + 2, cz + 2, 1, 7, SB, CB);
+        mcbTplCrenels(b, cx, cz, cx + 2, cz + 2, 8, CB);
+        b.put(cx + 1, 4, cz + 1, SB);                      // ярус боевого хода
+        b.put(cx + 1, 4, cz, GL); b.put(cx + 1, 6, cz + 2, GL);
+        b.put(cx, 4, cz + 1, GL); b.put(cx + 2, 6, cz + 1, GL);
       }
+      /* Донжон в центре двора: кирпичная коробка выше стены, с зубцами,
+         дверью и окнами с подоконниками. */
+      mcbTplWalls(b, 4, 4, 8, 8, 1, 7, SB);
+      mcbTplDoor(b, 6, 4, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplPlate(b, 4, 4, 8, 8, 8, PL);                   // крыша-площадка
+      mcbTplCrenels(b, 4, 4, 8, 8, 9, SB);
+      b.put(5, 4, 8, GL); b.put(5, 3, 8, DW);              // окна с подоконником
+      b.put(5, 6, 8, GL); b.put(5, 5, 8, DW);
+      b.put(8, 4, 6, GL); b.put(8, 3, 6, DW);
+      b.put(8, 6, 6, GL); b.put(8, 5, 6, DW);
+      b.put(4, 4, 6, GL); b.put(4, 3, 6, DW);
+      b.fill(6, 0, 1, 6, 0, 3, SL);                        // дорожка от ворот к донжону
+      /* Лестница на стену, флаг на угловой башне и фонари у ворот. */
+      mcbTplStairs(b, 3, 1, 1, 3, SB);
+      b.put(0, 9, 0, Xh); b.put(0, 10, 0, Xh); b.put(0, 11, 0, DW);
+      b.put(2, 5, 0, GL); b.put(10, 5, 0, GL);             // фонари на стене
+    },
+    meta: {
+      foot: [0, 0, 12, 12],
+      walls: [
+        { rect: [0, 0, 12, 12], y0: 1, y1: 4, open: [[5, 1, 0], [6, 1, 0], [7, 1, 0], [5, 2, 0], [6, 2, 0], [7, 2, 0]] },
+        { rect: [4, 4, 8, 8], y0: 1, y1: 7, open: [[6, 1, 4], [6, 2, 4]] }
+      ],
+      gate: { x0: 5, x1: 7, z: 0, y0: 1 },
+      door: { x: 6, z: 4, y0: 1, h: 2 },
+      glass: [[5, 4, 8], [5, 6, 8], [8, 4, 6], [8, 6, 6], [4, 4, 6]],
+      towers: [[0, 0], [10, 0], [0, 10], [10, 10]]
     }
   },
   {
-    key: 'watchtower', cat: 'fort', ru: 'Сторожевая башня', en: 'Watchtower',
+    key: 'tower', cat: 'fort', ru: 'Замковая башня', en: 'Castle tower',
     build: function (b) {
-      var W = 5, H = 6, x, z, y;
-      b.fill(0, 0, 0, W - 1, 0, W - 1, PL);
-      b.shell(0, 1, 0, W - 1, H, W - 1, DW);
-      mcbTplFrame(b, 0, 0, W - 1, W - 1, 1, H, Xh);
-      b.put(1, 3, 0, GL); b.put(3, 3, 0, GL);
-      b.put(0, 3, 2, GL); b.put(W - 1, 3, 2, GL);
-      b.erase(2, 1, 0); b.erase(2, 2, 0);
-      b.fill(0, H + 1, 0, W - 1, H + 1, W - 1, PL);     /* площадка */
-      b.shell(0, H + 2, 0, W - 1, H + 2, W - 1, DW);    /* перила */
-      b.erase(2, H + 2, 0);                            /* выход на площадку */
-      mcbTplRoof(b, 0, 0, W - 1, W - 1, H + 3, RF);
+      var S = 5, H = 9, x, z;
+      b.fill(-1, 0, -1, S, 0, S, CB);
+      mcbTplWalls(b, 0, 0, S - 1, S - 1, 1, H, CB, SB);
+      b.fill(0, 0, 0, S - 1, 0, S - 1, SL);                // пол первого яруса
+      b.fill(1, 3, 1, S - 2, 3, S - 2, DW);                // деревянные настилы
+      b.fill(1, 6, 1, S - 2, 6, S - 2, DW);
+      mcbTplCrenels(b, 0, 0, S - 1, S - 1, H + 1, SB);
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      /* Бойницы на каждом ярусе: узкое окно-щель. */
+      b.put(2, 5, 0, GL); b.put(2, 8, 0, GL);
+      b.put(2, 2, S - 1, GL); b.put(2, 8, S - 1, GL);
+      b.put(0, 5, 2, GL); b.put(S - 1, 5, 2, GL);
+      /* Лестница по стене: ступени с опорой до пола. */
+      mcbTplStairs(b, 1, 1, 1, 3, PL);
+      mcbTplStairs(b, 3, 4, 4, 3, PL);
+      b.put(1, 9, 1, Xh); b.put(1, 10, 1, DW);             // флагшток
+    },
+    meta: {
+      foot: [0, 0, 4, 4],
+      walls: [{ rect: [0, 0, 4, 4], y0: 1, y1: 9, open: [[2, 1, 0], [2, 2, 0]] }],
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[2, 5, 0], [2, 8, 0], [2, 2, 4], [2, 8, 4], [0, 5, 2], [4, 5, 2]],
+      floors: [{ y: 3, rect: [1, 1, 3, 3] }, { y: 6, rect: [1, 1, 3, 3] }]
     }
   },
   {
-    key: 'bridge', cat: 'infra', ru: 'Мост', en: 'Bridge',
+    key: 'fantasyTower', cat: 'fort', ru: 'Волшебная башня', en: 'Fantasy tower',
     build: function (b) {
-      var z, x;
-      for (z = 0; z <= 12; z++) {
-        b.fill(-1, 0, z, 1, 0, z, SL);                 /* настил 3 в ширину */
-        b.put(-1, 1, z, z % 3 === 0 ? Xh : DW);        /* перила */
-        b.put(1, 1, z, z % 3 === 0 ? Xh : DW);
-      }
-      /* Опоры: уходят вниз, к воде/земле под мостом. */
-      for (z = 3; z <= 9; z += 6) {
-        for (var d = 1; d <= 3; d++) b.fill(-1, -d, z, 1, -d, z, CB);
-      }
+      var S = 5, x, z;
+      b.fill(-1, 0, -1, S, 0, S, SB);                      // цоколь
+      mcbTplPlate(b, 0, 0, S - 1, S - 1, 0, SL);
+      mcbTplWalls(b, 0, 0, S - 1, S - 1, 1, 7, SB, CB);    // нижний ярус
+      mcbTplPlate(b, 1, 1, S - 2, S - 2, 3, PL);           // настил
+      b.erase(1, 3, 1); b.erase(1, 3, 2);                  // проём для лестницы
+      for (x = 1; x <= S - 2; x++) { b.put(x, 4, 0, GL); b.put(x, 4, S - 1, GL); }
+      for (z = 1; z <= S - 2; z++) { b.put(0, 4, z, GL); b.put(S - 1, 4, z, GL); }
+      /* Перекрытие, балкон-кольцо и узкий верхний ярус. */
+      b.fill(0, 8, 0, S - 1, 8, S - 1, DW);
+      for (x = -1; x <= S; x++) { b.put(x, 8, -1, DW); b.put(x, 8, S, DW); }
+      for (z = 0; z < S; z++) { b.put(-1, 8, z, DW); b.put(S, 8, z, DW); }
+      mcbTplWalls(b, 1, 1, 3, 3, 9, 14, PS, Xh);           // верхний ярус
+      b.put(2, 12, 1, GL); b.put(2, 12, 3, GL);
+      b.put(1, 12, 2, GL); b.put(3, 12, 2, GL);
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, SB);
+      mcbTplStairs(b, 1, 1, 1, 3, PL);
+      /* Крыша и высокий шпиль с навершием. */
+      var top = mcbTplHip(b, 1, 1, 3, 3, 15, RF, SL);
+      b.put(2, top, 2, SL);
+      b.put(2, top + 1, 2, GL);
+      b.put(2, top + 2, 2, SL);
+      b.put(2, top + 3, 2, SB);
+      /* Фонари у входа. */
+      b.put(1, 1, -1, Xh); b.put(1, 2, -1, GL);
+      b.put(S - 2, 1, -1, Xh); b.put(S - 2, 2, -1, GL);
+    },
+    meta: {
+      foot: [0, 0, 4, 4], wallTop: 14, roof: { rect: [1, 1, 3, 3], y: 15 },
+      walls: [
+        { rect: [0, 0, 4, 4], y0: 1, y1: 7, open: [[2, 1, 0], [2, 2, 0]] },
+        { rect: [1, 1, 3, 3], y0: 9, y1: 14, open: [] }
+      ],
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[1, 4, 0], [3, 4, 0], [0, 4, 2], [4, 4, 2], [2, 12, 1], [2, 12, 3], [1, 12, 2], [3, 12, 2]],
+      floors: [{ y: 3, rect: [1, 1, 3, 3], holes: [[1, 1, 1, 2]] }]
     }
   },
   {
     key: 'wall', cat: 'fort', ru: 'Крепостная стена', en: 'Castle wall',
     build: function (b) {
-      var L = 11, x, z;
-      b.fill(0, 0, 0, 1, 3, L - 1, CB);                /* стена в две клетки */
-      b.fill(0, 3, 0, 1, 3, L - 1, SB);
-      for (z = 0; z < L; z += 2) { b.put(0, 4, z, SB); b.put(1, 4, z, SB); }
-      b.erase(0, 1, 5); b.erase(0, 2, 5);             /* проход */
-      b.erase(1, 1, 5); b.erase(1, 2, 5);
-      b.put(0, 1, 2, GL); b.put(0, 2, 2, GL);
-      b.put(0, 1, 8, GL); b.put(0, 2, 8, GL);
+      var L = 9, x, z;
+      b.fill(-1, 0, -1, 2, 0, L, CB);                      // фундамент
+      b.fill(0, 0, 0, 1, 3, L - 1, CB);                    // тело стены
+      b.fill(0, 3, 0, 1, 3, L - 1, SB);                    // боевой ход
+      for (z = 0; z < L; z += 2) if (z !== 4) {              // зубцы на всю ширину
+        b.put(0, 4, z, SB); b.put(1, 4, z, SB);
+      }
+      /* Проход с перемычкой и бойницы. */
+      for (x = 0; x <= 1; x++) { b.erase(x, 1, 4); b.erase(x, 2, 4); b.put(x, 3, 4, SB); }
+      b.put(0, 2, 2, GL); b.put(1, 2, 2, GL);
+      b.put(0, 2, 7, GL); b.put(1, 2, 7, GL);
+      /* Наружная лестница на боевой ход у торца. */
+      mcbTplStairs(b, 2, 5, 1, 3, SB);
+      b.put(0, 1, 0, GL); b.put(1, 1, 0, GL);              // фонари у прохода
+    },
+    meta: {
+      wall: { rect: [0, 0, 1, 8], y0: 1, y1: 3, open: [[0, 1, 4], [1, 1, 4], [0, 2, 4], [1, 2, 4]] },
+      glass: [[0, 2, 2], [1, 2, 2], [0, 2, 7], [1, 2, 7]]
     }
   },
   {
-    key: 'farm', cat: 'infra', ru: 'Ферма', en: 'Farm',
+    key: 'watchtower', cat: 'fort', ru: 'Сторожевая вышка', en: 'Watchtower',
     build: function (b) {
-      var S = 9, x, z;
-      /* Грядки: чередование вспаханной земли и воды для полива. */
-      b.fill(1, 0, 1, S - 2, 0, S - 2, Gh);
-      for (z = 2; z <= 6; z += 4) b.fill(1, 0, z, S - 2, 0, z, Hh);
-      /* Забор по периметру: столбы и перекладины. */
-      for (x = 0; x < S; x++) {
-        for (z = 0; z < S; z++) {
-          if (x !== 0 && x !== S - 1 && z !== 0 && z !== S - 1) continue;
-          if ((x + z) % 2 === 0) b.put(x, 0, z, Xh);
-          b.put(x, 1, z, DW);
-        }
-      }
-      b.erase(S - 1, 1, 4);                            /* вход */
-      /* Пугало в центре. */
-      b.put(4, 1, 4, DW); b.put(4, 2, 4, DW); b.put(4, 3, 4, Bl);
-      b.put(3, 3, 4, Bl); b.put(5, 3, 4, Bl);
+      var W = 5, H = 6;
+      mcbTplPlinth(b, 0, 0, W - 1, W - 1, CB);
+      mcbTplPlate(b, 0, 0, W - 1, W - 1, 0, PL);
+      mcbTplWalls(b, 0, 0, W - 1, W - 1, 1, H, DW, Xh);
+      mcbTplDoor(b, 2, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplWindow(b, 1, 0, 3, Xh); mcbTplWindow(b, 3, 0, 3, Xh);
+      mcbTplWindow(b, 0, 2, 3, Xh); mcbTplWindow(b, W - 1, 2, 3, Xh);
+      b.fill(0, H + 1, 0, W - 1, H + 1, W - 1, PL);        // площадка
+      mcbTplWalls(b, 0, 0, W - 1, W - 1, H + 2, H + 2, DW, Xh); // перила
+      b.erase(2, H + 2, 0);                                // выход на площадку
+      mcbTplGable(b, 0, 0, W - 1, W - 1, H + 3, RF, SL);   // навес
+      mcbTplStairs(b, 1, 1, 1, 4, PL);                     // лестница наверх
+      b.erase(1, H + 1, 4);
+    },
+    meta: {
+      foot: [0, 0, 4, 4], wallTop: 6,
+      walls: [{ rect: [0, 0, 4, 4], y0: 1, y1: 6, open: [[2, 1, 0], [2, 2, 0]] }],
+      door: { x: 2, z: 0, y0: 1, h: 2 },
+      glass: [[1, 3, 0], [3, 3, 0], [0, 3, 2], [4, 3, 2]]
     }
   },
   {
-    key: 'decor', cat: 'decor', ru: 'Фонтан', en: 'Fountain',
+    key: 'stoneBridge', cat: 'infra', ru: 'Каменный мост', en: 'Stone bridge',
     build: function (b) {
-      var S = 5, x, z;
-      b.fill(0, 0, 0, S - 1, 0, S - 1, SB);            /* чаша */
-      b.fill(1, 0, 1, S - 2, 0, S - 2, GL);            /* вода (стекло) */
-      b.put(2, 1, 2, SL); b.put(2, 2, 2, SL);          /* колонна */
-      b.fill(1, 3, 1, 3, 3, 3, SB);                    /* верхняя чаша */
-      b.put(2, 3, 2, GL);
-      /* Фонари по углам. */
-      var corners = [[0, 0], [S - 1, 0], [0, S - 1], [S - 1, S - 1]];
-      for (var c = 0; c < corners.length; c++) {
-        b.put(corners[c][0], 1, corners[c][1], Xh);
-        b.put(corners[c][0], 2, corners[c][1], RF);
+      var L = 11, z, x, y;
+      b.fill(-2, -1, 0, 2, -1, 2, CB);                     // береговые опоры
+      b.fill(-2, -1, L - 3, 2, -1, L - 1, CB);
+      b.fill(-2, -2, 0, 2, -2, 2, CB);
+      b.fill(-2, -2, L - 3, 2, -2, L - 1, CB);
+      for (z = 0; z < L; z++) {
+        b.fill(-1, 0, z, 1, 0, z, SL);                     // настил в три клетки
+        b.put(-1, 1, z, z % 2 ? DW : Xh);                  // перила
+        b.put(1, 1, z, z % 2 ? DW : Xh);
       }
+      for (z = 1; z < L - 1; z += 3) {                     // столбы опор в воду
+        b.put(-1, -1, z, CB); b.put(1, -1, z, CB);
+        b.put(0, -1, z, CB);
+      }
+      b.put(-1, 2, 0, Xh); b.put(1, 2, 0, Xh);             // входные столбы
+      b.put(-1, 2, L - 1, Xh); b.put(1, 2, L - 1, Xh);
+      b.put(-1, 3, 0, GL); b.put(1, 3, L - 1, GL);         // фонари на столбах
+    },
+    meta: {
+      bridge: { deck: [-1, 0, 1], z0: 0, z1: 10, railY: 1 }
+    }
+  },
+  {
+    key: 'villageHall', cat: 'infra', ru: 'Деревенская таверна', en: 'Village tavern',
+    build: function (b) {
+      var W = 9, D = 7;
+      mcbTplPlinth(b, 0, 0, W - 1, D - 1, CB);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, PL);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 1, 3, PS, DW);
+      mcbTplTimber(b, 0, 0, W - 1, D - 1, 1, 3, DW, 2);
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 4, DW);
+      mcbTplWalls(b, 0, 0, W - 1, D - 1, 5, 6, PS, DW);
+      mcbTplTimber(b, 0, 0, W - 1, D - 1, 5, 6, DW, 2);
+      mcbTplDoor(b, 4, 0, 1, { dx: 0, dz: -1 }, DW, CB);
+      mcbTplWindow(b, 1, 0, 2, DW); mcbTplWindow(b, 7, 0, 2, DW);
+      mcbTplWindowRow(b, 'x', D - 1, 1, 7, 3, 2, DW);
+      mcbTplWindow(b, 0, 2, 2, DW); mcbTplWindow(b, 0, 4, 2, DW);
+      mcbTplWindow(b, W - 1, 2, 2, DW); mcbTplWindow(b, W - 1, 4, 2, DW);
+      mcbTplWindowRow(b, 'x', 0, 1, 7, 3, 6, DW, true);
+      mcbTplWindowRow(b, 'x', D - 1, 1, 7, 3, 6, DW, true);
+      mcbTplStairs(b, 1, 1, 1, 3, PL);
+      b.erase(1, 4, 1); b.erase(1, 4, 2); b.erase(1, 4, 3);
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 7, RF, SL);
+      mcbTplChimney(b, 7, 5, 1, 10, SB, SL);
+      /* Вывеска над входом и фонарь у двери. */
+      b.put(4, 4, -1, DW); b.put(5, 4, -1, DW);
+      b.put(6, 1, -1, Xh); b.put(6, 2, -1, GL);
+      b.fill(0, 0, -1, 8, 0, -1, PL);                      // площадка перед входом
+    },
+    meta: {
+      foot: [0, 0, 8, 6], wallTop: 6, roof: { rect: [0, 0, 8, 6], y: 7, open: [[7, 5]] },
+      walls: [
+        { rect: [0, 0, 8, 6], y0: 1, y1: 3, open: [[4, 1, 0], [4, 2, 0]] },
+        { rect: [0, 0, 8, 6], y0: 5, y1: 6, open: [] }
+      ],
+      floors: [{ y: 4, rect: [0, 0, 8, 6], holes: [[1, 1, 1, 3]] }],
+      door: { x: 4, z: 0, y0: 1, h: 2 },
+      glass: [[1, 2, 0], [7, 2, 0], [1, 2, 6], [4, 2, 6], [7, 2, 6], [0, 2, 2], [8, 2, 4]]
+    }
+  },
+  {
+    key: 'marketStall', cat: 'infra', ru: 'Рыночный навес', en: 'Market stall',
+    build: function (b) {
+      var W = 5, D = 5, x, z;
+      b.fill(-1, 0, -1, W, 0, D, PL);                      // настил-фундамент
+      mcbTplPlate(b, 0, 0, W - 1, D - 1, 0, DW);
+      /* Четыре стойки и решётка прилавка. */
+      var corners = [[0, 0], [W - 1, 0], [0, D - 1], [W - 1, D - 1]], c;
+      for (c = 0; c < corners.length; c++) {
+        for (var y = 1; y <= 4; y++) b.put(corners[c][0], y, corners[c][1], Xh);
+      }
+      b.fill(0, 1, 0, W - 1, 1, 0, DW);                    // прилавок
+      b.fill(0, 1, D - 1, W - 1, 1, D - 1, DW);
+      b.put(1, 2, 0, Bl); b.put(2, 2, 0, SB); b.put(3, 2, 0, Wh);   // товар
+      b.put(1, 2, D - 1, GL); b.put(2, 2, D - 1, PL); b.put(3, 2, D - 1, Bl);
+      b.put(2, 1, 2, Xh); b.put(2, 2, 2, GL);              // фонарь в центре
+      /* Бахрома только по внешнему краю: прилавок и проход остаются открытыми. */
+      for (x = -1; x <= W; x++) { b.put(x, 4, -1, DW); b.put(x, 4, D, DW); }
+      for (z = 0; z < D; z++) { b.put(-1, 4, z, DW); b.put(W, 4, z, DW); }
+      b.fill(0, 5, 0, W - 1, 5, D - 1, RF);                // навес над прилавком
+      b.put(2, 6, 2, SL);                                  // конёк навеса
+    },
+    meta: {
+      foot: [0, 0, 4, 4], wallTop: 4, roof: { rect: [0, 0, 4, 4], y: 5, flat: true }
+    }
+  },
+  {
+    key: 'temple', cat: 'decor', ru: 'Древний храм', en: 'Ancient temple',
+    build: function (b) {
+      var W = 9, D = 7, x, z;
+      b.fill(-1, 0, -1, W, 0, D, Hh);                      // первая ступень
+      b.fill(0, 1, 0, W - 1, 1, D - 1, Hh);                // вторая ступень
+      b.fill(1, 2, 1, W - 2, 2, D - 2, SB);                // пол храма
+      /* Колоннада по периметру. */
+      var cols = [
+        [1, 1], [1, 3], [1, 5], [7, 1], [7, 3], [7, 5],
+        [3, 1], [5, 1], [3, 5], [5, 5]
+      ];
+      for (var c = 0; c < cols.length; c++) mcbTplColumn(b, cols[c][0], cols[c][1], 3, 6, SB, SL);
+      b.fill(0, 7, 0, W - 1, 7, D - 1, SL);                // антаблемент
+      mcbTplGable(b, 0, 0, W - 1, D - 1, 8, SL, SB);       // фронтон
+      /* Святилище внутри: стены, вход и алтарь. */
+      mcbTplWalls(b, 3, 2, 5, 4, 3, 5, SB, SL);
+      b.erase(4, 3, 2); b.erase(4, 4, 2);
+      b.put(4, 3, 4, SL); b.put(4, 3, 3, GL);              // алтарь
+      b.fill(4, 0, -1, 4, 1, -1, SB);                     // дорожка к входу
+      b.put(4, 2, -1, SB);
+      b.put(0, 2, 0, GL); b.put(8, 2, 6, GL);              // чаши с огнём
+    },
+    meta: {
+      foot: [-1, -1, 9, 7],
+      temple: { cols: [[1, 1], [7, 5]], altar: [4, 3, 4] }
+    }
+  },
+  {
+    key: 'monument', cat: 'decor', ru: 'Монумент', en: 'Monument',
+    build: function (b) {
+      b.fill(-1, 0, -1, 5, 0, 5, Hh);                      // площадка
+      b.fill(0, 1, 0, 4, 1, 4, SB);                        // первая ступень
+      b.fill(1, 2, 1, 3, 2, 3, SL);                        // пьедестал
+      var y;
+      for (y = 3; y <= 7; y++) b.put(2, y, 2, SL);         // обелиск
+      b.put(2, 8, 2, SB); b.put(2, 9, 2, GL);              // навершие
+      /* Угловые фонари и зелень. */
+      var corners = [[0, 0], [4, 0], [0, 4], [4, 4]], c;
+      for (c = 0; c < corners.length; c++) {
+        b.put(corners[c][0], 2, corners[c][1], Xh);
+        b.put(corners[c][0], 3, corners[c][1], GL);
+        b.put(corners[c][0], 1, corners[c][1], Bl);
+      }
+      b.put(2, 1, 0, SB); b.put(2, 1, 4, SB);
+    },
+    meta: {
+      foot: [-1, -1, 5, 5],
+      monument: { shaft: [2, 2], top: 9 }
+    }
+  },
+  {
+    key: 'fountain', cat: 'decor', ru: 'Фонтан', en: 'Fountain',
+    build: function (b) {
+      var S = 5;
+      b.fill(-1, 0, -1, S, 0, S, SL);                      // площадка
+      b.fill(0, 1, 0, S - 1, 1, S - 1, SB);                // бортик чаши
+      b.fill(1, 1, 1, S - 2, 1, S - 2, GL);                // вода
+      mcbTplColumn(b, 2, 2, 2, 4, SL, SB);                 // колонна
+      b.fill(1, 5, 1, 3, 5, 3, SB);                        // верхняя чаша
+      b.fill(1, 5, 1, 3, 5, 3, GL);
+      b.put(2, 5, 2, SL); b.put(2, 6, 2, GL);
+      var corners = [[0, 0], [S - 1, 0], [0, S - 1], [S - 1, S - 1]], c;
+      for (c = 0; c < corners.length; c++) {
+        b.put(corners[c][0], 2, corners[c][1], Xh);
+        b.put(corners[c][0], 3, corners[c][1], GL);
+      }
+    },
+    meta: {
+      foot: [-1, -1, 5, 5],
+      fountain: { basin: [0, 1], centre: [2, 2] }
     }
   },
   {
     key: 'stairs', cat: 'parts', ru: 'Лестница', en: 'Stairs',
     build: function (b) {
-      /* Сплошная лестница: под каждой ступенью блок, поэтому нет «парящих»
-         клеток, а подъём остаётся на одну клетку за шаг. */
-      for (var i = 0; i < 5; i++) {
-        for (var w = 0; w < 3; w++) {
-          for (var y = 0; y <= i; y++) b.put(w - 1, y, i, PL);
-        }
-      }
-    }
+      for (var i = 0; i < 5; i++)
+        for (var w = -1; w <= 1; w++)
+          for (var y = 0; y <= i; y++) b.put(w, y, i, PL);
+    },
+    meta: { part: true }
   },
   {
     key: 'roof', cat: 'parts', ru: 'Крыша', en: 'Roof',
-    build: function (b) { mcbTplRoof(b, -3, 0, 3, 2, 0, RF); }
+    build: function (b) { mcbTplGable(b, -3, 0, 3, 4, 0, RF, SL); },
+    meta: { part: true }
   },
   {
     key: 'fence', cat: 'parts', ru: 'Забор', en: 'Fence',
     build: function (b) {
       for (var z = 0; z < 8; z++) {
-        if (z % 2 === 0) b.put(0, 0, z, Xh);
+        if (z % 2 === 0) { b.put(0, 0, z, Xh); b.put(0, 1, z, Xh); }
         b.put(0, 1, z, DW);
+        if (z % 2 === 0) b.put(0, 1, z, Xh);
+        b.put(0, 2, z, DW);
       }
-    }
+    },
+    meta: { part: true }
   },
   {
     key: 'window', cat: 'parts', ru: 'Окно', en: 'Window',
@@ -839,21 +1251,26 @@ var MCB_TEMPLATES = [
         var frame = x === 0 || x === 2 || y === 0 || y === 2;
         b.put(x, y, 0, frame ? PL : GL);
       }
-    }
+    },
+    meta: { part: true }
   },
   {
     key: 'door', cat: 'parts', ru: 'Дверь', en: 'Door',
     build: function (b) {
-      for (var x = 0; x < 3; x++) for (var y = 0; y < 4; y++) {
-        var frame = x === 0 || x === 2 || y === 3;
-        if (!frame && y < 3) continue;
-        b.put(x, y, 0, DW);
+      for (var x = 0; x < 3; x++) {
+        b.put(x, 0, 0, DW);
+        b.put(x, 3, 0, DW);
       }
-    }
+      b.put(0, 1, 0, DW); b.put(0, 2, 0, DW);
+      b.put(2, 1, 0, DW); b.put(2, 2, 0, DW);
+      b.put(1, 1, 0, CB); b.put(1, 2, 0, DW);
+    },
+    meta: { part: true }
   },
   {
     key: 'floor', cat: 'parts', ru: 'Пол', en: 'Floor',
-    build: function (b) { b.fill(0, 0, 0, 4, 0, 4, PL); }
+    build: function (b) { b.fill(0, 0, 0, 4, 0, 4, PL); },
+    meta: { part: true }
   }
 ];
 
@@ -888,6 +1305,169 @@ function mcbBuildPlan(key) {
   var b = mcbPlanBuilder();
   tpl.build(b);
   return b.done();
+}
+
+/* ------------------------------------------------- проверка постройки */
+/* Перед постройкой шаблон проверяется на целостность: фундамент, полы, стены
+   без лишних щелей, дверь с перемычкой, окна со стеклом и подоконником, крыша,
+   закрытая в каждом столбце, и отсутствие висящих блоков. Возвращает список
+   замечаний: пустой список — постройка закончена. */
+function mcbPlanValidate(key) {
+  var tpl = mcbTemplate(key);
+  var out = [];
+  if (!tpl) return ['unknown template'];
+  var blocks = mcbBuildPlan(key);
+  if (!blocks.length) return ['empty template'];
+  var map = {}, i, b, k;
+  for (i = 0; i < blocks.length; i++) {
+    b = blocks[i];
+    if (b.x !== Math.round(b.x) || b.y !== Math.round(b.y) || b.z !== Math.round(b.z)) {
+      out.push('unaligned block');
+      continue;
+    }
+    k = b.x + ',' + b.y + ',' + b.z;
+    if (map[k]) out.push('duplicate cell ' + k);
+    map[k] = b;
+  }
+  function solid(x, y, z) { return !!map[x + ',' + y + ',' + z]; }
+  function idAt(x, y, z) {
+    var c = map[x + ',' + y + ',' + z];
+    return c ? c.id : 0;
+  }
+  function eachCell(rect, fn) {
+    for (var x = rect[0]; x <= rect[2]; x++)
+      for (var z = rect[1]; z <= rect[3]; z++) fn(x, z);
+  }
+
+  /* Связность: всё сооружение — одна деталь, соединённая с нижним слоем. */
+  var minY = Infinity;
+  for (i = 0; i < blocks.length; i++) if (blocks[i].y < minY) minY = blocks[i].y;
+  var seen = {}, queue = [];
+  for (i = 0; i < blocks.length; i++) {
+    b = blocks[i];
+    if (b.y !== minY) continue;
+    k = b.x + ',' + b.y + ',' + b.z;
+    if (seen[k]) continue;
+    seen[k] = 1;
+    queue.push(b);
+  }
+  var dirs = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  var reached = 0;
+  while (queue.length) {
+    var cur = queue.pop();
+    reached++;
+    for (i = 0; i < dirs.length; i++) {
+      var nk = (cur.x + dirs[i][0]) + ',' + (cur.y + dirs[i][1]) + ',' + (cur.z + dirs[i][2]);
+      if (!map[nk] || seen[nk]) continue;
+      seen[nk] = 1;
+      queue.push(map[nk]);
+    }
+  }
+  if (reached !== blocks.length) out.push('floating blocks: ' + (blocks.length - reached));
+
+  var m = tpl.meta || {};
+
+  if (m.foot) {
+    var footGaps = 0;
+    eachCell(m.foot, function (x, z) { if (!solid(x, 0, z)) footGaps++; });
+    if (footGaps) out.push('foundation gaps: ' + footGaps);
+  }
+
+  if (m.floors) {
+    for (var f = 0; f < m.floors.length; f++) {
+      var fl = m.floors[f], holes = fl.holes || [], flGaps = 0;
+      eachCell(fl.rect, function (x, z) {
+        if (solid(x, fl.y, z)) return;
+        for (var h = 0; h < holes.length; h++) {
+          var hr = holes[h];
+          if (x >= hr[0] && x <= hr[2] && z >= hr[1] && z <= hr[3]) return;
+        }
+        flGaps++;
+      });
+      if (flGaps) out.push('floor gaps at y=' + fl.y + ': ' + flGaps);
+    }
+  }
+
+  if (m.walls) {
+    for (var w = 0; w < m.walls.length; w++) {
+      var band = m.walls[w], open = {}, miss = [];
+      for (var o = 0; o < (band.open || []).length; o++) open[band.open[o].join(',')] = 1;
+      for (var by = band.y0; by <= band.y1; by++) {
+        eachCell(band.rect, function (x, z) {
+          var r = band.rect;
+          if (x !== r[0] && x !== r[2] && z !== r[1] && z !== r[3]) return;
+          if (solid(x, by, z)) return;
+          if (open[x + ',' + by + ',' + z]) return;
+          miss.push(x + ',' + by + ',' + z);
+        });
+      }
+      /* Ярусы стены объявляются по одному, поэтому повторы по y проверяем
+         отдельно: у каждого яруса свой диапазон. */
+      if (miss.length) out.push('wall gaps y' + band.y0 + '-y' + band.y1 + ': ' + miss.length + ' [' + miss.slice(0, 3).join(' ') + ']');
+    }
+  }
+
+  if (m.door) {
+    for (var dy = m.door.y0; dy < m.door.y0 + m.door.h; dy++) {
+      if (solid(m.door.x, dy, m.door.z)) out.push('door cell blocked at y=' + dy);
+    }
+    if (!solid(m.door.x, m.door.y0 + m.door.h, m.door.z)) out.push('door lintel missing');
+  }
+
+  if (m.gate) {
+    var gateOpen = m.gate;
+    for (var gx = gateOpen.x0; gx <= gateOpen.x1; gx++) {
+      for (var gy = gateOpen.y0; gy < gateOpen.y0 + 2; gy++) {
+        if (solid(gx, gy, gateOpen.z)) out.push('gate cell blocked at ' + gx + ',' + gy);
+      }
+      if (!solid(gx, gateOpen.y0 + 2, gateOpen.z)) out.push('gate lintel missing');
+    }
+  }
+
+  if (m.glass) {
+    for (var g = 0; g < m.glass.length; g++) {
+      var gc = m.glass[g];
+      if (idAt(gc[0], gc[1], gc[2]) !== GL) out.push('window is not glass at ' + gc.join(','));
+      /* Фрамуга над дверью ставится без подоконника — это помечено в мете. */
+      if (gc[3] !== 1 && !solid(gc[0], gc[1] - 1, gc[2])) {
+        out.push('window sill missing at ' + gc.join(','));
+      }
+    }
+  }
+
+  if (m.roof) {
+    var roofOpen = {}, gaps = 0;
+    for (var ro = 0; ro < (m.roof.open || []).length; ro++) roofOpen[m.roof.open[ro].join(',')] = 1;
+    eachCell(m.roof.rect, function (x, z) {
+      if (roofOpen[x + ',' + z]) return;      // труба или зенитное окно
+      var id = idAt(x, m.roof.y, z);
+      if (id !== RF && id !== SL) gaps++;
+    });
+    if (gaps) out.push('roof layer gaps: ' + gaps);
+    var openTop = 0;
+    eachCell(m.roof.rect, function (x, z) {
+      if (roofOpen[x + ',' + z]) return;
+      var top = 0;
+      for (var y = m.roof.y; y <= m.roof.y + 24; y++) if (solid(x, y, z)) top = idAt(x, y, z);
+      if (top !== RF && top !== SL && top !== SB) openTop++;
+    });
+    if (openTop) out.push('roof not closed: ' + openTop);
+  }
+
+  if (m.wall) {
+    var band2 = m.wall, open2 = {}, miss2 = 0;
+    for (var o2 = 0; o2 < (band2.open || []).length; o2++) open2[band2.open[o2].join(',')] = 1;
+    for (var by2 = band2.y0; by2 <= band2.y1; by2++) {
+      eachCell(band2.rect, function (x, z) {
+        if (solid(x, by2, z)) return;
+        if (open2[x + ',' + by2 + ',' + z]) return;
+        miss2++;
+      });
+    }
+    if (miss2) out.push('wall body gaps: ' + miss2);
+  }
+
+  return out;
 }
 
 /* Поворот чертежа на 90° × dir вокруг опорной клетки. */
@@ -954,6 +1534,15 @@ function mcbPlanCheck(key, dir) {
     return result;
   }
   result.base = base;
+  /* Фундамент ставится на поверхность: под опорной клеткой должен быть блок.
+     Иначе дом повис бы в воздухе, и «фундамент» был бы только на словах. */
+  var under = base.y > 0 ? cs(base.x, base.y - 1, base.z) : Ai;
+  if (under === Ai || under === qh) {
+    result.reason = 'ground';
+    result.message = mcbT('Стройте с земли: наведитесь на поверхность, а не на стену.',
+      'Build from the ground: aim at a surface, not at a wall.');
+    return result;
+  }
   var blocks = [], out = 0, busy = 0, player = 0, need = {};
   for (var i = 0; i < rel.length; i++) {
     var r = rel[i];
@@ -1013,69 +1602,17 @@ function mcbPlanCheck(key, dir) {
     result.message = mcbT('Не хватает материала: ', 'Not enough material: ') + mcbMissingText(missing);
     return result;
   }
+  /* Последняя проверка — целостность самой постройки (фундамент, стены, крыша,
+     окна, двери). Шаблоны, которые её не проходят, ставить нельзя: недоделанных
+     построек в игре быть не должно. */
+  var issues = mcbPlanValidate(key);
+  if (issues.length) {
+    result.reason = 'broken';
+    result.message = mcbT('Шаблон недоделан: ', 'The template is incomplete: ') + issues.join('; ');
+    return result;
+  }
   result.ok = true;
   return result;
-}
-
-/* ------------------------------------------------- предпросмотр чертежа */
-function mcbPlanMaterial(ok) {
-  if (!mcbState.planMats) mcbState.planMats = {};
-  var k = ok ? 'ok' : 'no';
-  if (!mcbState.planMats[k]) {
-    mcbState.planMats[k] = new ti({
-      color: ok ? MCB_GHOST_GREEN : MCB_GHOST_RED,
-      transparent: true, opacity: ok ? .36 : .5, depthWrite: false
-    });
-  }
-  return mcbState.planMats[k];
-}
-
-function mcbPlanMesh(index, mat) {
-  var list = mcbState.planMeshes || (mcbState.planMeshes = []);
-  if (!list[index]) {
-    if (!Ht || typeof wt !== 'function' || typeof cn !== 'function') return null;
-    /* Геометрия одна на все клетки предпросмотра: замок из 400 блоков не
-       должен создавать 400 отдельных буферов. */
-    if (!mcbState.planGeom) mcbState.planGeom = new cn(1, 1, 1);
-    var mesh = new wt(mcbState.planGeom, mat);
-    mesh.renderOrder = 4;
-    mesh.name = 'mcx-plan-' + index;
-    Ht.add(mesh);
-    list[index] = mesh;
-  }
-  return list[index];
-}
-
-/* Перерисовываем предпросмотр только при смене цели/поворота/валидности —
-   поэтому при движении камеры внутри клетки ничего не мерцает. */
-function mcbPlanPreviewUpdate() {
-  if (!mcbState.planKey) { mcbPlanPreviewHide(); return; }
-  var check = mcbPlanCheck(mcbState.planKey, mcbState.planDir);
-  var baseKey = check.base ? (check.base.x + ',' + check.base.y + ',' + check.base.z) : '-';
-  var sig = check.key + '|' + check.dir + '|' + baseKey + '|' + (check.ok ? 1 : 0) + '|' +
-    check.blocks.length + '|' + check.reason;
-  if (sig === mcbState.planSig) return;
-  mcbState.planSig = sig;
-  var mat = mcbPlanMaterial(check.ok);
-  var list = mcbState.planMeshes || [];
-  var shown = 0;
-  for (var i = 0; i < check.blocks.length; i++) {
-    var b = check.blocks[i];
-    var mesh = mcbPlanMesh(shown, mat);
-    if (!mesh) break;
-    mesh.material = mat;
-    mesh.position.set(b.x + .5, b.y + .5, b.z + .5);
-    mesh.visible = true;
-    shown++;
-  }
-  for (var j = shown; j < list.length; j++) if (list[j]) list[j].visible = false;
-  mcbPlanBar(check);
-}
-
-function mcbPlanPreviewHide() {
-  var list = mcbState.planMeshes || [];
-  for (var i = 0; i < list.length; i++) if (list[i]) list[i].visible = false;
-  mcbState.planSig = '';
 }
 
 /* Полоска подтверждения: видно, что именно построится и почему нельзя. */
@@ -1106,14 +1643,14 @@ function mcbPlanBar(check) {
   }
 }
 
-/* Начать предпросмотр шаблона (постановка — только после подтверждения). */
+/* Выбрать шаблон: место и материалы проверяются сразу, постановка — по подтверждению. */
 function mcxBuildPlanStart(key, dir) {
   if (!mcbTemplate(key)) return false;
   mcbState.planKey = key;
   mcbState.planDir = dir == null ? (mcbStampDir || 0) : dir;
-  mcbState.planSig = '';
-  mcbPlanPreviewUpdate();
+  mcbState.planBarKey = '';
   var check = mcbPlanCheck(key, mcbState.planDir);
+  mcbPlanBar(check);
   if (!check.ok) mcbToast(check.message, 2800);
   return true;
 }
@@ -1127,15 +1664,15 @@ function mcxBuildPlanRotate() {
   }
   mcbState.planDir = ((mcbState.planDir || 0) + 1) % 4;
   mcbStampDir = mcbState.planDir;
-  mcbState.planSig = '';
-  mcbPlanPreviewUpdate();
+  mcbState.planBarKey = '';
+  mcbPlanBarRefresh();
   return mcbState.planDir;
 }
 
 function mcxBuildPlanCancel() {
   mcbState.planKey = null;
   mcbState.planDir = 0;
-  mcbPlanPreviewHide();
+  mcbState.planBarKey = '';
   mcbPlanBar(null);
 }
 
@@ -1168,18 +1705,17 @@ function mcxBuildConfirm() {
   return placed;
 }
 
-/* Совместимость: поставить шаблон сразу (без предпросмотра), но с той же
-   проверкой — постройка либо встаёт целиком, либо не встаёт вовсе. */
+/* Совместимость: поставить шаблон сразу (без полоски подтверждения), но с той
+   же проверкой — постройка либо встаёт целиком, либо не встаёт вовсе. */
 function mcxBuildStamp(key, dir) {
   if (!mcbTemplate(key)) return 0;
-  var previousKey = mcbState.planKey, previousDir = mcbState.planDir, previousSig = mcbState.planSig;
+  var previousKey = mcbState.planKey, previousDir = mcbState.planDir;
   mcbState.planKey = key;
   mcbState.planDir = ((dir || 0) % 4 + 4) % 4;
   var placed = mcxBuildConfirm();
   if (!placed) {
     mcbState.planKey = previousKey;
     mcbState.planDir = previousDir;
-    mcbState.planSig = previousSig;
   }
   return placed;
 }
@@ -1283,8 +1819,8 @@ function mcbPaintModal() {
   }
   if (mcbState.tab === 'plans' && plans) {
     var out = '<p class="mcb-hint">' + mcbT(
-      'Выберите шаблон — появится предпросмотр всей постройки. Зелёный можно ставить, красный — нельзя. R — повернуть, подтверждение — кнопкой снизу.',
-      'Pick a template to preview the whole building. Green can be placed, red cannot. R rotates, confirm with the button below.') + '</p>';
+      'Выберите шаблон: игра проверит место и материалы, а постройка встанет целиком после подтверждения. R — повернуть, «Построить» — поставить.',
+      'Pick a template: the game checks the spot and the materials, and the whole building is placed after you confirm. R rotates, Build places it.') + '</p>';
     for (var c = 0; c < MCB_PLAN_CATS.length; c++) {
       var cat = MCB_PLAN_CATS[c];
       var items = MCB_PLAN_NAMES.filter(function (plan) { return plan.cat === cat.id; });
@@ -1866,7 +2402,7 @@ addEventListener('keydown', function (event) {
   if (event.code === 'Escape' && mcbState.planKey) {
     event.preventDefault();
     mcxBuildPlanCancel();
-    mcbToast(mcbT('Предпросмотр отменён.', 'Preview cancelled.'), 1600);
+    mcbToast(mcbT('Постройка отменена.', 'Build cancelled.'), 1600);
     return;
   }
 }, true);
@@ -1886,6 +2422,6 @@ addEventListener('message', function (event) {
 });
 
 /* Автозапуск: интерфейс и защита жестов ставятся сразу, а покадровая часть
-   (призрак блока, восстановление постройки) вызывается из цикла отрисовки
+   (прицел, восстановление постройки) вызывается из цикла отрисовки
    самой игры — второй requestAnimationFrame на телефоне не нужен. */
 mcbInit();
