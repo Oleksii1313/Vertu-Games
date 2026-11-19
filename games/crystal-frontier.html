@@ -211,6 +211,7 @@ html,body{height:100%;height:var(--vg-vh,100%);margin:0;background:var(--bg);col
 #joy i{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(95,227,212,.45)}
 .mb{position:absolute;width:56px;height:56px;border-radius:50%;background:rgba(10,20,26,.6);border:2px solid rgba(255,255,255,.3);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:none}
 .mb:active,.mb.on{background:rgba(95,227,212,.5)}
+.mb.sel{box-shadow:inset 0 0 0 3px rgba(95,227,212,.8)}
 /* Раскладка тач-кнопок. Позиции живут только здесь (в разметке их нет),
    чтобы медиазапросы могли пересобрать схему без !important.
    Правая рука: атака — крупная кнопка в углу, вокруг неё дугой прыжок, кирка
@@ -302,6 +303,64 @@ html,body{height:100%;height:var(--vg-vh,100%);margin:0;background:var(--bg);col
 @media (pointer:coarse) and (orientation:landscape) and (max-height:520px){
   #mm{width:84px;height:84px;left:max(14px,env(safe-area-inset-left));right:auto;
       top:calc(max(58px,env(safe-area-inset-top) + 58px))}
+}
+
+/* ==== Итоговая раскладка тач-управления ====================================
+   Раньше правила были размазаны по нескольким блокам, и на телефоне Сумка
+   наезжала на мини-карту, а хотбар — на панель заданий. Здесь всё сведено в
+   один слой: левый низ — стик и «Бег», правый низ — действия, правый верх —
+   карта и служебные кнопки, хотбар на телефоне скрыт (инструмент выбирают
+   кнопки «Кирка»/«Атака», а сумка открывается кнопкой «Сумка»). */
+@media (pointer:coarse){
+  #quest{left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));
+         width:min(196px,44vw);font-size:11.5px;padding:8px 10px}
+  #vbal{right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));padding:6px 10px}
+  #mm{left:auto;right:max(12px,env(safe-area-inset-right));top:calc(max(12px,env(safe-area-inset-top)) + 68px);
+      width:92px;height:92px}
+  #bPause{left:auto;right:max(12px,env(safe-area-inset-right));bottom:auto;
+          top:calc(max(12px,env(safe-area-inset-top)) + 170px);width:52px;height:52px}
+  #bInv{left:auto;right:max(12px,env(safe-area-inset-right));bottom:auto;
+        top:calc(max(12px,env(safe-area-inset-top)) + 230px);width:52px;height:52px}
+  #hotbar{display:none}
+  #bars{left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));width:min(150px,40vw)}
+  #joy{left:max(20px,env(safe-area-inset-left));bottom:calc(max(84px,env(safe-area-inset-bottom) + 84px));
+       width:134px;height:134px}
+  #bAtk{right:max(12px,env(safe-area-inset-right));bottom:calc(max(84px,env(safe-area-inset-bottom) + 84px))}
+  #bJump{right:max(12px,env(safe-area-inset-right));bottom:calc(max(170px,env(safe-area-inset-bottom) + 170px))}
+  #bMine{right:calc(max(12px,env(safe-area-inset-right)) + 88px);bottom:calc(max(90px,env(safe-area-inset-bottom) + 90px))}
+  #bUse{right:calc(max(12px,env(safe-area-inset-right)) + 88px);bottom:calc(max(164px,env(safe-area-inset-bottom) + 164px))}
+  #bSpr{left:max(20px,env(safe-area-inset-left));bottom:calc(max(228px,env(safe-area-inset-bottom) + 228px))}
+  #loc{top:16%}
+  #toasts{top:24%}
+}
+@media (pointer:coarse) and (max-width:380px) and (orientation:portrait){
+  #joy{width:116px;height:116px}
+  #joy i{left:34px;top:34px;width:48px;height:48px}
+  #bMine{right:calc(max(10px,env(safe-area-inset-right)) + 96px);bottom:calc(max(84px,env(safe-area-inset-bottom) + 84px))}
+  #bUse{right:calc(max(10px,env(safe-area-inset-right)) + 96px);bottom:calc(max(152px,env(safe-area-inset-bottom) + 152px))}
+  #bSpr{left:max(18px,env(safe-area-inset-left));bottom:calc(max(206px,env(safe-area-inset-bottom) + 206px))}
+  #mm{width:84px;height:84px}
+  #bPause{top:calc(max(12px,env(safe-area-inset-top)) + 160px)}
+  #bInv{top:calc(max(12px,env(safe-area-inset-top)) + 216px)}
+}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:520px){
+  #mm{left:max(12px,env(safe-area-inset-left));right:auto;
+      top:calc(max(58px,env(safe-area-inset-top) + 58px));width:84px;height:84px}
+  #bPause{right:max(12px,env(safe-area-inset-right));top:calc(max(58px,env(safe-area-inset-top) + 58px));
+          bottom:auto;width:48px;height:48px}
+  #bInv{right:calc(max(12px,env(safe-area-inset-right)) + 54px);top:calc(max(58px,env(safe-area-inset-top) + 58px));
+        bottom:auto;width:48px;height:48px}
+  #bAtk{right:max(12px,env(safe-area-inset-right));bottom:calc(max(70px,env(safe-area-inset-bottom) + 70px))}
+  #bJump{right:max(12px,env(safe-area-inset-right));bottom:calc(max(146px,env(safe-area-inset-bottom) + 146px))}
+  #bMine{right:calc(max(12px,env(safe-area-inset-right)) + 78px);bottom:calc(max(74px,env(safe-area-inset-bottom) + 74px))}
+  #bUse{right:calc(max(12px,env(safe-area-inset-right)) + 78px);bottom:calc(max(140px,env(safe-area-inset-bottom) + 140px))}
+  /* В ландшафте высота маленькая: стик ниже и меньше, «Бег» — справа от него. */
+  #joy{left:max(20px,env(safe-area-inset-left));bottom:calc(max(76px,env(safe-area-inset-bottom) + 76px));
+       width:112px;height:112px}
+  #joy i{left:31px;top:31px;width:48px;height:48px}
+  #bSpr{left:max(140px,env(safe-area-inset-left));bottom:calc(max(84px,env(safe-area-inset-bottom) + 84px))}
+  #hotbar{display:none}
+  #bars{left:max(12px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));width:min(150px,32vw)}
 }
 </style>
 <canvas id="c"></canvas>
@@ -1010,7 +1069,10 @@ function vReward(a,reason){VertBridge.award(reason,a);toast(`+${a} монет ·
 function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;$('toasts').appendChild(d);while($('toasts').children.length>4)$('toasts').firstChild.remove();setTimeout(()=>d.remove(),3800)}
 let locTm=0;function showLoc(n){const e=$('loc');e.textContent=n;e.style.opacity=1;clearTimeout(locTm);locTm=setTimeout(()=>e.style.opacity=0,3000)}
 const HB=[['Pick','⛏'],['Sword','⚔'],['Potion','⚗'],['Build','⌂']];
-function renderHotbar(){const h=$('hotbar');h.innerHTML='';HB.forEach((b,i)=>{const s=document.createElement('div');s.className='slot'+(i===tool?' on':'');s.style.pointerEvents='auto';s.innerHTML=`<kbd>${i+1}</kbd><em>${b[1]}</em>${i===2?(inv.potion||0):b[0]}`;s.onpointerdown=e=>{e.stopPropagation();setTool(i)};h.appendChild(s)})}
+function renderHotbar(){const h=$('hotbar');h.innerHTML='';HB.forEach((b,i)=>{const s=document.createElement('div');s.className='slot'+(i===tool?' on':'');s.style.pointerEvents='auto';s.innerHTML=`<kbd>${i+1}</kbd><em>${b[1]}</em>${i===2?(inv.potion||0):b[0]}`;s.onpointerdown=e=>{e.stopPropagation();setTool(i)};h.appendChild(s)});markTool()}
+/* Хотбар на телефоне скрыт, поэтому выбранный инструмент подсвечиваем на кнопке
+   «Кирка»/«Атака»: игрок видит, чем ударит, не глядя на верх экрана. */
+function markTool(){const m0=$('bMine'),m1=$('bAtk');if(!m0||!m1)return;m0.classList.toggle('sel',tool===0);m1.classList.toggle('sel',tool===1)}
 /* ---- fragments & quests ---- */
 const FRAGINFO=['',((window.VGT&&window.VGT('Каменный страж · Древние руины','Stone Guardian · Elder Ruins'))||'Каменный страж · Древние руины'),((window.VGT&&window.VGT('Тайный сундук · Кристальная пещера','Hidden chest · Crystal Cave'))||'Тайный сундук · Кристальная пещера'),((window.VGT&&window.VGT('Кристальный колосс · в глубине пещеры','Crystal Colossus · deep in the cave'))||'Кристальный колосс · в глубине пещеры'),((window.VGT&&window.VGT('Святилище · на северной вершине','Summit Shrine · top of the northern peak'))||'Святилище · на северной вершине'),((window.VGT&&window.VGT('Тайное хранилище · за порталом в руинах','Hidden Vault · through the ruins portal'))||'Тайное хранилище · за порталом в руинах')];
 function giveFragment(i,src){if(FRAGS[i])return;FRAGS[i]=true;addItem('frag',1,true);toast(`Осколок кристалла ${i}/5 найден · ${src}`);vReward(100,`Fragment ${i}`);sfx.craft();questTick()}
@@ -1033,7 +1095,8 @@ const EM=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:
 function ball(r,m,x,y,z,sx=1,sy=1,sz=1){const o=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;return o}
 function limb(m,w,l,d,x,y,z){const p=new THREE.Group(),o=new THREE.Mesh(new THREE.BoxGeometry(w,l,d),m);o.position.y=-l/2;o.castShadow=true;p.add(o);p.position.set(x,y,z);return p}
 const ET={
- moss:{hp:30,dmg:8,speed:3.6,detect:16,range:1.7,cd:1.3,h:1.1,r:.7,wr:10,atk:.4},
+ moss:{hp:30,dmg:8,speed:3.6,detect:16,range:2,cd:1.3,h:2.9,r:.9,wr:10,atk:.4},
+ palehand:{hp:90,dmg:16,speed:3.2,detect:18,range:2.2,cd:1.5,h:2.8,r:.7,wr:6,atk:.6},
  guardian:{hp:170,dmg:22,speed:2.1,detect:14,range:2.9,cd:2.2,h:3.2,r:1.3,wr:4,atk:.8},
  shard:{hp:55,dmg:12,speed:3.9,detect:15,range:1.8,cd:1.2,h:1.2,r:.8,wr:6,atk:.45},
  bat:{hp:18,dmg:6,speed:5.8,detect:20,range:1.5,cd:1.0,h:.6,r:.5,wr:10,atk:.3,fly:1},
@@ -1135,17 +1198,87 @@ function golemGeo(k,B){
   for(const s of[-1,1])it.push([blob(.45*k,1,.2,.9),M(s*k,2.62*k,0),bodyC,.18]);
   return mg(it)
 }
+/* ===== Атмосферные монстры (перенос из новой версии игры) ==================
+   furBall — шар с мехом из слоёв-оболочек по alphaMap прядей: объёмный ворс,
+   тени между прядями, дёшево по полигонам. Watcher — высокий тёмный зверь с
+   одним огромным светящимся глазом, двумя малыми глазами, пастью с клыками и
+   свисающими прядями шерсти; Pale Hand — бледный охотник с глазами на ладонях.
+   Всё, что не анимируется, слито в общие меши (у Watcher ~25 вызовов). */
+const furAlphas={},furMats={};
+function furAlpha(layer){
+  if(!furAlphas[layer]){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+    if(x){x.fillStyle='#000';x.fillRect(0,0,256,256);
+      for(let i=0;i<2600;i++){const px=Math.random()*256,py=Math.random()*256,len=6+Math.random()*12,an=(Math.random()-.5)*.6+Math.PI/2;
+        x.strokeStyle='rgba(255,255,255,'+(.5+Math.random()*.5).toFixed(2)+')';x.lineWidth=.7+Math.random()*1.2;
+        x.beginPath();x.moveTo(px,py);x.lineTo(px+Math.cos(an)*len,py+Math.sin(an)*len);x.stroke()}}
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(10,6);furAlphas[layer]=t}
+  return furAlphas[layer]
+}
+function furMat(col,layer){const k=col+'_'+layer;
+  if(!furMats[k])furMats[k]=new THREE.MeshStandardMaterial({color:col,alphaMap:furAlpha(layer),alphaTest:.42,roughness:1,metalness:0,side:THREE.DoubleSide});
+  return furMats[k]}
+function furBall(r,col,x,y,z,sx=1,sy=1,sz=1,layers=3){
+  const grp=new THREE.Group();grp.position.set(x,y,z);grp.scale.set(sx,sy,sz);
+  const base=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),EM(col));base.castShadow=true;grp.add(base);
+  for(let l=1;l<=layers;l++){const sh=new THREE.Mesh(new THREE.SphereGeometry(r*(1+.05*l),16,12),furMat(col,l));sh.castShadow=false;grp.add(sh)}
+  return grp
+}
+function buildWatcher(g,a){
+  const furC=0x1c2026,dark=EM(0x0c0d10),skin=EM(0x2e241d),teethC=0xd9d2c2,glow=0xcfefff;
+  g.add(furBall(.55,furC,0,1.75,0,1,1.2,.85,3));          /* косматый корпус */
+  g.add(ball(.62,skin,0,2.55,.55,1,.95,.9));               /* морда-маска */
+  g.add(furBall(.5,furC,0,2.45,-.1,1,.9,.9,2));            /* мохнатый затылок */
+  /* три глаза одним мешем: огромный светящийся, малый и красный */
+  g.add(eyesMesh([{x:0,y:2.62,z:1.14,r:.22,col:glow,sz:.5},
+    {x:.42,y:2.38,z:1.0,r:.11,col:glow},{x:-.44,y:2.3,z:.95,r:.07,col:0xff2a14}],0x0b0a09));
+  /* пасть и клыки одним мешем */
+  const mouth=[[SPH(.42,12,10),M(0,2.12,1.0,0,0,0,1.35,.58,.35),0x2a0c0c]];
+  for(let i=0;i<12;i++){const x0=-.5+i*.091;
+    mouth.push([CONE(.026,.2+((i*7)%5)/5*.08,4),M(x0,2.22,1.14,Math.PI,0,0),teethC]);
+    mouth.push([CONE(.026,.18+((i*11)%5)/5*.07,4),M(x0,2.04,1.14,0,0,0),teethC])}
+  g.add(new THREE.Mesh(mg(mouth),VMAT));
+  /* свисающие пряди — одна геометрия линий */
+  const pos=[];
+  for(let i=0;i<46;i++){const a0=(i*2.39996)%6.283,r0=.25+((i*7)%10)/10*.4,x0=Math.cos(a0)*r0,z0=Math.sin(a0)*r0*.7,len=.6+((i*13)%10)/10*.9;
+    let px=x0,py=1.6+((i*5)%10)/10*.4,pz=z0;
+    for(let k=0;k<3;k++){const nx=px+(((i+k*3)%7)-3)*.012,ny=py-len/3,nz=pz+(((i+k*5)%7)-3)*.012;
+      pos.push(px,py,pz,nx,ny,nz);px=nx;py=ny;pz=nz}}
+  const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.add(new THREE.LineSegments(sg,new THREE.LineBasicMaterial({color:0x2a2f36})));
+  const lm=EM(0x15181d);
+  for(const[x0,z0]of[[-.3,.25],[.3,.25],[-.3,-.25],[.3,-.25]]){
+    const l=limb(lm,.12,1.4,.12,x0,1.45,z0);l.add(ball(.08,lm,0,-1.45,0));g.add(l);a.legs.push(l)}
+  for(const sd of[-1,1]){
+    const ar=limb(lm,.13,1.6,.13,sd*.6,2.0,0);ar.rotation.z=sd*.2;
+    const hand=new THREE.Mesh(mg([[CONE(.03,.3,4),M(-.05,-.15,0,-.4,0,0),teethC],
+      [CONE(.03,.3,4),M(0,-.15,0,-.4,0,0),teethC],[CONE(.03,.3,4),M(.05,-.15,0,-.4,0,0),teethC]]),VMAT);
+    hand.position.y=-1.6;ar.add(hand);g.add(ar);a.arms.push(ar)}
+}
+function buildPaleHand(g,a){
+  const pale=0xd9c9b8,boneC=0xe8dccb,paleM=EM(pale,{roughness:.9});
+  const bodyIt=[
+    [SPH(.36,14,10),M(0,1.9,0,0,0,0,.8,1.6,.7),pale],           /* худое тело */
+    [SPH(.3,14,10),M(0,2.95,.1,0,0,0,.9,1.15,.85),pale],        /* вытянутый череп */
+    [SPH(.15,10,8),M(0,2.75,.36,0,0,0,1,1.3,.5),0x2a0c0c],      /* открытая пасть */
+    [SPH(.1,8,6),M(-.11,2.98,.3,0,0,0,1,1,.7),0x2a0c0c],        /* запавшие глаза */
+    [SPH(.1,8,6),M(.11,2.98,.3,0,0,0,1,1,.7),0x2a0c0c]];
+  for(let i=0;i<5;i++)bodyIt.push([CONE(.02,.1,4),M(-.09+i*.045,2.82,.44,0,0,0),boneC]);
+  g.add(new THREE.Mesh(mg(bodyIt),VMAT));
+  for(const sd of[-1,1]){
+    const ar=limb(paleM,.17,2.0,.17,sd*.48,2.45,0);ar.rotation.z=sd*.35;
+    const palmIt=[[SPH(.3,10,8),M(0,0,0,0,0,0,1,.5,1),pale],
+      [SPH(.09,8,6),M(sd*.1,0,.27),0xf2ece0],                    /* глаз на ладони */
+      [SPH(.05,8,6),M(sd*.1,0,.31),0x5a3a1a]];
+    for(let k=0;k<5;k++){const ang=(k-2)*.35;
+      palmIt.push([CONE(.035,.6,4),M(Math.sin(ang)*.3,.22,.1+Math.cos(ang)*.05,-.5,0,-ang*.8),boneC])}
+    const palm=new THREE.Mesh(mg(palmIt),VMAT);palm.position.y=-2.0;
+    ar.add(palm);g.add(ar);a.arms.push(ar)}
+  for(const sd of[-1,1]){const l=limb(paleM,.2,1.2,.2,sd*.22,1.2,0);g.add(l);a.legs.push(l)}
+}
 function mkEnemy(type){const g=new THREE.Group(),a={legs:[],arms:[],wings:[],fur:[]};
   const bone=0xe8e2cf,clawC=0x241f1a;
-  if(type==='moss'){
-    const shag=R(),body=furShells(mossGeo(shag),{len:.075+shag*.14,sway:.022});
-    g.add(body);a.fur.push(body);
-    g.add(eyesMesh([{x:-.15,y:.98,z:1.04,r:.1,col:0xffe45a,sz:.8},{x:.15,y:.98,z:1.04,r:.1,col:0xffe45a,sz:.8}]));
-    const det=[[SPH(.05),M(0,.9,1.14),0x17140f],[BOX,M(-.15,1.1,1.02,0,0,-.3,.2,.05,.12),0x2a241c],[BOX,M(.15,1.1,1.02,0,0,.3,.2,.05,.12),0x2a241c]];
-    for(let i=0;i<4;i++)det.push([CONE(.02,.09,4),M((i-1.5)*.055,.8,1.06,Math.PI,0,0),bone]);
-    const dm=new THREE.Mesh(mg(det),VMAT);g.add(dm);
-    for(const[x,z]of[[-.3,.42],[.3,.42],[-.3,-.5],[.3,-.5]]){const l=paw(0x3e4a2a,x,.62,z,.5,.13,clawC);g.add(l);a.legs.push(l)}
-  }
+  if(type==='moss'){buildWatcher(g,a)}
+  if(type==='palehand'){buildPaleHand(g,a)}
   if(type==='guardian'||type==='boss'){
     const B=type==='boss',k=B?2.2:1,bodyC=B?0x4b4658:0x7b786f;
     const body=furShells(golemGeo(k,B),{len:.055,sway:.015,tint:B?1:.95});
@@ -1229,8 +1362,10 @@ function updateEnemy(e,dt,t){
   if(e.type==='boss'&&e.state==='chase'){$('bossb').style.width=clamp(e.hp/e.max,0,1)*100+'%'}}
 const SPAWNERS=[];let caveSpawned=false;
 function addSpawner(type,x,z,o){const s={type,x,z,o:o||{},e:null,t:0};SPAWNERS.push(s);s.e=spawnEnemy(type,x,z,s.o);return s}
-function initEnemies(){let n=0,t=0;while(n<26&&t++<4000){const x=rr(-210,210),z=rr(-110,210),h=heightAt(x,z);if(h<3||h>26||!okTree(x,z)||fbm(x*.02+3,z*.02,3)<.42||Math.hypot(x-VILLAGE.x,z-VILLAGE.z)<60)continue;addSpawner('moss',x,z);n++}
+function initEnemies(){let n=0,t=0;while(n<14&&t++<4000){const x=rr(-210,210),z=rr(-110,210),h=heightAt(x,z);if(h<3||h>26||!okTree(x,z)||fbm(x*.02+3,z*.02,3)<.42||Math.hypot(x-VILLAGE.x,z-VILLAGE.z)<60)continue;addSpawner('moss',x,z);n++}
   n=0;t=0;while(n<4&&t++<4000){const x=rr(-150,150),z=rr(-230,-120),h=heightAt(x,z);if(h<24||slopeAt(x,z)>.9||polyD(RIVER,x,z)<12)continue;addSpawner('guardian',x,z,{wr:8});n++}
+  /* Бледные охотники держатся в тени леса — по одному на пару обычных зверей. */
+  n=0;t=0;while(n<6&&t++<4000){const x=rr(-210,210),z=rr(-110,210),h=heightAt(x,z);if(h<3||h>26||!okTree(x,z)||fbm(x*.02+9,z*.02+4,3)<.55||Math.hypot(x-VILLAGE.x,z-VILLAGE.z)<70)continue;addSpawner('palehand',x,z);n++}
   const bl=ores.filter(o=>o.k==='blue'&&Math.hypot(o.x-VILLAGE.x,o.z-VILLAGE.z)>60).slice(0,6);for(const o of bl)addSpawner('shard',o.x+rr(-4,4),o.z+rr(-4,4));
   const g=spawnEnemy('guardian',RUINS.x,RUINS.z+2,{frag:1,hp:260,detect:16,dmg:26});g.max=260;g.sc=1.2;g.name=((window.VGT&&window.VGT('Страж руин','Ruin Guardian'))||'Страж руин')}
 function spawnCaveMobs(){if(caveSpawned)return;caveSpawned=true;for(let i=0;i<9;i++){const a=R()*6.28,r=rr(12,36);spawnEnemy(i%3?'crawler':'shard',CV.x+Math.cos(a)*r,CV.z+Math.sin(a)*r,{zone:'cave'})}

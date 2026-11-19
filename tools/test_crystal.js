@@ -207,12 +207,28 @@ function mediaMatches(head, w, h) {
   if (/orientation:portrait/.test(q)) ok = ok && h >= w;
   return ok;
 }
+/* Размеры считаем в пикселях: vw/vh берём от текущего экрана, env() считаем нулём. */
+let VW = 0;
+let VH = 0;
 function cssLength(expr) {
-  const str = expr.replace(/env\([^)]*\)/g, '0px');
+  const str = expr.replace(/env\([^)]*\)/g, '0px').replace(/\s+/g, ' ');
   let i = 0;
   const ws = () => { while (i < str.length && /\s/.test(str[i])) i++; };
   function value() {
     ws();
+    if (str.startsWith('min(', i) || str.startsWith('max(', i)) {
+      const isMax = str[i] === 'm' && str[i + 1] === 'a';
+      i += 4;
+      const nums = [];
+      for (;;) {
+        nums.push(sum());
+        ws();
+        if (str[i] === ',') { i++; continue; }
+        if (str[i] === ')') i++;
+        break;
+      }
+      return isMax ? Math.max(...nums) : Math.min(...nums);
+    }
     if (str.startsWith('max(', i)) {
       i += 4; const a = sum(); ws(); if (str[i] === ',') i++; const b = sum();
       ws(); if (str[i] === ')') i++;
@@ -221,8 +237,14 @@ function cssLength(expr) {
     if (str.startsWith('calc(', i)) {
       i += 5; const v = sum(); ws(); if (str[i] === ')') i++; return v;
     }
-    const px = /^[\d.]+px/.exec(str.slice(i));
-    if (px) { i += px[0].length; return parseFloat(px[0]); }
+    const px = /^[\d.]+(px|vw|vh)/.exec(str.slice(i));
+    if (px) {
+      i += px[0].length;
+      const n = parseFloat(px[0]);
+      if (px[1] === 'vw') return (n * VW) / 100;
+      if (px[1] === 'vh') return (n * VH) / 100;
+      return n;
+    }
     throw new Error('не разобрал длину: ' + str.slice(i, i + 16));
   }
   function sum() {
@@ -240,10 +262,13 @@ function cssLength(expr) {
   if (i !== str.length) throw new Error('лишний хвост в длине: ' + str.slice(i));
   return out;
 }
-const cssText = html.slice(html.lastIndexOf('<style>') + 7);
-const cssSource = cssText.slice(0, cssText.indexOf('</style>'));
-const WATCH = ['#bAtk', '#bJump', '#bMine', '#bUse', '#bSpr', '#bInv', '#bPause', '#joy', '#mm', '#vbal'];
+/* Стилей в файле несколько (база + мобильные медиа), а правила каскада
+   действуют на весь документ: склеиваем все <style> по порядку. */
+const cssSource = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+const WATCH = ['#bAtk', '#bJump', '#bMine', '#bUse', '#bSpr', '#bInv', '#bPause', '#joy', '#mm', '#vbal',
+  '#hotbar', '#quest', '#bars'];
 function cssLayout(w, h) {
+  VW = w; VH = h;
   const style = {};
   const apply = (head, body) => head.split(',').map((s) => s.trim()).forEach((sel) => {
     style[sel] = Object.assign(style[sel] || {}, cssDecls(body));
@@ -256,6 +281,7 @@ function cssLayout(w, h) {
   const rects = {};
   for (const sel of WATCH) {
     const own = style[sel] || {};
+    if ((own.display || '').trim() === 'none') continue;  /* скрытое на телефоне не мешает */
     const base = sel.startsWith('#b') ? (style['.mb'] || {}) : {};
     const width = cssLength(own.width || base.width || '0px');
     const height = cssLength(own.height || base.height || '0px');
