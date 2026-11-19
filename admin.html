@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#07080c">
-<meta name="description" content="Админ-панель Vert Games: пользователи, балансы, статистика, игры и журнал действий.">
+<meta name="description" content="Админ-панель Vert Games: пользователи, балансы, статистика, игры, ошибки игроков и журнал действий.">
 <meta name="vert-build" content="2026-11-18-vert-audit-v1">
 <title>Админ-панель — Vert Games</title>
 <link rel="icon" href="coin.svg" type="image/svg+xml">
@@ -51,6 +51,9 @@
         <button data-view="catalog"><span data-ico="bag"></span> <span data-ru="Каталог" data-en="Catalog">Каталог</span></button>
         <button data-view="transactions"><span data-ico="coin"></span> <span data-ru="Операции" data-en="Operations">Операции</span></button>
         <button data-view="casino"><span data-ico="wheel"></span> <span data-ru="Казино" data-en="Casino">Казино</span></button>
+        <button data-view="blocks"><span data-ico="cube"></span> Блоки стройки</button>
+        <button data-view="errors"><span data-ico="flag"></span> <span data-ru="Ошибки" data-en="Errors">Ошибки</span></button>
+        <button data-view="suspicious"><span data-ico="shield"></span> Подозрительное</button>
         <button data-view="log"><span data-ico="clock"></span> <span data-ru="Журнал" data-en="Log">Журнал</span></button>
         <div class="divider"></div>
         <a href="index.html" style="display:flex;align-items:center;gap:9px;padding:10px 13px;font-size:13px;color:var(--muted)"><span data-ico="chev"></span> <span data-ru="На сайт" data-en="Back to site">На сайт</span></a>
@@ -85,7 +88,7 @@
         <div id="view-catalog" class="hidden">
           <div class="card panel">
             <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Предметы магазина" data-en="Shop items">Предметы магазина</span></h2>
-              <p class="muted" style="font-size:12.5px;margin:4px 0 0"><span data-ru="Только косметика: аватары, цвета, титулы. Пакеты V не продаются." data-en="Cosmetics only: avatars, colours, titles. No V packs are sold.">Только косметика: аватары, цвета, титулы. Пакеты V не продаются.</span></p></div></div>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только косметика: аватары, цвета, титулы, фоны профиля. Пакеты V не продаются.</p></div></div>
             <div id="adminItems"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
           <div class="card panel" style="margin-top:16px">
@@ -112,6 +115,34 @@
           <div class="card panel">
             <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px"><span data-ru="Настройки казино" data-en="Casino settings">Настройки казино</span></h2></div></div>
             <div id="adminCasino"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+          <div class="card panel" style="margin-top:16px">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">История рулетки и слотов</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Ставка и выплата — отдельные числа: видно, сколько списали и сколько вернули.</p></div></div>
+            <div id="adminCasinoHistory"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+        </div>
+        <div id="view-blocks" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Доступные блоки стройки</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Снятый блок исчезает из палитры MiniCraft. Уже поставленные блоки остаются на месте.</p></div></div>
+            <div id="adminBlocks"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+            <button class="btn btn-primary" id="saveBlocks" style="margin-top:12px">Сохранить блоки</button>
+            <p class="msg" id="blocksMsg"></p>
+          </div>
+        </div>
+        <div id="view-errors" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Сообщения игроков об ошибках</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Приходят из кнопки «Ошибка» в плеере игры.</p></div></div>
+            <div id="adminErrors"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
+          </div>
+        </div>
+        <div id="view-suspicious" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Подозрительная активность</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только факты из журналов за последние 24 часа — решение принимает администратор.</p></div></div>
+            <div id="adminSuspicious"><div class="loading-row"><span class="spinner"></span> <span data-ru="Загрузка…" data-en="Loading…">Загрузка…</span></div></div>
           </div>
         </div>
         <div id="view-log" class="hidden">

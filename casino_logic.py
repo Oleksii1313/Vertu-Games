@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import math
 import secrets
 
@@ -85,7 +86,50 @@ def _rng_choice_weighted(items, weights) -> int:
     return len(weights) - 1
 
 
-def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
+def request_ref(user_id: int, request_id, prefix: str = 'spin') -> str | None:
+    """Идемпотентный ключ спина из идентификатора запроса клиента.
+
+    Клиент присылает ``requestId`` один раз на попытку вращения. Повтор того же
+    запроса (двойной тап, повтор после обрыва связи, дубль от прокси) попадёт в
+    ту же строку ``casino_history`` и не спишет ставку второй раз.
+    """
+    if request_id in (None, ''):
+        return None
+    text = str(request_id).strip()
+    if not text or len(text) > 120:
+        return None
+    digest = hashlib.sha256(f'{prefix}:{int(user_id)}:{text}'.encode()).hexdigest()
+    return f'rq:{digest[:40]}'
+
+
+def _repeat_result(row, game: str, balance: int) -> dict:
+    """Ответ на повторный запрос: те же числа, что были записаны в историю."""
+    bet = int(row['bet'] or 0)
+    payout = int(row['reward'] or 0)
+    outcome = str(row['result'] or '')
+    multiplier = None
+    if outcome[:1] in ('x', 'X'):
+        try:
+            multiplier = int(float(outcome[1:]))
+        except ValueError:
+            multiplier = None
+    free = str(row['game_type'] or '').endswith('_free')
+    charge = 0 if (free or bet == 0) else bet
+    payload = {
+        'game': game, 'stake': bet, 'payout': payout, 'win': payout > 0,
+        'multiplier': multiplier, 'outcome': outcome,
+        'charge': charge, 'credit': payout, 'net': payout - charge,
+        'balance': balance, 'ref': row['reference_id'], 'repeated': True,
+        'free': free,
+    }
+    if game == 'wheel' and multiplier is not None:
+        payload['segment'] = WHEEL_SEGMENTS.index(multiplier) \
+            if multiplier in WHEEL_SEGMENTS else 0
+    return payload
+
+
+def spin_wheel(user_id: int, stake=None, allow_free: bool = False,
+               request_id=None) -> dict:
     """Колесо: результат и выплата считаются здесь.
 
     ``allow_free=True`` — первый спин за сутки бесплатный (ставка сохраняется для
@@ -97,6 +141,16 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
         raise CasinoError('DISABLED', 'Казино временно отключено', 503)
     if cfg.get('wheel_enabled', '1') != '1':
         raise CasinoError('DISABLED', 'Колесо временно отключено', 503)
+    # Повтор того же запроса отвечаем ДО проверки суточных лимитов: спин уже
+    # случился, и клиент, потерявший ответ, обязан получить свой результат, а не
+    # «лимит исчерпан».
+    ref = request_ref(user_id, request_id, 'wheel')
+    if ref:
+        existing = data.casino_bet_by_ref(ref)
+        if existing is not None and int(existing['user_id']) == int(user_id):
+            payload = _repeat_result(existing, 'wheel', data.balance(user_id))
+            payload['limits'] = wheel_limits(user_id)
+            return payload
     limits = data.casino_limits(user_id)
     if limits['exclude_until'] > store.now():
         raise CasinoError('SELF_EXCLUDED', 'Вы добровольно ограничили игру в казино.', 403)
@@ -133,18 +187,24 @@ def spin_wheel(user_id: int, stake=None, allow_free: bool = False) -> dict:
     payout = wheel_payout(stake, multiplier)
     charge = 0 if use_free else stake
     net = payout - charge
-    ref = secrets.token_urlsafe(18)
+    ref = ref or secrets.token_urlsafe(18)
     # Отдельный вид записи для бесплатного вращения: по нему считается дневной лимит.
     kind = FREE_SPIN_RECORD if use_free else FREE_SPIN_KIND
     result = data.casino_bet(user_id, kind, stake, f'x{multiplier:g}', ref,
                              payout, detail=f'x{multiplier:g}',
                              charge=charge, free_key=free_key)
+    if result.get('repeated'):
+        # Тот же requestId уже обработан: отдаём записанный результат, а не
+        # второй раз списываем ставку.
+        payload = _repeat_result(result['bet'], 'wheel', result['balance'])
+        payload['limits'] = wheel_limits(user_id)
+        return payload
     return {
         'game': 'wheel', 'segment': index, 'multiplier': multiplier, 'stake': stake,
         'payout': payout, 'win': payout > 0, 'free': bool(use_free and not result['repeated']),
         # charge — списано на старте, payout — зачислено в конце, net — разница.
         'charge': charge, 'credit': payout, 'net': net,
-        'balance': result['balance'], 'ref': ref,
+        'balance': result['balance'], 'ref': ref, 'repeated': False,
         'limits': wheel_limits(user_id),
     }
 
@@ -165,7 +225,7 @@ def _limits():
     return int(cfg.get('min_stake', '5') or 5), int(cfg.get('max_stake', '100') or 100)
 
 
-def spin_slots(user_id: int, stake) -> dict:
+def spin_slots(user_id: int, stake, request_id=None) -> dict:
     data = store.get_store()
     cfg = data.settings_map()
     if cfg.get('slots_enabled', '1') != '1':
@@ -179,6 +239,13 @@ def spin_slots(user_id: int, stake) -> dict:
     min_stake, max_stake = _limits()
     if stake < min_stake or stake > max_stake:
         raise CasinoError('STAKE_RANGE', f'Ставка от {min_stake} до {max_stake} V')
+    ref = request_ref(user_id, request_id, 'slots')
+    if ref:
+        existing = data.casino_bet_by_ref(ref)
+        if existing is not None and int(existing['user_id']) == int(user_id):
+            payload = _repeat_result(existing, 'slots', data.balance(user_id))
+            payload['outcome'] = str(existing['result'] or '')
+            return payload
     limits = data.casino_limits(user_id)
     if limits['exclude_until'] > store.now():
         raise CasinoError('SELF_EXCLUDED', 'Вы добровольно ограничили игру.', 403)
@@ -187,9 +254,14 @@ def spin_slots(user_id: int, stake) -> dict:
     reels = [_rng_choice_weighted(SLOT_SYMBOLS, weights) for _ in range(3)]
     ids = [SLOT_SYMBOLS[i]['id'] for i in reels]
     payout, outcome = _slot_payout(ids, stake)
-    ref = secrets.token_urlsafe(18)
+    ref = ref or secrets.token_urlsafe(18)
     result = data.casino_bet(user_id, 'slots', stake, outcome, ref, payout,
                              detail=outcome)
+    if result.get('repeated'):
+        payload = _repeat_result(result['bet'], 'slots', result['balance'])
+        payload['outcome'] = str(result['bet']['result'] or '')
+        payload['reels'] = []
+        return payload
     return {
         'game': 'slots', 'reels': ids, 'symbols': [SLOT_SYMBOLS[i] for i in reels],
         'stake': stake, 'payout': payout, 'win': payout > 0, 'outcome': outcome,

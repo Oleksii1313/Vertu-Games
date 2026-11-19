@@ -97,12 +97,15 @@ class WheelApiFormula(unittest.TestCase):
     def _balance(self) -> int:
         return self.client.get('/api/balance').get_json()['coins']
 
-    def _spin(self, segment: int, stake: int):
+    def _spin(self, segment: int, stake: int, request_id: str | None = None):
         """Спин с принудительным сектором (RNG подменяем только в тесте)."""
         original = casino_logic._rng_choice_weighted
         casino_logic._rng_choice_weighted = lambda seq, weights: segment
+        body = {'stake': stake}
+        if request_id:
+            body['requestId'] = request_id
         try:
-            return self.client.post('/api/casino/wheel', json={'stake': stake},
+            return self.client.post('/api/casino/wheel', json=body,
                                     headers=self.headers)
         finally:
             casino_logic._rng_choice_weighted = original
@@ -155,6 +158,27 @@ class WheelApiFormula(unittest.TestCase):
         self.assertEqual(data['payout'], 20)
         bonus = self._bonus(data)
         self.assertEqual(self._balance(), before + bonus, 'баланс не меняется: ставка вернулась')
+
+    def test_same_request_id_over_http_spins_once(self):
+        """Двойной тап по кнопке: тот же requestId — одно списание, один результат."""
+        index = WHEEL_SEGMENTS.index(2)
+        before = self._balance()
+        first = self._spin(index, 20, request_id='mobile-tap-1')
+        self.assertEqual(first.status_code, 200, first.get_data(as_text=True))
+        data = first.get_json()
+        self.assertFalse(data.get('repeated'))
+        middle = self._balance()
+        self.assertEqual(middle, before - 20 + data['payout'] + self._bonus(data))
+        second = self._spin(index, 20, request_id='mobile-tap-1')
+        self.assertEqual(second.status_code, 200, second.get_data(as_text=True))
+        again = second.get_json()
+        self.assertTrue(again.get('repeated'), 'повтор должен быть помечен')
+        self.assertEqual(again['payout'], data['payout'])
+        self.assertEqual(again['segment'], data['segment'])
+        self.assertEqual(self._balance(), middle, 'повтор не двигает баланс')
+        history = self.client.get('/api/casino/history?limit=5&game=wheel').get_json()
+        stamps = [row for row in history['items'] if row.get('payout') == data['payout']]
+        self.assertEqual(len(stamps), 1, 'в истории один спин, а не два')
 
     def test_stake_is_charged_before_spin_and_rejected_when_short(self):
         """Если денег меньше ставки — спина нет, баланс не двигается."""

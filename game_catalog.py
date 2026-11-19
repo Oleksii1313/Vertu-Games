@@ -371,6 +371,13 @@ SHOP_ITEMS = [
      'icon': '', 'payload': 'Ас', 'order': 32},
     {'id': 't:legend', 'kind': 'title', 'name_ru': 'Легенда', 'name_en': 'Legend', 'price': 260,
      'icon': '', 'payload': 'Легенда', 'order': 33},
+    # Фоны профиля: обложка шапки профиля (cosmetic). payload — CSS-класс.
+    {'id': 'bg:aurora', 'kind': 'bg', 'name_ru': 'Северное сияние', 'name_en': 'Aurora',
+     'price': 0, 'icon': '', 'payload': 'vg-cover-aurora', 'order': 50},
+    {'id': 'bg:grid', 'kind': 'bg', 'name_ru': 'Сетка', 'name_en': 'Grid',
+     'price': 120, 'icon': '', 'payload': 'vg-cover-grid', 'order': 51},
+    {'id': 'bg:sunset', 'kind': 'bg', 'name_ru': 'Закат', 'name_en': 'Sunset',
+     'price': 180, 'icon': '', 'payload': 'vg-cover-sunset', 'order': 52},
     # Услуги (не «предмет навсегда», а разовое действие за V)
     {'id': 'username_change', 'kind': 'service',
      'name_ru': 'Смена ника', 'name_en': 'Change username',
@@ -379,7 +386,7 @@ SHOP_ITEMS = [
 
 # Только косметика. Пакеты V (в том числе за V-монеты) удалены: монеты
 # нельзя ни купить, ни обменять — их зарабатывают в играх и казино.
-SHOP_KINDS = ['avatar', 'color', 'title', 'service']
+SHOP_KINDS = ['avatar', 'color', 'title', 'bg', 'service']
 
 # Пакеты V за реальные деньги (выключены, пока не задан SHOP_PROVIDER).
 # Продажа V-монет за реальные деньги удалена из продукта.
@@ -469,6 +476,27 @@ SLOT_SYMBOLS = [
     {'id': 'crown', 'icon': 'crown', 'name': 'Crown', 'm3': 70, 'w': 6, 'color': '#f59e0b'},
 ]
 SLOT_TWO_PAY = 0.4
+# Блоки стройки MiniCraft: id совпадает с блоком в движке игры, поэтому
+# администратор может скрыть материал, не трогая код игры.
+BUILD_BLOCKS = [
+    {'id': 1, 'ru': 'Трава', 'en': 'Grass'},
+    {'id': 2, 'ru': 'Земля', 'en': 'Dirt'},
+    {'id': 3, 'ru': 'Камень', 'en': 'Stone'},
+    {'id': 4, 'ru': 'Песок', 'en': 'Sand'},
+    {'id': 5, 'ru': 'Дерево', 'en': 'Wood'},
+    {'id': 6, 'ru': 'Листва', 'en': 'Leaves'},
+    {'id': 9, 'ru': 'Кирпич', 'en': 'Stone brick'},
+    {'id': 10, 'ru': 'Булыжник', 'en': 'Cobblestone'},
+    {'id': 11, 'ru': 'Тёмные доски', 'en': 'Dark planks'},
+    {'id': 12, 'ru': 'Доски', 'en': 'Planks'},
+    {'id': 13, 'ru': 'Черепица', 'en': 'Roof tiles'},
+    {'id': 14, 'ru': 'Штукатурка', 'en': 'Plaster'},
+    {'id': 15, 'ru': 'Стекло', 'en': 'Glass'},
+    {'id': 16, 'ru': 'Сланец', 'en': 'Slate'},
+]
+BUILD_BLOCK_IDS = [row['id'] for row in BUILD_BLOCKS]
+
+
 CASINO_STAKES = [5, 10, 20, 25, 50, 100]
 
 

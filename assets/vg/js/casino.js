@@ -61,6 +61,24 @@
     });
   }
 
+  /* Идентификатор попытки: сервер по нему отсекает двойное списание, если один
+     и тот же запрос придёт дважды (двойной тап, повтор после обрыва связи). */
+  function newRequestId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        var bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        return Array.prototype.map.call(bytes, function (b) {
+          return ('0' + b.toString(16)).slice(-2);
+        }).join('');
+      }
+    } catch (error) { /* игнорируем: ниже резервный вариант */ }
+    return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+  }
+
   function spinSlots() {
     if (busy) return;
     if (!VG.user()) {
@@ -97,7 +115,7 @@
       });
     }, 90);
 
-    VG.api('/api/casino/slots', { body: { stake: slotStake } }).then(function (data) {
+    VG.api('/api/casino/slots', { body: { stake: slotStake, requestId: newRequestId() } }).then(function (data) {
       // Останавливаем барабаны по результату сервера — по одному, для эффекта.
       setTimeout(function () {
         clearInterval(rollTimer);
@@ -205,7 +223,7 @@
     // в начале своей транзакции); выплата зачислится после остановки колеса.
     if (!free) VG.updateCoins(Math.max(0, VG.coins() - wheelStake));
 
-    VG.api('/api/casino/wheel', { body: { stake: wheelStake, free: free } }).then(function (data) {
+    VG.api('/api/casino/wheel', { body: { stake: wheelStake, free: free, requestId: newRequestId() } }).then(function (data) {
       var weights = (rules.wheel.weights || []);
       // Геометрия — из единственной реализации (wheel-math.js), см. roulette.js:
       // колесо встаёт ровно на оплаченный сектор, ширина сектора = вероятность.

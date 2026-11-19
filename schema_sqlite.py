@@ -251,6 +251,18 @@ CREATE TABLE IF NOT EXISTS shop_ledger (
     created_at   TEXT    NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS error_reports (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind       TEXT    NOT NULL DEFAULT 'client',
+    message    TEXT    NOT NULL DEFAULT '',
+    page       TEXT    NOT NULL DEFAULT '',
+    detail     TEXT    NOT NULL DEFAULT '',
+    user_id    INTEGER,
+    resolved   INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_error_reports_created ON error_reports(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS platform_settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL

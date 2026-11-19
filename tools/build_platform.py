@@ -778,7 +778,7 @@ def build_login() -> str:
 
 # --------------------------------------------------------------------------- #  admin
 def build_admin() -> str:
-    return f'''{head('Админ-панель', 'Админ-панель Vert Games: пользователи, балансы, статистика, игры и журнал действий.', 'admin',
+    return f'''{head('Админ-панель', 'Админ-панель Vert Games: пользователи, балансы, статистика, игры, ошибки игроков и журнал действий.', 'admin',
                   '<style>.admin-grid{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:start}.admin-side{position:sticky;top:calc(var(--header-h) + 16px)}.admin-side button{display:flex;align-items:center;gap:9px;width:100%;padding:10px 13px;border:0;border-radius:10px;background:transparent;color:var(--text-2);font-weight:700;font-size:13.5px;cursor:pointer;text-align:left}.admin-side button:hover{{background:rgba(255,255,255,.06)}}.admin-side button.on{{background:linear-gradient(120deg,rgba(139,92,246,.3),rgba(255,45,149,.18));color:#fff}}@media(max-width:900px){{.admin-grid{{grid-template-columns:1fr}}.admin-side{{position:static;display:grid;grid-template-columns:repeat(2,1fr);gap:6px}}.admin-side .divider{{display:none}}}}</style>')}
 {header('admin')}
 <main class="wrap">
@@ -814,6 +814,9 @@ def build_admin() -> str:
         <button data-view="catalog"><span data-ico="bag"></span> Каталог</button>
         <button data-view="transactions"><span data-ico="coin"></span> Операции</button>
         <button data-view="casino"><span data-ico="wheel"></span> Казино</button>
+        <button data-view="blocks"><span data-ico="cube"></span> Блоки стройки</button>
+        <button data-view="errors"><span data-ico="flag"></span> Ошибки</button>
+        <button data-view="suspicious"><span data-ico="shield"></span> Подозрительное</button>
         <button data-view="log"><span data-ico="clock"></span> Журнал</button>
         <div class="divider"></div>
         <a href="index.html" style="display:flex;align-items:center;gap:9px;padding:10px 13px;font-size:13px;color:var(--muted)"><span data-ico="chev"></span> На сайт</a>
@@ -848,7 +851,7 @@ def build_admin() -> str:
         <div id="view-catalog" class="hidden">
           <div class="card panel">
             <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Предметы магазина</h2>
-              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только косметика: аватары, цвета, титулы. Пакеты V не продаются.</p></div></div>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только косметика: аватары, цвета, титулы, фоны профиля. Пакеты V не продаются.</p></div></div>
             <div id="adminItems"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
           </div>
           <div class="card panel" style="margin-top:16px">
@@ -875,6 +878,34 @@ def build_admin() -> str:
           <div class="card panel">
             <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Настройки казино</h2></div></div>
             <div id="adminCasino"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
+          <div class="card panel" style="margin-top:16px">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">История рулетки и слотов</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Ставка и выплата — отдельные числа: видно, сколько списали и сколько вернули.</p></div></div>
+            <div id="adminCasinoHistory"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
+        </div>
+        <div id="view-blocks" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Доступные блоки стройки</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Снятый блок исчезает из палитры MiniCraft. Уже поставленные блоки остаются на месте.</p></div></div>
+            <div id="adminBlocks"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+            <button class="btn btn-primary" id="saveBlocks" style="margin-top:12px">Сохранить блоки</button>
+            <p class="msg" id="blocksMsg"></p>
+          </div>
+        </div>
+        <div id="view-errors" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Сообщения игроков об ошибках</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Приходят из кнопки «Ошибка» в плеере игры.</p></div></div>
+            <div id="adminErrors"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
+          </div>
+        </div>
+        <div id="view-suspicious" class="hidden">
+          <div class="card panel">
+            <div class="section-head" style="margin-bottom:12px"><div><h2 style="font-size:18px">Подозрительная активность</h2>
+              <p class="muted" style="font-size:12.5px;margin:4px 0 0">Только факты из журналов за последние 24 часа — решение принимает администратор.</p></div></div>
+            <div id="adminSuspicious"><div class="loading-row"><span class="spinner"></span> Загрузка…</div></div>
           </div>
         </div>
         <div id="view-log" class="hidden">

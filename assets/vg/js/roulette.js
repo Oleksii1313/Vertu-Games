@@ -194,6 +194,24 @@
     }).catch(function () {});
   }
 
+  /* Идентификатор попытки: сервер по нему отсекает двойное списание, если один
+     и тот же запрос придёт дважды (двойной тап, повтор после обрыва связи). */
+  function newRequestId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        var bytes = new Uint8Array(16);
+        window.crypto.getRandomValues(bytes);
+        return Array.prototype.map.call(bytes, function (b) {
+          return ('0' + b.toString(16)).slice(-2);
+        }).join('');
+      }
+    } catch (error) { /* игнорируем: ниже резервный вариант */ }
+    return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+  }
+
   function setBusy(value) {
     busy = value;
     var button = $('#spinWheel');
@@ -226,7 +244,7 @@
        придёт от сервера, и баланс выставится ровно по его ответу. */
     if (!free) VG.updateCoins(Math.max(0, VG.coins() - stake));
 
-    VG.api('/api/casino/wheel', { body: { stake: stake, free: free } }).then(function (data) {
+    VG.api('/api/casino/wheel', { body: { stake: stake, free: free, requestId: newRequestId() } }).then(function (data) {
       var weights = rules.wheel.weights || [];
       /* Геометрия — из единственной реализации (wheel-math.js): колесо обязано
          встать ровно на сектор `data.segment`, за который заплатил сервер. */

@@ -1385,6 +1385,14 @@ class DataStore:
         return {'repeated': False, 'balance': balance, 'stake': stake, 'charge': charge,
                 'payout': payout}
 
+    def casino_bet_by_ref(self, ref: str | None):
+        """Найти уже обработанную ставку по ключу идемпотентности (или None)."""
+        if not ref:
+            return None
+        with self.driver.transaction(isolation='read committed') as c:
+            return c.execute('SELECT * FROM casino_history WHERE reference_id=?',
+                             (str(ref),)).fetchone()
+
     def import_casino_history(self, user_id: int, game: str, bet: int, reward: int,
                               outcome: str, detail: str, created: int = 0) -> bool:
         """Перенести историческую ставку **без** движения монет (импорт старых баз)."""
@@ -1665,6 +1673,87 @@ class DataStore:
         with self.driver.transaction(isolation='read committed') as c:
             c.execute("UPDATE users SET is_admin=?, role=? WHERE id=?",
                       (bool(is_admin), 'admin' if is_admin else 'player', int(user_id)))
+
+    # ------------------------------------------------------- сообщения об ошибках
+    def report_error(self, message: str, page: str = '', kind: str = 'client',
+                     detail: str = '', user_id: int | None = None) -> int:
+        """Сохранить сообщение игрока об ошибке (без падения интерфейса)."""
+        text = str(message or '').strip()[:600]
+        if not text:
+            return 0
+        with self.driver.transaction() as c:
+            row = c.execute('INSERT INTO error_reports(kind,message,page,detail,user_id,'
+                            'resolved,created_at) VALUES(?,?,?,?,?,?,?) RETURNING id',
+                            (str(kind)[:32], text, str(page)[:200], str(detail)[:600],
+                             int(user_id) if user_id else None, False, iso())).fetchone()
+        return int(row['id']) if row else 0
+
+    def error_reports(self, limit: int = 50, unresolved: bool = False):
+        sql = ('SELECT e.*, u.username FROM error_reports e '
+               'LEFT JOIN users u ON u.id=e.user_id ')
+        if unresolved:
+            sql += 'WHERE e.resolved=FALSE '
+        sql += 'ORDER BY e.id DESC LIMIT ?'
+        with self.driver.transaction(isolation='read committed') as c:
+            rows = c.execute(sql, (max(1, min(200, int(limit))),)).fetchall()
+        out = []
+        for row in rows:
+            item = dict(row)
+            item['resolved'] = bool(item.get('resolved'))
+            out.append(item)
+        return out
+
+    def resolve_error(self, report_id: int) -> bool:
+        with self.driver.transaction() as c:
+            row = c.execute('SELECT id FROM error_reports WHERE id=?',
+                            (int(report_id),)).fetchone()
+            if not row:
+                return False
+            c.execute('UPDATE error_reports SET resolved=? WHERE id=?', (True, int(report_id)))
+        return True
+
+    # --------------------------------------------------- подозрительная активность
+    def suspicious_activity(self, hours: int = 24) -> dict:
+        """Сводка для админки: то, что стоит проверить руками.
+
+        Ничего не блокирует автоматически — только показывает факты из журналов,
+        чтобы решение принимал человек.
+        """
+        since = iso(now() - max(1, min(24 * 14, int(hours))) * 3600)
+        with self.driver.transaction(isolation='read committed') as c:
+            failed = c.execute("SELECT COUNT(*) AS n FROM admin_log WHERE action='admin_login_failed' "
+                               "AND created_at>=?", (since,)).fetchone()['n']
+            failed_ips = c.execute("SELECT ip_hash, COUNT(*) AS n, MAX(created_at) AS last "
+                                   "FROM admin_log WHERE action='admin_login_failed' AND created_at>=? "
+                                   "GROUP BY ip_hash ORDER BY n DESC LIMIT 10", (since,)).fetchall()
+            logins = c.execute("SELECT COUNT(*) AS n FROM admin_log WHERE action='admin_login' "
+                               "AND created_at>=?", (since,)).fetchone()['n']
+            limits = c.execute('SELECT COUNT(*) AS n FROM rate_limits WHERE expires_at>?',
+                               (iso(),)).fetchone()['n']
+            big = c.execute('SELECT t.id, t.user_id, u.username, t.amount, t.balance_after, '
+                            't.transaction_type, t.description, t.created_at '
+                            'FROM transactions t LEFT JOIN users u ON u.id=t.user_id '
+                            'WHERE t.created_at>=? AND ABS(t.amount)>=1000 '
+                            'ORDER BY ABS(t.amount) DESC LIMIT 20', (since,)).fetchall()
+            winners = c.execute("SELECT h.user_id, u.username, COUNT(*) AS spins, "
+                                "SUM(h.bet) AS staked, SUM(h.reward) AS paid, "
+                                "SUM(h.reward)-SUM(h.bet) AS net FROM casino_history h "
+                                "LEFT JOIN users u ON u.id=h.user_id WHERE h.created_at>=? "
+                                "GROUP BY h.user_id, u.username HAVING COUNT(*)>=5 "
+                                "ORDER BY net DESC LIMIT 10", (since,)).fetchall()
+            new_accounts = c.execute('SELECT COUNT(*) AS n FROM users WHERE created_at>=?',
+                                     (since,)).fetchone()['n']
+        return {
+            'hours': int(hours),
+            'failedAdminLogins': int(failed or 0),
+            'adminLogins': int(logins or 0),
+            'failedByIp': [{'ip': r['ip_hash'], 'count': int(r['n']), 'last': r['last']}
+                           for r in failed_ips],
+            'activeRateLimits': int(limits or 0),
+            'largeTransactions': [dict(r) for r in big],
+            'topWinners': [dict(r) for r in winners],
+            'newAccounts': int(new_accounts or 0),
+        }
 
     def admin_log(self, admin: str, action: str, target: str = '', detail: str = '',
                   ip_hash: str = ''):

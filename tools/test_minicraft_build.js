@@ -125,7 +125,11 @@ runtime = runtime.slice(0, idx) +
   ' select: mcxBuildSelect, pick: mcxBuildPick, stamp: mcxBuildStamp, hotbar: mcbHotbar, open: mcbOpen,' +
   ' close: mcbClose, paint: mcbPaintModal, keySlot: mcbKeySlot, restore: mcbRestore, saveNow: mcbSaveNow,' +
   ' load: mcbLoad, rotate: mcbRotate, aim: mcbAim, cs, ui, Ai, qh, ct, dn, world: () => Wl,' +
-  ' stampDir: () => mcbStampDir, setStampDir: (v) => { mcbStampDir = v; } });\n' +
+  ' stampDir: () => mcbStampDir, setStampDir: (v) => { mcbStampDir = v; },' +
+  ' camera: () => Wt, templates: MCB_TEMPLATES, planCats: MCB_PLAN_CATS, planBlocks: mcbPlanBlocks,' +
+  ' planStart: mcxBuildPlanStart, planCheck: mcbPlanCheck, confirm: mcxBuildConfirm,' +
+  ' planRotate: mcxBuildPlanRotate, planCancel: mcxBuildPlanCancel, placeReason: mcbPlaceReason,' +
+  ' buildPlan: mcbBuildPlan, ghostUpdate: mcbGhostUpdate, ghostMat: mcbGhostMaterial });\n' +
   runtime.slice(idx);
 w.eval(runtime);
 
@@ -187,9 +191,13 @@ function findSpot(A) {
   check('4 категории материалов', A0.cats.length === 4, A0.cats.map(c => c.id));
   check('окно инвентаря создано и скрыто', !!$('mcb-inv') && $('mcb-inv').hidden === true);
   check('стили модуля подключены', !!$('mcb-style') && $('mcb-style').textContent.length > 2000);
-  check('чертежи: house/tower/bridge/wall/stairs/roof/fence/window/door/floor',
-    ['house', 'tower', 'bridge', 'wall', 'stairs', 'roof', 'fence', 'window', 'door', 'floor']
-      .every(k => typeof A0.plans[k] === 'function'), A0.planNames.length);
+  const TPL_KEYS = ['smallHouse', 'largeHouse', 'stoneHouse', 'medievalHouse', 'tower',
+    'castle', 'watchtower', 'bridge', 'wall', 'farm', 'decor', 'stairs', 'roof', 'fence',
+    'window', 'door', 'floor'];
+  check('шаблоны: дома, крепости, мост, стена, башня, ферма, декор',
+    TPL_KEYS.every(k => typeof A0.plans[k] === 'function'), A0.planNames.map(p => p.key));
+  check('у каждого шаблона есть категория', A0.planNames.every(p => !!p.cat), A0.planNames.length);
+  check('категории шаблонов: 5', A0.planCats.length === 5, A0.planCats.map(c => c.id));
   check('хотбар помечен как модульный', $('hotbar').getAttribute('data-mcb') === '1');
 
   /* ---------- 2. старт мира ---------- */
@@ -288,8 +296,11 @@ function findSpot(A) {
     click($('mcb-inv').querySelector('[data-mcb-tab="plans"]'));
     return api().mcb().tab === 'plans' && $('mcb-plans').hidden === false && $('mcb-blocks').hidden === true;
   })());
-  check('10 чертежей в списке', $('mcb-plans').querySelectorAll('[data-mcb-plan]').length === 10,
+  check('все 17 шаблонов в списке', $('mcb-plans').querySelectorAll('[data-mcb-plan]').length === 17,
     $('mcb-plans').querySelectorAll('[data-mcb-plan]').length);
+  check('шаблоны сгруппированы по категориям',
+    $('mcb-plans').querySelectorAll('.mcb-cat').length === 5,
+    $('mcb-plans').querySelectorAll('.mcb-cat h5').length);
   check('кнопка отмены в чертежах', !!$('mcb-plans').querySelector('[data-mcb-undo]'));
 
   /* ---------- 10. чувствительность ---------- */
@@ -365,7 +376,7 @@ function findSpot(A) {
   check('Z отменяет последнюю постройку', api().cs(p2.x, p2.y, p2.z) === api().Ai, api().cs(p2.x, p2.y, p2.z));
 
   /* ---------- 14. поворот чертежа ---------- */
-  const house = api().plans.house();
+  const house = api().buildPlan('smallHouse');
   check('чертёж дома содержательный', house.length > 30, house.length);
   const asym = { x: 2, y: 0, z: 1, id: 1 };
   let rotated = asym;
@@ -376,6 +387,7 @@ function findSpot(A) {
 
   /* ---------- 15. чертёж «в мире» ---------- */
   api().F().pitch = -1.1;
+  frames(2);                       /* камера обновляется в кадре — как в игре */
   const aim = api().aim();
   check('прицел находит поверхность', !!aim, aim && [aim.x, aim.y, aim.z]);
   if (aim) {
@@ -384,9 +396,36 @@ function findSpot(A) {
   }
   let stamped = 0;
   if (aim) {
+    const base = [aim.px, aim.py, aim.pz];
+    /* Игрок отходит в сторону: клетка под ним не должна попасть в постройку. */
+    const savedPlayer = { x: api().F().x, y: api().F().y, z: api().F().z };
+    api().F().x = base[0] + 40;
+    /* Сначала проверяем отказ: на неровной земле постройка «всё или ничего». */
+    const refusal = api().stamp('floor', 0);
+    check('чертёж не ставится частично на неровной земле (всё или ничего)',
+      refusal === 0 || refusal === 25, [refusal, api().planCheck('floor', 0).reason]);
+    /* Ровная площадка 5×5 — как игрок расчищает место перед стройкой. */
+    for (let dx = 0; dx < 5; dx++) {
+      for (let dz = 0; dz < 5; dz++) api().ui(base[0] + dx, base[1], base[2] + dz, api().Ai);
+    }
+    const flatCheck = api().planCheck('floor', 0);
+    check('ровная площадка проходит проверку шаблона', flatCheck.ok === true, flatCheck.message);
     stamped = api().stamp('floor', 0);
+    check('чертёж «пол» построен на ровной площадке', stamped === 25, stamped);
+    check('пол лёг ровно по сетке', (() => {
+      let bad = 0;
+      for (let dx = 0; dx < 5; dx++) {
+        for (let dz = 0; dz < 5; dz++) {
+          if (api().cs(base[0] + dx, base[1], base[2] + dz) === api().Ai) bad++;
+        }
+      }
+      return bad === 0;
+    })());
+    check('шаблон ставится только целиком', stamped === 25, stamped);
+    api().F().x = savedPlayer.x;
+    api().F().y = savedPlayer.y;
+    api().F().z = savedPlayer.z;
   }
-  check('чертёж «пол» построен', stamped > 0, stamped);
   const stampEdits = Object.keys(api().mcb().edits).length;
   check('постройка попала в состояние', stampEdits >= stamped, [stampEdits, stamped]);
   api().saveNow();
@@ -415,7 +454,7 @@ function findSpot(A) {
   check('после восстановления меняется набор правок', Object.keys(api().mcb().edits).length === snapshot.length,
     [Object.keys(api().mcb().edits).length, snapshot.length]);
 
-  /* ---------- 17. призрак блока ---------- */
+  /* ---------- 17. призрак блока: луч из камеры, зелёный/красный ---------- */
   api().F().pitch = -0.9;
   frames(4);
   const ghost = api().mcb().ghost;
@@ -424,21 +463,169 @@ function findSpot(A) {
   const aimG = api().mcb().aim;
   if (aimG) {
     const gx = aimG.x + aimG.nx, gy = aimG.y + aimG.ny, gz = aimG.z + aimG.nz;
-    const F1 = api().F();
-    const free = api().cs(gx, gy, gz) === api().Ai &&
-      !(Math.abs(gx + .5 - F1.x) < .8 && Math.abs(gz + .5 - F1.z) < .8 &&
-        gy >= Math.floor(F1.y) && gy <= Math.floor(F1.y + 1.8));
-    check('превью показывается только там, где можно ставить', ghost.visible === free,
-      [free, ghost.visible]);
-    if (free) {
-      check('превью стоит по сетке в целевой клетке',
-        ghost.position.x === gx + .5 && ghost.position.y === gy + .5 && ghost.position.z === gz + .5,
-        [ghost.position.x, ghost.position.y, ghost.position.z, gx, gy, gz]);
-    }
-    check('превью принимает материал выбранного блока', !!ghost.material && ghost.material.opacity < 1);
-  } else {
-    check('превью спрятано без цели', ghost.visible === false, ghost.visible);
+    check('цель призрака — ровно соседняя клетка (hit + нормаль)',
+      gx === aimG.px && gy === aimG.py && gz === aimG.pz, [gx, gy, gz, aimG.px, aimG.py, aimG.pz]);
+    check('нормаль грани — единичный вектор по одной оси',
+      Math.abs(aimG.nx) + Math.abs(aimG.ny) + Math.abs(aimG.nz) === 1, [aimG.nx, aimG.ny, aimG.nz]);
+    check('превью стоит по сетке в целевой клетке',
+      ghost.visible === true &&
+      ghost.position.x === gx + .5 && ghost.position.y === gy + .5 && ghost.position.z === gz + .5,
+      [ghost.visible, ghost.position.x, ghost.position.y, ghost.position.z, gx, gy, gz]);
+    const okHere = api().placeReason(gx, gy, gz, api().mcb().selected) === '';
+    const green = api().ghostMat(true), red = api().ghostMat(false);
+    check('зелёный и красный призрак — разные материалы',
+      green !== red && green.color.getHex() !== red.color.getHex(),
+      [green.color.getHex().toString(16), red.color.getHex().toString(16)]);
+    check('цвет призрака совпадает с проверкой клетки',
+      ghost.material === (okHere ? green : red), [okHere, ghost.material === green]);
+    check('призрак не исчезает там, где ставить нельзя (красный)',
+      ghost.visible === true, ghost.visible);
   }
+  /* Стабильность: та же клетка — mesh не пересоздаётся и не двигается. */
+  const keyBefore = api().mcb().targetKey;
+  const posBefore = ghost ? [ghost.position.x, ghost.position.y, ghost.position.z] : null;
+  api().F().yaw = (api().F().yaw || 0) + 0.0004;
+  frames(2);
+  check('мелкий поворот внутри клетки не двигает призрак',
+    api().mcb().targetKey === keyBefore &&
+    JSON.stringify([ghost.position.x, ghost.position.y, ghost.position.z]) === JSON.stringify(posBefore),
+    [keyBefore, api().mcb().targetKey]);
+
+  /* Прицел считается от ЦЕНТРА КАМЕРЫ, а не от координат игрока. */
+  const cam = api().camera();
+  const player = api().F();
+  const savedF = { x: player.x, y: player.y, z: player.z, yaw: player.yaw, pitch: player.pitch };
+  /* Ищем столб земли и ставим камеру над ним, глядя строго вниз. */
+  let ground = null;
+  for (let r = 1; r < 8 && !ground; r++) {
+    for (let dx = -r; dx <= r && !ground; dx++) {
+      for (let dz = -r; dz <= r && !ground; dz++) {
+        const x = Math.floor(savedF.x) + dx, z = Math.floor(savedF.z) + dz;
+        for (let y = 30; y >= 2; y--) {
+          if (api().cs(x, y, z) !== api().Ai && api().cs(x, y + 1, z) === api().Ai) { ground = { x, y, z }; break; }
+        }
+      }
+    }
+  }
+  if (ground && cam) {
+    cam.position.set(ground.x + .5, ground.y + 4.5, ground.z + .5);
+    cam.rotation.set(-Math.PI / 2, 0, 0);
+    cam.updateMatrixWorld(true);
+    /* Игрок уходит далеко в сторону: при прицеле «от игрока» результат бы изменился. */
+    player.x = savedF.x + 60;
+    player.z = savedF.z - 60;
+    const camAim = api().aim();
+    check('прицел идёт от камеры: игрок в стороне, попадание под камерой',
+      !!camAim && camAim.x === ground.x && camAim.z === ground.z && camAim.y === ground.y,
+      [camAim && [camAim.x, camAim.y, camAim.z], ground]);
+    if (camAim) {
+      check('клетка постановки — над верхней гранью блока',
+        camAim.ny === 1 && camAim.py === ground.y + 1, [camAim.ny, camAim.py, ground.y]);
+    }
+    cam.position.set(ground.x + .5, ground.y + 40, ground.z + .5);
+    cam.updateMatrixWorld(true);
+    const farAim = api().aim();
+    api().ghostUpdate();
+    check('дальше дистанции постройки цели нет (призрак скрыт)',
+      farAim === null && api().mcb().ghost.visible === false, farAim);
+  }
+  player.x = savedF.x; player.y = savedF.y; player.z = savedF.z;
+  player.yaw = savedF.yaw; player.pitch = savedF.pitch;
+  frames(3);
+
+  /* ---------- 17б. шаблоны: структура, предпросмотр, подтверждение ---------- */
+  const tpls = api().templates;
+  check('в библиотеке 17 шаблонов', tpls.length === 17, tpls.length);
+  for (const tpl of tpls) {
+    const blocks = api().buildPlan(tpl.key);
+    const keys = new Set(blocks.map(b => b.x + ',' + b.y + ',' + b.z));
+    const ids = new Set(blocks.map(b => b.id));
+    const palette = new Set(api().mats.map(m => m.id));
+    check('шаблон ' + tpl.key + ': клетки не дублируются', keys.size === blocks.length,
+      [blocks.length, keys.size]);
+    check('шаблон ' + tpl.key + ': только материалы палитры',
+      [...ids].every(id => palette.has(id)), [...ids]);
+    /* Связность: каждый блок соединён с самым нижним слоем (нет парящих блоков). */
+    const minY = Math.min(...blocks.map(b => b.y));
+    const byKey = new Map(blocks.map(b => [b.x + ',' + b.y + ',' + b.z, b]));
+    const seen = new Set();
+    const queue = blocks.filter(b => b.y === minY).map(b => b.x + ',' + b.y + ',' + b.z);
+    queue.forEach(k => seen.add(k));
+    while (queue.length) {
+      const [x, y, z] = queue.pop().split(',').map(Number);
+      for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+        const k = (x + dx) + ',' + (y + dy) + ',' + (z + dz);
+        if (!byKey.has(k) || seen.has(k)) continue;
+        seen.add(k);
+        queue.push(k);
+      }
+    }
+    check('шаблон ' + tpl.key + ': нет висящих блоков', seen.size === blocks.length,
+      [seen.size, blocks.length]);
+  }
+  const houseBlocks = api().buildPlan('smallHouse');
+  check('дом: стены выше пола и ниже крыши', (() => {
+    const floor = houseBlocks.filter(b => b.y === 0).length;
+    const top = Math.max(...houseBlocks.map(b => b.y));
+    return floor === 25 && top >= 5;
+  })(), houseBlocks.length);
+  check('дом: есть дверной проём и окна', (() => {
+    const glass = new Set([15]);
+    return houseBlocks.some(b => b.id === 15) &&
+      !houseBlocks.some(b => b.x === 2 && b.z === 0 && b.y === 1);
+  })());
+
+  /* Предпросмотр: мир не меняется до подтверждения. */
+  api().setStampDir(0);
+  api().F().pitch = -1.2;
+  frames(2);
+  const editsBefore = Object.keys(api().mcb().edits).length;
+  const started = api().planStart('smallHouse');
+  frames(3);
+  const planCheck = api().planCheck('smallHouse', 0);
+  check('предпросмотр шаблона включён', started === true && api().mcb().planKey === 'smallHouse',
+    api().mcb().planKey);
+  check('мир до подтверждения не изменился', Object.keys(api().mcb().edits).length === editsBefore,
+    [editsBefore, Object.keys(api().mcb().edits).length]);
+  check('полоска подтверждения показывает шаблон и число блоков', (() => {
+    const bar = $('mcb-planbar');
+    return !!bar && bar.hidden === false &&
+      /Дом|House/i.test(bar.querySelector('[data-mcb-plan-name]').textContent) &&
+      bar.querySelector('[data-mcb-plan-name]').textContent.includes(String(planCheck.blocks.length));
+  })(), $('mcb-planbar') && $('mcb-planbar').textContent.trim());
+  if (planCheck.ok) {
+    check('предпросмотр показал все блоки постройки',
+      (api().mcb().planMeshes || []).filter(m => m.visible).length === planCheck.blocks.length,
+      [(api().mcb().planMeshes || []).filter(m => m.visible).length, planCheck.blocks.length]);
+    const placed = api().confirm();
+    check('подтверждение ставит всю постройку', placed === planCheck.blocks.length, [placed, planCheck.blocks.length]);
+    check('каждый блок шаблона стоит в мире',
+      planCheck.blocks.every(b => api().cs(b.x, b.y, b.z) === b.id),
+      planCheck.blocks.filter(b => api().cs(b.x, b.y, b.z) !== b.id).slice(0, 3));
+    check('предпросмотр после постройки убран',
+      api().mcb().planKey === null &&
+      (api().mcb().planMeshes || []).every(m => m.visible === false));
+    check('повторное подтверждение ничего не ставит', api().confirm() === 0);
+    /* Защита существующей постройки: тот же угол занят — шаблон не встанет. */
+    api().planStart('smallHouse');
+    frames(2);
+    const blocked = api().planCheck('smallHouse', 0);
+    check('повторная постройка на том же месте запрещена', blocked.ok === false &&
+      blocked.reason === 'busy', [blocked.ok, blocked.reason]);
+    check('в занятом месте ничего не поставлено', api().confirm() === 0);
+    check('занятость не испортила уже стоящий дом',
+      planCheck.blocks.every(b => api().cs(b.x, b.y, b.z) === b.id));
+    api().planCancel();
+    api().mcb().edits = {};
+    api().mcb().editCount = 0;
+  } else {
+    check('предпросмотр предупредил, почему нельзя построить', !!planCheck.message, planCheck.reason);
+    api().planCancel();
+  }
+  check('отмена предпросмотра скрывает полоску', (() => {
+    api().planCancel();
+    return $('mcb-planbar').hidden === true && api().mcb().planKey === null;
+  })());
 
   /* ---------- 18. удаление постройки ---------- */
   click($('mcbBag'));

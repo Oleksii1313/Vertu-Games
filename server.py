@@ -37,8 +37,9 @@ import db as store
 import shop
 from db import (AccountBanned, DuplicateUser, InsufficientFunds, InvalidCredentials,
                 LimitExceeded, NotFound, StoreError, get_store)
-from game_catalog import (APP_VERSION, GAMES, GAMES_BY_ID, WHEEL_SEGMENTS, WHEEL_WEIGHTS,
-                          game_available, public_games, wheel_probabilities, wheel_rtp)
+from game_catalog import (APP_VERSION, BUILD_BLOCKS, BUILD_BLOCK_IDS, GAMES, GAMES_BY_ID,
+                          WHEEL_SEGMENTS, WHEEL_WEIGHTS, game_available, public_games,
+                          wheel_probabilities, wheel_rtp)
 
 ROOT = Path(__file__).resolve().parent
 COOKIE = 'vg_session'
@@ -160,7 +161,7 @@ def csrf_ok() -> bool:
     # Первый визит: клиент ещё не получил куку — разрешаем только вход/регистрацию,
     # они и так защищены Turnstile и rate-limit'ом.
     if not cookie and request.path in ('/api/auth/register', '/api/auth/login',
-                                       '/api/admin/login'):
+                                       '/api/admin/login', '/api/report/error'):
         return True
     return False
 
@@ -1216,7 +1217,8 @@ def casino_wheel():
         return api_error(429, 'RATE_LIMIT', 'Слишком много ставок подряд.')
     try:
         result = casino_logic.spin_wheel(user['id'], data.get('stake'),
-                                         allow_free=bool(data.get('free')))
+                                         allow_free=bool(data.get('free')),
+                                         request_id=data.get('requestId'))
     except casino_logic.CasinoError as exc:
         payload = {'ok': False, 'code': exc.code, 'msg': exc.message}
         if exc.extra:
@@ -1242,7 +1244,8 @@ def casino_slots():
     if not rate('casino', 90, 60):
         return api_error(429, 'RATE_LIMIT', 'Слишком много ставок подряд.')
     try:
-        result = casino_logic.spin_slots(user['id'], data.get('stake'))
+        result = casino_logic.spin_slots(user['id'], data.get('stake'),
+                                         request_id=data.get('requestId'))
     except casino_logic.CasinoError as exc:
         return api_error(exc.status, exc.code, exc.message)
     except LimitExceeded as exc:
@@ -1601,6 +1604,121 @@ def admin_casino_history():
 @admin_required
 def admin_log_rows():
     return jsonify({'ok': True, 'items': get_store().admin_log_rows(80)})
+
+
+@app.get('/api/admin/errors')
+@admin_required
+def admin_errors():
+    """Сообщения игроков об ошибках (нажали «Сообщить об ошибке»)."""
+    try:
+        limit = int(request.args.get('limit', '50'))
+    except (TypeError, ValueError):
+        limit = 50
+    only_new = request.args.get('unresolved') in ('1', 'true', 'yes')
+    return jsonify({'ok': True, 'items': get_store().error_reports(limit, only_new)})
+
+
+@app.post('/api/admin/errors/resolve')
+@admin_required
+def admin_errors_resolve():
+    data = json_body()
+    try:
+        report_id = int(data.get('id'))
+    except (TypeError, ValueError):
+        return api_error(400, 'BAD_ID', 'Некорректный номер сообщения.')
+    if not get_store().resolve_error(report_id):
+        return api_error(404, 'NOT_FOUND', 'Сообщение не найдено.')
+    get_store().admin_log(admin_name(), 'error_resolved', str(report_id), '', store.digest(client_ip()))
+    return jsonify({'ok': True})
+
+
+@app.get('/api/admin/suspicious')
+@admin_required
+def admin_suspicious():
+    """Что стоит проверить: неудачные входы, крупные операции, «везучие» игроки."""
+    try:
+        hours = int(request.args.get('hours', '24'))
+    except (TypeError, ValueError):
+        hours = 24
+    return jsonify({'ok': True, 'report': get_store().suspicious_activity(hours)})
+
+
+@app.get('/api/admin/blocks')
+@admin_required
+def admin_blocks():
+    """Доступные блоки стройки: что видит игрок в палитре MiniCraft."""
+    disabled = _disabled_build_blocks()
+    blocks = []
+    for row in BUILD_BLOCKS:
+        blocks.append({'id': row['id'], 'ru': row['ru'], 'en': row['en'],
+                       'enabled': row['id'] not in disabled})
+    return jsonify({'ok': True, 'blocks': blocks, 'disabled': sorted(disabled)})
+
+
+@app.post('/api/admin/blocks')
+@admin_required
+def admin_blocks_set():
+    """Скрыть/вернуть блоки. Список id проверяется по серверному справочнику."""
+    data = json_body()
+    raw = data.get('disabled')
+    if not isinstance(raw, list):
+        return api_error(400, 'BAD_LIST', 'Ожидается список disabled.')
+    ids = set()
+    for value in raw:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number in BUILD_BLOCK_IDS:
+            ids.add(number)
+    get_store().set_setting('mcx_blocks_disabled', ','.join(str(i) for i in sorted(ids)))
+    get_store().admin_log(admin_name(), 'blocks_update', 'minicraft',
+                          ','.join(str(i) for i in sorted(ids)), store.digest(client_ip()))
+    return jsonify({'ok': True, 'disabled': sorted(ids)})
+
+
+def _disabled_build_blocks() -> set:
+    raw = get_store().settings_map().get('mcx_blocks_disabled', '')
+    out = set()
+    for part in str(raw).split(','):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            number = int(part)
+        except ValueError:
+            continue
+        if number in BUILD_BLOCK_IDS:
+            out.add(number)
+    return out
+
+
+@app.get('/api/game/blocks')
+def game_blocks():
+    """Публичный список материалов стройки (игра берёт его при запуске)."""
+    disabled = sorted(_disabled_build_blocks())
+    return jsonify({'ok': True, 'blocks': {'disabled': disabled},
+                    'catalog': [{'id': r['id'], 'enabled': r['id'] not in set(disabled)}
+                                for r in BUILD_BLOCKS]})
+
+
+@app.post('/api/report/error')
+def report_error_public():
+    """Игрок сообщает об ошибке. Без авторизации, но с лимитом и обрезкой полей."""
+    if not rate('report_error', 10, 300):
+        return api_error(429, 'RATE_LIMIT', 'Слишком много сообщений. Попробуйте позже.')
+    data = json_body()
+    message = str(data.get('message', ''))[:600].strip()
+    if len(message) < 4:
+        return api_error(400, 'EMPTY', 'Опишите ошибку хотя бы в двух словах.')
+    user = current_user()
+    report_id = get_store().report_error(
+        message,
+        page=str(data.get('page', ''))[:200],
+        kind=str(data.get('kind', 'client'))[:32],
+        detail=str(data.get('detail', ''))[:600],
+        user_id=user['id'] if user else None)
+    return jsonify({'ok': True, 'id': report_id})
 
 
 @app.get('/api/admin/settings')
